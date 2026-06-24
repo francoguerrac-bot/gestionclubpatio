@@ -328,6 +328,38 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .dp-progress-bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden;}
 .dp-progress-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--sage-light));border-radius:99px;transition:width .5s cubic-bezier(.34,1.56,.64,1);}
 
+/* ── WEEK PLANNER ── */
+.week-days-strip{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);scrollbar-width:none;}
+.week-day-pill{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 10px;border-radius:11px;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);min-width:46px;transition:all .2s;user-select:none;}
+.week-day-pill.wp-today{border-color:var(--sage);background:var(--sage-dim);}
+.week-day-pill.wp-selected{background:var(--charcoal);border-color:var(--charcoal);color:#fff;}
+.week-day-name{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+.week-day-num{font-size:17px;font-weight:700;line-height:1;}
+.week-day-badge{font-size:9px;font-weight:800;background:var(--coral);color:#fff;border-radius:99px;padding:1px 6px;min-width:16px;text-align:center;}
+.week-day-pill.wp-selected .week-day-badge{background:rgba(255,255,255,.25);}
+.week-task-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;gap:10px;align-items:center;transition:all .2s;position:relative;overflow:hidden;}
+.week-task-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.week-task-card.wctx-casa::before{background:var(--casa-color);}
+.week-task-card.wctx-bazar::before{background:var(--bazar-color);}
+.week-task-card.wctx-tienda::before{background:#0F766E;}
+.week-task-card.wctx-club::before{background:var(--club-color);}
+.week-task-card.wdone{opacity:.4;}
+.week-task-card.wdone .week-task-title{text-decoration:line-through;}
+.week-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s;}
+.week-check:hover{border-color:var(--sage);}
+.week-check.wchecked{background:var(--sage);border-color:var(--sage);color:#fff;}
+.week-task-info{flex:1;min-width:0;}
+.week-task-title{font-size:12px;font-weight:600;color:var(--charcoal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px;}
+.week-task-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.week-mod-chip{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;}
+.week-empty{text-align:center;padding:32px 16px;color:var(--mid);}
+.week-progress-wrap{padding:10px 14px 4px;background:var(--surface);}
+.week-progress-label{font-size:10px;color:var(--mid);display:flex;justify-content:space-between;margin-bottom:4px;}
+.week-progress-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden;}
+.week-progress-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--sage-light));border-radius:99px;transition:width .5s;}
+/* nav scrollable cuando hay muchos tabs */
+.bottom-nav{overflow-x:auto;scrollbar-width:none;}
+.bottom-nav::-webkit-scrollbar{display:none;}
 /* ── RBAC · ROLE SYSTEM ── */
 .role-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
 .pending-overlay{position:fixed;inset:0;z-index:180;background:linear-gradient(160deg,#1A1A1A 0%,#243b32 100%);display:none;align-items:center;justify-content:center;padding:24px;}
@@ -1513,7 +1545,37 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 </div>
 
 <!-- ══════════════════════════════════════
-     PAGE 8 · PANEL DE ROLES (Director)
+     PAGE 8 · SEMANA EN CURSO
+════════════════════════════════════════ -->
+<div class="page" id="pg-semana">
+
+  <!-- Header con rango y progreso -->
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:12px 14px 8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:13px;font-weight:800;">📅 Semana en Curso</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);" id="weekRangeLabel">—</div>
+    </div>
+    <div class="week-progress-label">
+      <span id="weekProgressLabel">Calculando...</span>
+      <span id="weekProgressPct">0%</span>
+    </div>
+    <div class="week-progress-bar">
+      <div class="week-progress-fill" id="weekProgressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Selector de días (pills) -->
+  <div class="week-days-strip" id="weekDaysStrip"></div>
+
+  <!-- Lista de tareas del día seleccionado -->
+  <div style="padding:10px 14px;" id="weekTaskList">
+    <div class="week-empty">Cargando semana...</div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 9 · PANEL DE ROLES (Director)
 ════════════════════════════════════════ -->
 <div class="page" id="pg-roles">
   <div style="padding:14px 14px 0;">
@@ -1614,10 +1676,10 @@ let tasks=[], sprintTasks=[], checkins=[];
 let ctxFilter='todo', sortBy='deadline', freq='unica';
 
 const CTX_MAP={
-  casa:  {label:'🏠 Casa',      tagClass:'tag-ctx-casa',   cardClass:'ctx-casa'},
-  bazar: {label:'🛍️ Bazar',    tagClass:'tag-ctx-bazar',  cardClass:'ctx-bazar'},
-  tienda:{label:'🏪 Tienda',    tagClass:'tag-ctx-tienda', cardClass:'ctx-tienda'},
-  club:  {label:'🟢 Club Patio',tagClass:'tag-ctx-club',   cardClass:'ctx-club'},
+  casa:  {label:'🏠 Casa',      tagClass:'tag-ctx-casa',   cardClass:'ctx-casa',   bg:'var(--casa-soft)', color:'var(--casa-color)'},
+  bazar: {label:'🛍️ Bazar',    tagClass:'tag-ctx-bazar',  cardClass:'ctx-bazar',  bg:'var(--bazar-soft)',color:'var(--bazar-color)'},
+  tienda:{label:'🏪 Tienda',    tagClass:'tag-ctx-tienda', cardClass:'ctx-tienda', bg:'#CCFBF1',          color:'#0F766E'},
+  club:  {label:'🟢 Club Patio',tagClass:'tag-ctx-club',   cardClass:'ctx-club',   bg:'var(--club-soft)', color:'var(--club-color)'},
 };
 const PRIO_MAP={
   p1:{label:'🔴 Urgente',     tagClass:'tag-p1',order:1},
@@ -1635,10 +1697,10 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','sprint','club','equipo','coach','control','roles'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','bazar','tienda','equipo','coach'],          canReadAll:false},
-  hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['tareas','coach'],                                   canReadAll:false},
-  hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['tareas','coach'],                                   canReadAll:false},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','equipo','coach','control','roles'], canReadAll:true,  canApprove:true},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','equipo','coach'],  canReadAll:false},
+  hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['tareas','semana','coach'],                           canReadAll:false},
+  hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['tareas','semana','coach'],                           canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   disenador:            {label:'Diseñador/a',         emoji:'🎨', color:'#7C3AED', bg:'#EDE9FE', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   coordinadora_bazares: {label:'Coord. Bazares',      emoji:'🎪', color:'#0891B2', bg:'#CFFAFE', modules:['club','bazar'],                nav:['tareas','club','bazar','equipo'],                   canReadAll:false},
@@ -1660,6 +1722,7 @@ const NAV_META = {
   coach:   {icon:'🧠', label:'Coach'},
   control: {icon:'🎛️', label:'Control'},
   roles:   {icon:'🔑', label:'Roles'},
+  semana:  {icon:'📅', label:'Semana'},
 };
 
 let currentRole = 'pending';
@@ -1749,6 +1812,7 @@ function showPage(p){
   if(p==='bazar') {renderBazarPage();}
   if(p==='tienda'){renderTiendaPage();}
   if(p==='roles') {renderRolesPanel();}
+  if(p==='semana'){renderWeekPlanner();}
   window.scrollTo(0,0);
 }
 
@@ -4398,6 +4462,118 @@ function initDirectorCasaTasks(){
     saveTasks(); renderTasks();
   }
 }
+
+// ═══════════════ WEEK PLANNER ═══════════════
+let selectedWeekDay = null;
+
+function getWeekDays(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dow=today.getDay();
+  const monday=new Date(today);
+  monday.setDate(today.getDate()-(dow===0?6:dow-1));
+  return Array.from({length:7},(_,i)=>{ const d=new Date(monday); d.setDate(monday.getDate()+i); return d; });
+}
+
+function renderWeekPlanner(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=today.toISOString().split('T')[0];
+  const days=getWeekDays();
+
+  // Inicializar día seleccionado al día de hoy
+  if(!selectedWeekDay) selectedWeekDay=todayStr;
+
+  // Rango de la semana
+  const fmt=d=>d.toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+  const rl=document.getElementById('weekRangeLabel');
+  if(rl) rl.textContent=fmt(days[0])+' – '+fmt(days[6]);
+
+  // Progreso semanal global
+  const weekStrs=days.map(d=>d.toISOString().split('T')[0]);
+  const weekTasks=tasks.filter(t=>weekStrs.includes(t.deadline));
+  const wDone=weekTasks.filter(t=>t.done).length;
+  const wPct=weekTasks.length?Math.round(wDone/weekTasks.length*100):0;
+  const pf=document.getElementById('weekProgressFill');
+  const pl=document.getElementById('weekProgressLabel');
+  const pp=document.getElementById('weekProgressPct');
+  if(pf) pf.style.width=wPct+'%';
+  if(pp) pp.textContent=wPct+'%';
+  if(pl) pl.textContent=wDone+' de '+weekTasks.length+' tarea'+( weekTasks.length!==1?'s':'')+' completada'+(wDone!==1?'s':'');
+
+  // Pills de días
+  const strip=document.getElementById('weekDaysStrip'); if(!strip) return;
+  const DNAMES=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  strip.innerHTML='';
+  days.forEach(d=>{
+    const ds=d.toISOString().split('T')[0];
+    const dt=tasks.filter(t=>t.deadline===ds);
+    const pending=dt.filter(t=>!t.done).length;
+    const isToday=ds===todayStr;
+    const isSel=ds===selectedWeekDay;
+    const pill=document.createElement('div');
+    pill.className='week-day-pill'+(isSel?' wp-selected':isToday?' wp-today':'');
+    pill.onclick=()=>{ selectedWeekDay=ds; renderWeekPlanner(); };
+    pill.innerHTML=`
+      <div class="week-day-name">${DNAMES[d.getDay()]}</div>
+      <div class="week-day-num">${d.getDate()}</div>
+      ${dt.length?`<div class="week-day-badge">${pending>0?pending:'✓'}</div>`:'<div style="height:14px;"></div>'}`;
+    strip.appendChild(pill);
+  });
+
+  renderWeekDayTasks(selectedWeekDay);
+}
+
+function renderWeekDayTasks(ds){
+  const el=document.getElementById('weekTaskList'); if(!el) return;
+  const day=new Date(ds+'T00:00:00');
+  const DNAMES_FULL=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const dayName=DNAMES_FULL[day.getDay()];
+  const dayTasks=[...tasks.filter(t=>t.deadline===ds)].sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    return (PRIO_MAP[a.prio]?.order||9)-(PRIO_MAP[b.prio]?.order||9);
+  });
+  const pending=dayTasks.filter(t=>!t.done).length;
+  const done=dayTasks.filter(t=>t.done).length;
+  const prioCol={p1:'var(--p1)',p2:'var(--p2)',p3:'var(--p3)',p4:'var(--p4)'};
+
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <div style="font-size:12px;font-weight:700;color:var(--charcoal);">${dayName} ${day.getDate()}</div>
+    <div style="font-size:10px;color:var(--mid);">${pending} pendiente${pending!==1?'s':''} · ${done} lista${done!==1?'s':''}</div>
+  </div>`;
+
+  if(!dayTasks.length){
+    el.innerHTML+=`<div class="week-empty">📭 Sin tareas para este día.<br><span style="font-size:11px;color:#ccc;">Asigna un deadline desde la pestaña 📋 Tareas.</span></div>`;
+    return;
+  }
+
+  dayTasks.forEach(t=>{
+    const ctx=CTX_MAP[t.ctx]||CTX_MAP.club;
+    const card=document.createElement('div');
+    card.className=`week-task-card wctx-${t.ctx||'club'}${t.done?' wdone':''}`;
+    card.innerHTML=`
+      <div class="week-check ${t.done?'wchecked':''}" onclick="toggleWeekTask('${t.id}')">${t.done?'✓':''}</div>
+      <div class="week-task-info">
+        <div class="week-task-title">${t.text}</div>
+        <div class="week-task-meta">
+          <span class="week-mod-chip" style="background:${ctx.bg};color:${ctx.color};">${ctx.label}</span>
+          ${t.time?`<span style="font-size:9px;color:var(--mid);">⏰ ${t.time}</span>`:''}
+          ${t.owner?`<span style="font-size:9px;color:var(--mid);">· ${t.owner}</span>`:''}
+          <span style="font-size:9px;font-weight:700;color:${prioCol[t.prio]||'var(--mid)'};">${PRIO_MAP[t.prio]?.label||''}</span>
+        </div>
+      </div>`;
+    el.appendChild(card);
+  });
+  el.insertAdjacentHTML('beforeend','<div class="swipe-hint">Toca el círculo para marcar como hecha · ✓</div>');
+}
+
+function toggleWeekTask(id){
+  const t=tasks.find(t=>t.id===id); if(!t) return;
+  t.done=!t.done;
+  saveTasks();
+  renderWeekPlanner();
+  renderTasks(); // sync con lista principal
+  if(t.done) showCelebration(t.text);
+}
+window.toggleWeekTask=toggleWeekTask;
 
 // ═══════════════ PANEL DE ROLES (Admin Dashboard) ═══════════════
 const ROLE_PERMS = {
