@@ -418,6 +418,45 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 /* nav scrollable */
 .bottom-nav{overflow-x:auto;scrollbar-width:none;}
 .bottom-nav::-webkit-scrollbar{display:none;}
+/* ── HIJO PERSONAL DASHBOARD ── */
+.hijo-dash{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;padding:14px 14px 0;}
+@media(max-width:640px){.hijo-dash{grid-template-columns:1fr;}}
+.hijo-dash-col{display:flex;flex-direction:column;gap:10px;}
+.hijo-dash-section{background:var(--bg-card);border-radius:16px;padding:14px;box-shadow:0 2px 10px rgba(45,49,66,.06);border:1px solid rgba(221,227,231,.7);}
+.hijo-dash-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+/* Mood emojis */
+.mood-emoji-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px;}
+.mood-emoji-btn{text-align:center;padding:8px 4px;border-radius:10px;border:2px solid var(--border);background:var(--bg-main);cursor:pointer;transition:all .18s;font-size:22px;line-height:1;}
+.mood-emoji-btn:hover{border-color:var(--primary-blue);background:var(--sage-dim);}
+.mood-emoji-btn.sel{border-color:var(--primary-blue);background:var(--sage-dim);transform:scale(1.08);}
+.mood-emoji-label{font-size:8px;color:var(--text-muted);margin-top:3px;display:block;}
+.mood-history-row-sm{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.mood-history-row-sm:last-child{border-bottom:none;}
+/* Propuestas */
+.proposal-card-sm{background:var(--bg-main);border-radius:9px;padding:8px 10px;margin-bottom:6px;font-size:11px;border-left:3px solid var(--primary-blue);}
+.proposal-status{font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;}
+.ps-pending{background:#FEF3C7;color:#92400E;}
+.ps-approved{background:#DCFCE7;color:#16A34A;}
+.ps-rejected{background:#FEE2E2;color:#DC2626;}
+/* Permission requests */
+.perm-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(45,49,66,.05);}
+.perm-card-hdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+.perm-requester{width:36px;height:36px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.perm-title{font-size:13px;font-weight:700;color:var(--text-main);}
+.perm-detail{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.perm-signatures{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;}
+.perm-sig{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:99px;}
+.perm-sig-done{background:#DCFCE7;color:#16A34A;}
+.perm-sig-pend{background:#FEF3C7;color:#92400E;}
+.perm-sig-no{background:#FEE2E2;color:#DC2626;}
+.perm-actions{display:flex;gap:8px;margin-top:10px;}
+.perm-approve-btn{flex:1;padding:9px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--primary-green),#7DAD2E);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+.perm-reject-btn{flex:1;padding:9px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent-coral),#D94540);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+.perm-status-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;margin-bottom:6px;}
+.psb-pending{background:#FEF3C7;color:#92400E;}
+.psb-approved{background:#DCFCE7;color:#16A34A;}
+.psb-rejected{background:#FEE2E2;color:#DC2626;}
+.hijo-perm-status{background:var(--bg-main);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;}
 /* ── NEW MEMBER MODAL ── */
 .nm-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
 .nm-card{background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;font-family:'Inter',sans-serif;max-height:90vh;overflow-y:auto;}
@@ -1697,6 +1736,150 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     MODAL: SOLICITAR PERMISO (Hijos)
+════════════════════════════════════════ -->
+<div id="permissionModal" class="nm-overlay" onclick="if(event.target===this)closePermissionModal()">
+  <div class="nm-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:15px;font-weight:800;">🔑 Solicitar Permiso</div>
+      <button onclick="closePermissionModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">×</button>
+    </div>
+    <div class="nm-alert err" id="permError"></div>
+    <div class="nm-alert ok"  id="permSuccess"></div>
+    <div class="nm-field">
+      <label class="nm-label">Motivo / Actividad *</label>
+      <input id="permMotivo" class="nm-input" type="text" placeholder="Ej: Salir al cine, Quedarse a dormir...">
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Lugar / Dirección *</label>
+      <input id="permLugar" class="nm-input" type="text" placeholder="Ej: Mall Curicó, Casa de Martín">
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Acompañantes</label>
+      <input id="permAcomp" class="nm-input" type="text" placeholder="Ej: Amigos del colegio, Familia García">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="nm-field">
+        <label class="nm-label">Fecha *</label>
+        <input id="permFecha" class="nm-input" type="date">
+      </div>
+      <div class="nm-field">
+        <label class="nm-label">Hora regreso *</label>
+        <input id="permHoraFin" class="nm-input" type="time">
+      </div>
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Hora de salida</label>
+      <input id="permHoraInicio" class="nm-input" type="time">
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Mensaje adicional (opcional)</label>
+      <textarea id="permMensaje" class="nm-input" rows="2" placeholder="Algo más que quieras comentar..." style="resize:none;"></textarea>
+    </div>
+    <div style="background:var(--bg-main);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--text-muted);margin-bottom:14px;">
+      🔑 Esta solicitud requiere la aprobación de <strong>Mamá</strong> y <strong>Papá</strong> para activarse.
+    </div>
+    <button id="permSubmitBtn" class="btn btn-sage" onclick="submitPermissionRequest()"
+      style="width:100%;padding:13px;font-size:14px;">
+      📤 Enviar solicitud
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: MI PANEL (Hijos / integrantes)
+════════════════════════════════════════ -->
+<div class="page" id="pg-mi-panel">
+  <!-- Header personal del hijo -->
+  <div style="padding:14px 14px 0;" id="miPanelHeader"></div>
+
+  <!-- 3 columnas -->
+  <div class="hijo-dash" id="hijoDash">
+
+    <!-- Col 1: Mis Tareas -->
+    <div class="hijo-dash-col">
+      <div class="hijo-dash-section">
+        <div class="hijo-dash-title">📋 Mis tareas de hoy</div>
+        <div id="misTareasHoy"></div>
+      </div>
+      <div class="hijo-dash-section">
+        <div class="hijo-dash-title">⏳ Próximas pendientes</div>
+        <div id="misTareasProx"></div>
+      </div>
+      <!-- Botón permiso solo para hijos -->
+      <div id="btnPermisoCont" style="display:none;">
+        <button class="btn btn-sage" onclick="openPermissionModal()"
+          style="width:100%;padding:13px;font-size:13px;border-radius:12px;">
+          🔑 Solicitar Permiso
+        </button>
+      </div>
+    </div>
+
+    <!-- Col 2: Check-in Emocional -->
+    <div class="hijo-dash-col">
+      <div class="hijo-dash-section">
+        <div class="hijo-dash-title">💭 ¿Cómo estoy hoy?</div>
+        <div class="mood-emoji-grid" id="moodEmojiGrid"></div>
+        <div id="moodEmojiSelected" style="text-align:center;font-size:11px;color:var(--text-muted);margin-bottom:8px;min-height:16px;"></div>
+        <button class="btn btn-sage btn-sm" onclick="saveDiaryMood()" style="width:100%;">Guardar estado</button>
+      </div>
+      <div class="hijo-dash-section">
+        <div class="hijo-dash-title">📊 Historial reciente</div>
+        <div id="diaryMoodHistory"></div>
+      </div>
+      <!-- Mis permisos (solo hijos) -->
+      <div class="hijo-dash-section" id="misPermisosSection" style="display:none;">
+        <div class="hijo-dash-title">🔑 Mis permisos</div>
+        <div id="misPermisosList"></div>
+      </div>
+    </div>
+
+    <!-- Col 3: Buzón de Propuestas -->
+    <div class="hijo-dash-col">
+      <div class="hijo-dash-section">
+        <div class="hijo-dash-title">💡 Proponer una idea</div>
+        <div class="nm-field">
+          <input id="propTitulo" class="nm-input" type="text" placeholder="Título de la idea *" style="margin-bottom:8px;">
+        </div>
+        <div class="nm-field">
+          <select id="propModulo" class="nm-select" style="margin-bottom:8px;">
+            <option value="">Módulo relacionado...</option>
+            <option value="casa">🏠 Casa</option>
+            <option value="club">🟢 Club Patio</option>
+            <option value="bazar">🛍️ Bazar</option>
+            <option value="tienda">🏪 Tienda</option>
+            <option value="general">✨ General</option>
+          </select>
+        </div>
+        <textarea id="propDesc" class="nm-input" rows="3" placeholder="Describe tu propuesta o mejora..." style="resize:none;margin-bottom:8px;"></textarea>
+        <button class="btn btn-sage btn-sm" onclick="submitProposal()" style="width:100%;">📤 Enviar propuesta</button>
+      </div>
+      <div class="hijo-dash-section">
+        <div class="hijo-dash-title">📬 Mis propuestas enviadas</div>
+        <div id="myProposalsList"><div class="workplan-empty">Sin propuestas aún.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: PERMISOS (Papá / Mamá / Director)
+════════════════════════════════════════ -->
+<div class="page" id="pg-permisos">
+  <div style="padding:14px 14px 0;">
+    <div class="card" style="background:linear-gradient(135deg,#1E2D3D,#2D4A2E);border:none;margin-bottom:14px;">
+      <div style="color:#fff;">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Sistema de Doble Llave</div>
+        <div style="font-size:16px;font-weight:800;">🔑 Centro de Aprobaciones</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">Permisos solicitados por los hijos</div>
+      </div>
+    </div>
+    <div id="permissionsCenter"></div>
+  </div>
+</div>
+
 <!-- ── MODAL ALTA DE INTEGRANTE ── -->
 <div id="newMemberModal" class="nm-overlay" onclick="if(event.target===this)closeNewMemberModal()">
   <div class="nm-card">
@@ -1946,9 +2129,9 @@ const FREQ_MAP={
 const ORG_ID = 'curauma_001';
 const ROLES = {
   director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','roles'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','equipo','coach'],  canReadAll:false},
-  hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['tareas','semana','coach'],                           canReadAll:false},
-  hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['tareas','semana','coach'],                           canReadAll:false},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','permisos','coach'],canReadAll:false},
+  hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
+  hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   disenador:            {label:'Diseñador/a',         emoji:'🎨', color:'#7C3AED', bg:'#EDE9FE', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   coordinadora_bazares: {label:'Coord. Bazares',      emoji:'🎪', color:'#0891B2', bg:'#CFFAFE', modules:['club','bazar'],                nav:['tareas','club','bazar','equipo'],                   canReadAll:false},
@@ -1972,6 +2155,8 @@ const NAV_META = {
   roles:    {icon:'🔑', label:'Roles'},
   semana:   {icon:'📅', label:'Semana'},
   personas: {icon:'🫂', label:'Equipo'},
+  'mi-panel':{icon:'🏠',label:'Mi Panel'},
+  permisos: {icon:'🔑', label:'Permisos'},
 };
 
 let currentRole = 'pending';
@@ -2060,9 +2245,11 @@ function showPage(p){
   if(p==='club')  {renderClubPage();}
   if(p==='bazar') {renderBazarPage();}
   if(p==='tienda'){renderTiendaPage();}
-  if(p==='roles')    {renderRolesPanel();}
-  if(p==='semana')   {renderWeekPlanner();}
-  if(p==='personas') {renderPersonasPanel();}
+  if(p==='roles')     {renderRolesPanel();}
+  if(p==='semana')    {renderWeekPlanner();}
+  if(p==='personas')  {renderPersonasPanel();}
+  if(p==='mi-panel')  {renderMiPanel();}
+  if(p==='permisos')  {renderPermissionsCenter();}
   window.scrollTo(0,0);
 }
 
@@ -4715,6 +4902,305 @@ function initDirectorCasaTasks(){
   }
 }
 
+// ═══════════════ MI PANEL (Dashboard personal Hijo/Integrante) ═══════════════
+
+let diaryMoodSelected = null;
+let myProposals = [];
+let myPermissions = [];
+
+const DIARY_MOODS = [
+  {emoji:'🔥',label:'Motivado', value:'motivado'},
+  {emoji:'😊',label:'Feliz',    value:'feliz'},
+  {emoji:'😴',label:'Cansado',  value:'cansado'},
+  {emoji:'😤',label:'Estresado',value:'estresado'},
+  {emoji:'😔',label:'Triste',   value:'triste'},
+];
+
+function renderMiPanel(){
+  renderMiPanelHeader();
+  renderMisTareas();
+  renderMoodEmojiGrid();
+  renderDiaryHistory();
+  renderMyProposals();
+  renderMyPermissions();
+
+  // Solo hijos pueden solicitar permisos
+  const isHijo = currentRole==='hijo1'||currentRole==='hijo2';
+  const btnCont = document.getElementById('btnPermisoCont');
+  const misPerm = document.getElementById('misPermisosSection');
+  if(btnCont) btnCont.style.display = isHijo ? 'block' : 'none';
+  if(misPerm) misPerm.style.display = isHijo ? 'block' : 'none';
+}
+
+function renderMiPanelHeader(){
+  const el=document.getElementById('miPanelHeader'); if(!el) return;
+  const rc=ROLES[currentRole]||{};
+  const me=currentProfile.displayName||rc.label||'Usuario';
+  const h=new Date().getHours();
+  el.innerHTML=`
+    <div style="background:linear-gradient(135deg,${rc.color}22,${rc.color}11);border:1.5px solid ${rc.color}33;border-radius:14px;padding:14px 16px;margin-bottom:4px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:36px;">${rc.emoji||'👤'}</span>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);">${h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches'} 👋</div>
+        <div style="font-size:17px;font-weight:800;color:${rc.color};">${me}</div>
+        <div style="font-size:10px;color:var(--text-muted);">${rc.label} · ${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</div>
+      </div>
+    </div>`;
+}
+
+function renderMisTareas(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=today.toISOString().split('T')[0];
+  const me=currentProfile.displayName||'';
+  const myTasks=tasks.filter(t=>t.owner===me&&!t.done);
+  const todayT=myTasks.filter(t=>t.deadline===todayStr);
+  const proxT=myTasks.filter(t=>t.deadline&&t.deadline>todayStr).slice(0,5);
+
+  const renderList=(el,list)=>{
+    if(!el) return;
+    if(!list.length){el.innerHTML='<div class="workplan-empty">¡Sin tareas! 🎉</div>';return;}
+    el.innerHTML='';
+    list.forEach(t=>{
+      const prioCol={p1:ROLES.pending&&'var(--accent-coral)',p2:'var(--accent-gold)',p3:'var(--primary-blue)',p4:'var(--text-muted)'};
+      const d=document.createElement('div');
+      d.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;';
+      d.innerHTML=`
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .2s;"
+          onclick="toggleDone('${t.id}');renderMiPanel()"></div>
+        <span style="flex:1;">${t.text}</span>
+        ${t.time?`<span style="font-size:9px;color:var(--text-muted);font-family:monospace;">⏰${t.time}</span>`:''}`;
+      el.appendChild(d);
+    });
+  };
+  renderList(document.getElementById('misTareasHoy'), todayT);
+  renderList(document.getElementById('misTareasProx'), proxT);
+}
+
+function renderMoodEmojiGrid(){
+  const grid=document.getElementById('moodEmojiGrid'); if(!grid) return;
+  grid.innerHTML='';
+  DIARY_MOODS.forEach(m=>{
+    const btn=document.createElement('div');
+    btn.className='mood-emoji-btn'+(diaryMoodSelected===m.value?' sel':'');
+    btn.onclick=()=>{ diaryMoodSelected=m.value; renderMoodEmojiGrid();
+      const lbl=document.getElementById('moodEmojiSelected');
+      if(lbl) lbl.textContent='Seleccionaste: '+m.label+' '+m.emoji; };
+    btn.innerHTML=`<div>${m.emoji}</div><span class="mood-emoji-label">${m.label}</span>`;
+    grid.appendChild(btn);
+  });
+}
+
+function saveDiaryMood(){
+  if(!diaryMoodSelected){toast('Selecciona cómo te sientes primero');return;}
+  const m=DIARY_MOODS.find(x=>x.value===diaryMoodSelected);
+  const entry={date:new Date().toLocaleDateString('es-CL'),ts:Date.now(),mood:diaryMoodSelected,emoji:m.emoji,label:m.label};
+  const history=currentProfile.diaryMood||[];
+  history.unshift(entry);
+  if(history.length>14) history.length=14;
+  currentProfile.diaryMood=history;
+  window.cloudSet&&window.cloudSet('diaryMood',history);
+  // También actualizar currentMood para el panel del Director
+  window.cloudSet&&window.cloudSet('currentMood',
+    diaryMoodSelected==='motivado'||diaryMoodSelected==='feliz'?'green':
+    diaryMoodSelected==='cansado'||diaryMoodSelected==='estresado'?'yellow':'red');
+  window.cloudSet&&window.cloudSet('statusMessage','Hoy me siento '+m.label+' '+m.emoji);
+  diaryMoodSelected=null; renderMiPanel();
+  toast('✅ Estado guardado · '+m.emoji+' '+m.label);
+  writeAuditEntry&&writeAuditEntry('diary_mood',{emoji:m.emoji,mood:m.value});
+}
+window.saveDiaryMood=saveDiaryMood;
+
+function renderDiaryHistory(){
+  const el=document.getElementById('diaryMoodHistory'); if(!el) return;
+  const history=currentProfile.diaryMood||[];
+  if(!history.length){el.innerHTML='<div class="workplan-empty">Sin registros aún.</div>';return;}
+  el.innerHTML=history.slice(0,5).map(h=>`
+    <div class="mood-history-row-sm">
+      <span style="font-size:18px;">${h.emoji}</span>
+      <span style="flex:1;font-weight:600;">${h.label}</span>
+      <span style="font-size:9px;color:var(--text-muted);">${h.date}</span>
+    </div>`).join('');
+}
+
+// ── Propuestas / Buzón de Ideas ──
+function submitProposal(){
+  const titulo=document.getElementById('propTitulo').value.trim();
+  const modulo=document.getElementById('propModulo').value;
+  const desc=document.getElementById('propDesc').value.trim();
+  if(!titulo){toast('⚠️ Escribe el título de la propuesta');return;}
+  const proposal={
+    id:uid(), orgId:ORG_ID,
+    requesterId:currentProfile.uid||'', requesterName:currentProfile.displayName||'',
+    requesterRole:currentRole, titulo, modulo, descripcion:desc,
+    status:'pending', createdAt:new Date().toISOString(), ts:Date.now()
+  };
+  window.saveProposal&&window.saveProposal(proposal);
+  myProposals.unshift(proposal);
+  ['propTitulo','propModulo','propDesc'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
+  renderMyProposals();
+  toast('💡 Propuesta enviada al Director');
+  writeAuditEntry&&writeAuditEntry('proposal_submitted',{emoji:'💡',titulo});
+}
+window.submitProposal=submitProposal;
+
+function renderMyProposals(){
+  const el=document.getElementById('myProposalsList'); if(!el) return;
+  if(!myProposals.length){el.innerHTML='<div class="workplan-empty">Sin propuestas aún.</div>';return;}
+  el.innerHTML=myProposals.slice(0,5).map(p=>`
+    <div class="proposal-card-sm">
+      <div style="font-weight:700;margin-bottom:3px;">${p.titulo}</div>
+      <div style="font-size:9px;color:var(--text-muted);">${p.modulo?'['+p.modulo+'] ':''} ${new Date(p.ts).toLocaleDateString('es-CL')}</div>
+      <span class="proposal-status ${p.status==='approved'?'ps-approved':p.status==='rejected'?'ps-rejected':'ps-pending'}">${p.status==='approved'?'✅ Aceptada':p.status==='rejected'?'❌ Rechazada':'⏳ En revisión'}</span>
+    </div>`).join('');
+}
+
+// ── PERMISOS: Solicitud y Doble Llave ──
+function openPermissionModal(){
+  ['permError','permSuccess'].forEach(id=>{const e=document.getElementById(id);e.style.display='none';e.textContent='';});
+  ['permMotivo','permLugar','permAcomp','permMensaje'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('permFecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('permModal'||'permissionModal').style.display='flex';
+}
+window.openPermissionModal=openPermissionModal;
+function closePermissionModal(){ document.getElementById('permissionModal').style.display='none'; }
+window.closePermissionModal=closePermissionModal;
+
+async function submitPermissionRequest(){
+  const motivo=document.getElementById('permMotivo').value.trim();
+  const lugar=document.getElementById('permLugar').value.trim();
+  const fecha=document.getElementById('permFecha').value;
+  const horaFin=document.getElementById('permHoraFin').value;
+  if(!motivo||!lugar||!fecha||!horaFin){
+    const e=document.getElementById('permError');e.style.display='block';e.textContent='Completa motivo, lugar, fecha y hora de regreso.';return;
+  }
+  const req={
+    id:uid(), orgId:ORG_ID,
+    requesterId:currentProfile.uid||'', requesterName:currentProfile.displayName||'',
+    requesterRole:currentRole, requesterEmoji:(ROLES[currentRole]||{}).emoji||'👤',
+    motivo, lugar, acompañantes:document.getElementById('permAcomp').value.trim(),
+    mensaje:document.getElementById('permMensaje').value.trim(),
+    fecha, horaInicio:document.getElementById('permHoraInicio').value, horaFin,
+    status:'pending', approvedByMom:false, approvedByDad:false,
+    createdAt:new Date().toISOString(), ts:Date.now()
+  };
+  const btn=document.getElementById('permSubmitBtn');
+  btn.disabled=true; btn.textContent='Enviando...';
+  try{
+    await window.savePermissionRequest(req);
+    myPermissions.unshift(req);
+    const s=document.getElementById('permSuccess');
+    s.style.display='block'; s.textContent='✅ Solicitud enviada. Mamá y Papá recibirán la notificación.';
+    toast('🔑 Permiso solicitado — esperando firmas');
+    writeAuditEntry&&writeAuditEntry('permission_requested',{emoji:'🔑',motivo,fecha});
+    setTimeout(()=>{ closePermissionModal(); renderMyPermissions(); },2500);
+  }catch(e){
+    const err=document.getElementById('permError');err.style.display='block';err.textContent='Error: '+e.message;
+  }finally{ btn.disabled=false; btn.textContent='📤 Enviar solicitud'; }
+}
+window.submitPermissionRequest=submitPermissionRequest;
+
+function renderMyPermissions(){
+  const el=document.getElementById('misPermisosList'); if(!el) return;
+  if(!myPermissions.length){el.innerHTML='<div class="workplan-empty">Sin solicitudes de permiso.</div>';return;}
+  el.innerHTML=myPermissions.map(p=>{
+    const statusMap={pending:'⏳ En revisión',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
+    const clsMap={pending:'psb-pending',approved:'psb-approved',rejected:'psb-rejected'};
+    return `<div class="hijo-perm-status">
+      <div class="perm-status-badge ${clsMap[p.status]||'psb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</div>
+      <div style="font-weight:700;font-size:12px;">${p.motivo}</div>
+      <div style="font-size:10px;color:var(--text-muted);">${p.fecha} · ${p.horaFin} · ${p.lugar}</div>
+      ${p.status==='pending'?`<div style="font-size:10px;margin-top:5px;">
+        ${!p.approvedByMom?'⏳ Falta firma de Mamá':'✅ Mamá aprobó'} ·
+        ${!p.approvedByDad?'⏳ Falta firma de Papá':'✅ Papá aprobó'}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── CENTRO DE APROBACIONES (Padres / Director) ──
+let allPermissions = [];
+
+async function renderPermissionsCenter(){
+  const el=document.getElementById('permissionsCenter'); if(!el) return;
+  el.innerHTML='<div class="workplan-empty">Cargando permisos...</div>';
+  try{
+    allPermissions = await window.loadPermissionRequests()||[];
+  }catch(e){ allPermissions=[]; }
+
+  if(!allPermissions.length){
+    el.innerHTML='<div class="empty-state" style="padding:40px 20px;">🎉 Sin solicitudes de permiso pendientes.</div>';
+    return;
+  }
+  el.innerHTML='';
+  allPermissions.forEach(p=>{
+    const card=document.createElement('div');
+    card.className='perm-card';
+    const isMama   = currentRole==='mama';
+    const isDirector= currentRole==='director';
+    const canApprove= isMama||isDirector;
+    const myApproval= isMama?p.approvedByMom:isDirector?p.approvedByDad:false;
+    const statusMap={pending:'⏳ En revisión',approved:'✅ Aprobado por ambos',rejected:'❌ Rechazado'};
+    const clsMap={pending:'psb-pending',approved:'psb-approved',rejected:'psb-rejected'};
+
+    card.innerHTML=`
+      <span class="perm-status-badge ${clsMap[p.status]||'psb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
+      <div class="perm-card-hdr">
+        <div class="perm-requester" style="background:rgba(37,99,235,.12);">${p.requesterEmoji||'👦'}</div>
+        <div>
+          <div class="perm-title">${p.requesterName||'Hijo/a'} solicita: ${p.motivo}</div>
+          <div class="perm-detail">📍 ${p.lugar} · 📅 ${p.fecha} · ⏰ ${p.horaFin||'—'}
+            ${p.acompañantes?'· 👥 '+p.acompañantes:''}
+          </div>
+          ${p.mensaje?`<div class="perm-detail" style="margin-top:4px;font-style:italic;">"${p.mensaje}"</div>`:''}
+        </div>
+      </div>
+      <div class="perm-signatures">
+        <span class="perm-sig ${p.approvedByMom?'perm-sig-done':'perm-sig-pend'}">
+          👩 Mamá: ${p.approvedByMom?'✅ Aprobó':'⏳ Pendiente'}
+        </span>
+        <span class="perm-sig ${p.approvedByDad?'perm-sig-done':'perm-sig-pend'}">
+          👨 Papá: ${p.approvedByDad?'✅ Aprobó':'⏳ Pendiente'}
+        </span>
+      </div>
+      ${canApprove&&p.status==='pending'?`
+        <div class="perm-actions">
+          ${!myApproval?`<button class="perm-approve-btn" onclick="approvePermission('${p.id}')">✅ ${isMama?'Aprobar (Mamá)':'Aprobar (Papá)'}</button>`
+            :`<div style="font-size:11px;color:var(--primary-green);font-weight:700;padding:9px;">✅ Ya aprobaste esta solicitud</div>`}
+          <button class="perm-reject-btn" onclick="rejectPermission('${p.id}')">❌ Rechazar</button>
+        </div>`:''}`;
+    el.appendChild(card);
+  });
+}
+
+async function approvePermission(reqId){
+  const p=allPermissions.find(x=>x.id===reqId); if(!p)return;
+  const isMama=currentRole==='mama';
+  if(isMama) p.approvedByMom=true; else p.approvedByDad=true;
+  if(p.approvedByMom&&p.approvedByDad) p.status='approved';
+  try{
+    await window.updatePermissionRequest(reqId,{
+      approvedByMom:p.approvedByMom, approvedByDad:p.approvedByDad, status:p.status, updatedAt:new Date().toISOString()
+    });
+    toast(p.status==='approved'?'✅ ¡APROBADO! Ambas firmas completas.':'✅ Firma registrada. Falta la otra.');
+    writeAuditEntry&&writeAuditEntry('permission_approved',{emoji:'✅',reqId,role:currentRole,status:p.status});
+    renderPermissionsCenter();
+  }catch(e){toast('⚠️ Error al guardar: '+e.message);}
+}
+window.approvePermission=approvePermission;
+
+async function rejectPermission(reqId){
+  if(!confirm('¿Seguro/a que quieres rechazar este permiso?')) return;
+  const p=allPermissions.find(x=>x.id===reqId); if(!p)return;
+  p.status='rejected'; p.rejectedBy=currentRole; p.rejectedAt=new Date().toISOString();
+  try{
+    await window.updatePermissionRequest(reqId,{status:'rejected',rejectedBy:currentRole,rejectedAt:p.rejectedAt,updatedAt:new Date().toISOString()});
+    toast('❌ Permiso rechazado.');
+    writeAuditEntry&&writeAuditEntry('permission_rejected',{emoji:'❌',reqId,role:currentRole});
+    renderPermissionsCenter();
+  }catch(e){toast('⚠️ Error: '+e.message);}
+}
+window.rejectPermission=rejectPermission;
+
 // ═══════════════ TEAM DASHBOARD · PERSONAS ═══════════════
 
 // Dataset demo por módulo (se fusiona con orgMembers reales si existen)
@@ -5656,6 +6142,35 @@ window.createUserForDirector = async function(email, pass, profileData){
       Promise.resolve().then(()=>deleteApp(secondaryApp)).catch(()=>{});
     }
   }
+};
+
+// ── Solicitudes de Permiso (Doble Llave) ──
+window.savePermissionRequest = async function(req){
+  await setDoc(doc(db,'permission_requests',req.id), req);
+};
+window.updatePermissionRequest = async function(id, data){
+  await setDoc(doc(db,'permission_requests',id), data, {merge:true});
+};
+window.loadPermissionRequests = async function(){
+  try{
+    const { collection:col, getDocs:gd, query:q, where:w, orderBy:ob }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await gd(q(col(db,'permission_requests'), w('orgId','==',ORG_ID)));
+    return snap.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);
+  }catch(e){ console.error('loadPermissions:', e); return []; }
+};
+
+// ── Propuestas / Ideas ──
+window.saveProposal = async function(proposal){
+  await setDoc(doc(db,'proposals',proposal.id), proposal);
+};
+window.loadMyProposals = async function(uid){
+  try{
+    const { collection:col, getDocs:gd, query:q, where:w }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await gd(q(col(db,'proposals'), w('requesterId','==',uid)));
+    return snap.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);
+  }catch(e){ return []; }
 };
 
 // ── Actualizar perfil de usuario por email (para scripts de consola del Director) ──
