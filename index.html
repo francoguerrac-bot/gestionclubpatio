@@ -2252,22 +2252,26 @@ function dbg(msg){ console.log('[RBAC]', msg); }
 
 // ═══════════════ ROLE ROUTER ═══════════════
 function mountRoleUI(role, profile){
-  dbg('✅ mountRoleUI: rol=' + role + ' | email=' + (profile&&profile.email||'?'));
-  document.title = 'Club Patio · ' + (role||'?');
+  // Garantía: profile nunca es null aquí
+  profile = profile || {};
+  role    = role    || profile.role || 'pending';
 
-  // ── Soporte multi-rol: leer array profile.roles si existe ──
-  const allRoles = (Array.isArray(profile&&profile.roles) && profile.roles.length)
-    ? profile.roles
-    : [role||'pending'];
-  const primaryRole = allRoles[0];
+  dbg('✅ mountRoleUI: rol=' + role + ' | email=' + (profile.email||'?'));
+  document.title = 'Club Patio · ' + role;
+
+  try {
+  // ── Soporte multi-rol: leer array profile.roles ──
+  const rawRoles  = Array.isArray(profile.roles) ? profile.roles.filter(Boolean) : [];
+  const allRoles  = rawRoles.length ? rawRoles : [role];
+  const primaryRole = allRoles[0] || 'pending';
 
   currentRole = primaryRole;
   window.currentRole = primaryRole;
-  currentProfile = profile || {};
+  currentProfile = profile;
 
-  // Fusionar nav y módulos de TODOS los roles del usuario
-  const mergedNav     = [...new Set(allRoles.flatMap(r=>(ROLES[r]||{}).nav    ||[]))];
-  const mergedModules = [...new Set(allRoles.flatMap(r=>(ROLES[r]||{}).modules||[]))];
+  // Fusionar nav y módulos de TODOS los roles válidos
+  const mergedNav     = [...new Set(allRoles.flatMap(r => (ROLES[r]||{}).nav    ||[]).filter(Boolean))];
+  const mergedModules = [...new Set(allRoles.flatMap(r => (ROLES[r]||{}).modules||[]).filter(Boolean))];
   const rc = { ...(ROLES[primaryRole]||ROLES.pending), nav:mergedNav, modules:mergedModules };
 
   // Role badge in header
@@ -2301,6 +2305,16 @@ function mountRoleUI(role, profile){
 
   // Stealth audit entry
   writeAuditEntry('login', {emoji:'🔐', role: currentRole});
+
+  } catch(mountErr) {
+    // Safety net: si mountRoleUI falla, mostrar pantalla pendiente limpia
+    console.error('[RBAC] mountRoleUI error:', mountErr);
+    currentRole = 'pending'; window.currentRole = 'pending';
+    const po = document.getElementById('pendingOverlay');
+    if(po){ po.style.display='flex';
+      const pe=document.getElementById('pendingEmail');
+      if(pe) pe.textContent=(profile&&profile.email)||''; }
+  }
 }
 window.mountRoleUI = mountRoleUI;
 
@@ -5489,13 +5503,28 @@ function renderPersonasPanel(){
   const container=document.getElementById('personasContainer'); if(!container) return;
   container.innerHTML='';
 
-  // Fusionar datos reales con mock
+  // Fusionar datos reales con mock — null-safe en todos los campos
   const realByModule = {};
-  (window.orgMembers||[]).filter(m=>m.role&&m.role!=='director'&&m.role!=='pending').forEach(m=>{
-    const mods=(ROLES[m.role]||{}).modules||[];
-    mods.forEach(mod=>{
+  (window.orgMembers||[]).filter(m=>m&&m.role&&m.role!=='director'&&m.role!=='pending').forEach(m=>{
+    // Soporte multi-rol: si tiene roles[], expandir; si no, usar role single
+    const roleList = Array.isArray(m.roles)&&m.roles.length ? m.roles : [m.role];
+    const allMods  = [...new Set(roleList.flatMap(r=>(ROLES[r]||{}).modules||[]))];
+    allMods.forEach(mod=>{
       if(!realByModule[mod]) realByModule[mod]=[];
-      realByModule[mod].push({...m, uid:m.uid||m.email, emoji:(ROLES[m.role]||{}).emoji||'👤', color:(ROLES[m.role]||{}).color||'#888', currentMood:m.currentMood||'green', statusMessage:m.statusMessage||'Sin nota de estado.'});
+      realByModule[mod].push({
+        uid:          m.uid           || m.email || 'unknown',
+        displayName:  m.displayName   || m.email || '—',
+        email:        m.email         || '',
+        role:         m.role          || 'pending',
+        roles:        roleList,
+        emoji:        (ROLES[m.role]||{}).emoji  || '👤',
+        color:        (ROLES[m.role]||{}).color  || '#888',
+        phone:        m.phone         || '',
+        currentMood:  m.currentMood   || 'green',
+        statusMessage:m.statusMessage || 'Sin nota de estado.',
+        lastSeen:     m.lastSeen      || '—',
+        _tasks:       Array.isArray(m._tasks)?m._tasks:[],
+      });
     });
   });
 
@@ -5560,10 +5589,8 @@ function makePersonaCard(p, mod){
     <div class="persona-status ${mood.bar}">${p.statusMessage||'Sin nota de estado.'}</div>
     <div style="font-size:9px;color:var(--mid);margin-bottom:8px;">${mood.label} · Visto ${p.lastSeen||'–'}</div>
     <div class="persona-actions">
-      <button class="pact-btn" onclick="personaMsg('${p.uid}')"
-        title="${p.phone?'WhatsApp: +56 '+p.phone:'Sin teléfono registrado — agrega el número desde el modal de edición'}"
-        style="${!p.phone?'opacity:.4;cursor:not-allowed;':''}"
-        >💬 WA${!p.phone?' 🚫':''}</button>
+      ${p && p.phone ? `<button class="pact-btn" onclick="personaMsg('${p.uid||''}')" title="WhatsApp: ${p.phone}">💬 WA</button>`
+        : `<button class="pact-btn" style="opacity:.35;cursor:not-allowed;" title="Sin teléfono registrado" disabled>💬 WA 🚫</button>`}
       <button class="pact-btn" onclick="personaMeeting('${p.displayName}')">📅 Reunión</button>
       <button class="pact-btn" onclick="personaTasks('${p.displayName}')">🔄 Tareas</button>
     </div>`;
@@ -6360,32 +6387,44 @@ const ROLE_MODULES = {
 onAuthStateChanged(auth, async (user)=>{
   if(user){
     currentUser = user;
-
-
-    let data = {}, profile = null;
-    const preset = PRESET_ROLES[user.email.toLowerCase()];
-
+    // profile NUNCA puede ser null al llegar a bootApp — siempre es al menos {}
+    let data = {}, profile = { uid:user.uid, email:user.email, role:'pending', roles:[], modules:[] };
+    const preset = PRESET_ROLES[(user.email||'').toLowerCase()];
 
     try{
       const snap = await getDoc(doc(db,'users',user.uid));
-  
 
-      if(snap.exists()){
-        data    = snap.data();
-        profile = {...snap.data()};
-    
+      if(snap.exists() && snap.data()){
+        const raw = snap.data();
+        data    = raw;
+        // Asegurar campos mínimos siempre presentes
+        profile = {
+          uid:     user.uid,
+          email:   user.email,
+          role:    raw.role    || 'pending',
+          roles:   Array.isArray(raw.roles) ? raw.roles : (raw.role ? [raw.role] : []),
+          modules: Array.isArray(raw.modules) ? raw.modules : [],
+          displayName:    raw.displayName    || user.email.split('@')[0],
+          phone:          raw.phone          || '',
+          currentMood:    raw.currentMood    || 'green',
+          statusMessage:  raw.statusMessage  || '',
+          onboardingComplete: raw.onboardingComplete || false,
+          ...raw // el resto de los campos originales
+        };
       } else {
+        // Cuenta nueva: crear documento
         profile = await createUserProfile(user.uid, user.email);
-        data    = {...profile};
-    
+        profile.roles   = profile.roles   || (profile.role ? [profile.role] : ['pending']);
+        profile.modules = profile.modules || [];
+        data = {...profile};
       }
 
-      // SIEMPRE forzar el rol correcto para emails pre-asignados
+      // Forzar rol correcto para emails pre-asignados (ej: Director)
       if(preset && profile.role !== preset.role){
-    
         const update = {
           uid: user.uid, orgId: ORG_ID, email: user.email,
           role: preset.role, displayName: preset.displayName,
+          roles: [preset.role],
           modules: ROLE_MODULES[preset.role] || [],
           onboardingComplete: true,
           profile: { avatarEmoji: preset.emoji, color: preset.color },
@@ -6393,37 +6432,41 @@ onAuthStateChanged(auth, async (user)=>{
         };
         await setDoc(doc(db,'users',user.uid), update, {merge:true});
         profile = {...profile, ...update};
-        data    = {...data, ...update};
-    
-      } else if(preset) {
-    
+        data    = {...data,    ...update};
       }
 
-      // Parche de teléfono: aplicar corrección si el campo está vacío o tiene número falso
-      const phonePatch = PHONE_PATCHES[user.email.toLowerCase()];
-      if(phonePatch && (!profile.phone || profile.phone === '' || profile.phone === '+56912345678')){
-        await setDoc(doc(db,'users',user.uid),{phone: phonePatch},{merge:true});
+      // Parche de teléfono (solo si phone está vacío o incorrecto)
+      const phonePatch = (window.PHONE_PATCHES||{})[(user.email||'').toLowerCase()];
+      if(phonePatch && !profile.phone){
+        await setDoc(doc(db,'users',user.uid),{phone:phonePatch},{merge:true}).catch(()=>{});
         profile.phone = phonePatch;
         data.phone    = phonePatch;
-        console.log('[PHONE_PATCH] Teléfono actualizado para', user.email, '→', phonePatch);
+        console.log('[PHONE_PATCH]', user.email, '→', phonePatch);
       }
 
       setDoc(doc(db,'users',user.uid),{lastSeen:new Date().toISOString()},{merge:true}).catch(()=>{});
-    }catch(e){
-  
-      // Fallback: usar preset directamente si Firestore falla
-      if(preset){
-        profile = { uid:user.uid, email:user.email, role:preset.role,
-          displayName:preset.displayName, modules:ROLE_MODULES[preset.role]||[],
-          onboardingComplete:true };
-        console.log('[RBAC] Fallback aplicado, rol:', preset.role);
-      }
-    }
 
+    }catch(e){
+      console.error('[AUTH] Error cargando sesión:', e.code || e.message);
+      // Fallback robusto: construir profile mínimo funcional
+      const fb = preset ? {
+        uid:user.uid, email:user.email,
+        role:preset.role, roles:[preset.role],
+        displayName:preset.displayName, modules:ROLE_MODULES[preset.role]||[],
+        phone:'', currentMood:'green', statusMessage:'', onboardingComplete:true
+      } : {
+        uid:user.uid, email:user.email,
+        role:'pending', roles:[], modules:[],
+        displayName:user.email.split('@')[0],
+        phone:'', currentMood:'green', statusMessage:'', onboardingComplete:false
+      };
+      profile = fb; // NUNCA null
+    }
 
     overlay.style.display = 'none';
     booted = true;
-    window.bootApp(data, profile);
+    // Garantía final: profile nunca llega null a bootApp
+    window.bootApp(data || {}, profile || {uid:user.uid,email:user.email,role:'pending',roles:[],modules:[]});
   }else{
     currentUser = null;
     booted = false;
