@@ -2314,6 +2314,51 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 
 <div class="toast" id="toast"></div>
 
+<!-- ── PWA INSTALL BANNER ── -->
+<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9990;background:linear-gradient(135deg,#1E2D3D,#2D4A3E);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);width:calc(100% - 28px);max-width:380px;font-family:'Inter',sans-serif;border:1px solid rgba(91,192,190,.3);animation:pwa-slide-in .4s cubic-bezier(.34,1.56,.64,1);">
+  @keyframes pwa-slide-in{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  <div style="display:flex;align-items:center;gap:12px;">
+    <img src="/assets/Logo2.png" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px;">Club Patio · Instalar App</div>
+      <div style="font-size:11px;color:#9CA3AF;line-height:1.4;">Acceso directo desde tu pantalla de inicio</div>
+    </div>
+    <button onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:none;border:none;color:#6B7280;font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;">×</button>
+  </div>
+  <button id="pwaInstallBtn" onclick="triggerPwaInstall()" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.02em;">
+    📲 Descargar App
+  </button>
+</div>
+
+<!-- ── PWA iOS INSTRUCTIONS MODAL ── -->
+<div id="pwaIosModal" style="display:none;position:fixed;inset:0;z-index:9995;background:rgba(0,0,0,.7);align-items:flex-end;justify-content:center;padding:0;">
+  <div style="background:#1E2D3D;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;font-family:'Inter',sans-serif;animation:pwa-slide-in .3s ease;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <img src="/assets/Logo2.png" style="width:60px;height:60px;border-radius:14px;object-fit:cover;margin-bottom:10px;" onerror="this.style.display='none'">
+      <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px;">Instalar en iPhone</div>
+      <div style="font-size:12px;color:#9CA3AF;">Sigue estos pasos en Safari</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border-radius:12px;padding:12px;">
+        <span style="font-size:24px;flex-shrink:0;">1️⃣</span>
+        <div style="color:#e5e7eb;font-size:13px;line-height:1.4;">Toca el botón de compartir <strong style="color:#5BC0BE;">⬆️</strong> en la barra inferior de Safari</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border-radius:12px;padding:12px;">
+        <span style="font-size:24px;flex-shrink:0;">2️⃣</span>
+        <div style="color:#e5e7eb;font-size:13px;line-height:1.4;">Desplázate hacia abajo y selecciona <strong style="color:#5BC0BE;">"Añadir a pantalla de inicio"</strong></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border-radius:12px;padding:12px;">
+        <span style="font-size:24px;flex-shrink:0;">3️⃣</span>
+        <div style="color:#e5e7eb;font-size:13px;line-height:1.4;">Toca <strong style="color:#5BC0BE;">"Añadir"</strong> — el ícono aparecerá en tu pantalla de inicio</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#6B7280;text-align:center;margin-bottom:14px;">⚠️ Debes usar Safari. No funciona desde Chrome en iPhone.</div>
+    <button onclick="document.getElementById('pwaIosModal').style.display='none'" style="width:100%;padding:13px;background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.2);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">
+      Entendido
+    </button>
+  </div>
+</div>
+
 <!-- debug panel eliminado (RBAC confirmado funcionando) -->
 
 <script>
@@ -7259,17 +7304,77 @@ onAuthStateChanged(auth, async (user)=>{
 </script>
 <!-- ── PWA: Registro del Service Worker ── -->
 <script>
+// ── PWA: Service Worker ──
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('/sw.js')
-      .then(reg=>{
-        console.log('[PWA] Service Worker registrado:', reg.scope);
-      })
-      .catch(err=>{
-        console.warn('[PWA] Error al registrar SW:', err);
-      });
+      .then(reg=>console.log('[PWA] SW registrado:', reg.scope))
+      .catch(err=>console.warn('[PWA] SW error:', err));
   });
 }
+
+// ── PWA: Banner de instalación inteligente ──
+let pwaInstallEvent = null;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                  || window.navigator.standalone === true;
+
+// Android / Chrome: capturar el evento nativo de instalación
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  pwaInstallEvent = e;
+  // Mostrar el banner después de 3 segundos si no está instalada
+  if(!isStandalone){
+    setTimeout(()=>{
+      document.getElementById('pwaInstallBanner').style.display='flex';
+    }, 3000);
+  }
+});
+
+// Cuando el usuario instala la app, ocultar el banner
+window.addEventListener('appinstalled', ()=>{
+  console.log('[PWA] App instalada');
+  document.getElementById('pwaInstallBanner').style.display='none';
+  pwaInstallEvent = null;
+  if(window.toast) window.toast('✅ ¡App instalada! Búscala en tu pantalla de inicio');
+});
+
+// iOS: mostrar instrucciones manuales si aún no está instalada
+if(isIOS && !isStandalone){
+  setTimeout(()=>{
+    document.getElementById('pwaInstallBanner').style.display='flex';
+    // Cambiar el botón para abrir instrucciones de iOS
+    const btn = document.getElementById('pwaInstallBtn');
+    if(btn){
+      btn.textContent='📲 Ver cómo instalar en iPhone';
+      btn.onclick = ()=>{
+        document.getElementById('pwaInstallBanner').style.display='none';
+        document.getElementById('pwaIosModal').style.display='flex';
+      };
+    }
+  }, 3000);
+}
+
+function triggerPwaInstall(){
+  if(pwaInstallEvent){
+    // Android: disparar el diálogo nativo del navegador
+    pwaInstallEvent.prompt();
+    pwaInstallEvent.userChoice.then(choice=>{
+      console.log('[PWA] Respuesta del usuario:', choice.outcome);
+      if(choice.outcome === 'accepted'){
+        document.getElementById('pwaInstallBanner').style.display='none';
+      }
+      pwaInstallEvent = null;
+    });
+  } else if(isIOS){
+    document.getElementById('pwaInstallBanner').style.display='none';
+    document.getElementById('pwaIosModal').style.display='flex';
+  } else {
+    // Fallback: mostrar instrucciones genéricas
+    if(window.toast) window.toast('Abre el menú del navegador y selecciona "Instalar app" o "Agregar a pantalla de inicio"');
+  }
+}
+window.triggerPwaInstall = triggerPwaInstall;
 </script>
 </body>
 </html>
