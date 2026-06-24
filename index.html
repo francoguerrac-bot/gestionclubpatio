@@ -367,6 +367,44 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 /* nav scrollable */
 .bottom-nav{overflow-x:auto;scrollbar-width:none;}
 .bottom-nav::-webkit-scrollbar{display:none;}
+/* ── TEAM DASHBOARD (PERSONAS) ── */
+.personas-module-hdr{display:flex;align-items:center;gap:8px;padding:10px 0 6px;border-bottom:2px solid var(--border);margin-bottom:10px;}
+.personas-module-icon{font-size:18px;}
+.personas-module-title{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);}
+.personas-module-count{font-size:10px;font-weight:600;background:var(--border);color:var(--mid);padding:2px 8px;border-radius:99px;margin-left:auto;}
+.personas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px;}
+.persona-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:0;transition:box-shadow .2s;position:relative;overflow:hidden;}
+.persona-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.persona-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.persona-card-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.persona-avatar{width:42px;height:42px;border-radius:50%;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.persona-name{font-size:13px;font-weight:800;color:var(--charcoal);margin-bottom:2px;}
+.persona-role-label{font-size:10px;color:var(--mid);}
+.persona-mood-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:4px;margin-left:auto;box-shadow:0 0 0 2px #fff,0 0 0 3px currentColor;}
+.mood-green{color:#16A34A;background:#16A34A;}
+.mood-yellow{color:#D97706;background:#D97706;}
+.mood-red{color:#DC2626;background:#DC2626;}
+.persona-load{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+.load-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;}
+.load-pending{background:#FEF3C7;color:#92400E;}
+.load-overdue{background:#FEE2E2;color:#DC2626;}
+.load-done{background:#DCFCE7;color:#16A34A;}
+.persona-status{font-size:11px;color:#444;line-height:1.45;padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:10px;border-left:3px solid var(--border);}
+.persona-status.sm-green{border-color:#16A34A;background:#F0FDF4;}
+.persona-status.sm-yellow{border-color:#D97706;background:#FFFBEB;}
+.persona-status.sm-red{border-color:#DC2626;background:#FEF2F2;}
+.persona-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.pact-btn{flex:1;font-size:10px;font-weight:600;padding:6px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--charcoal);cursor:pointer;text-align:center;transition:all .15s;white-space:nowrap;font-family:'Inter',sans-serif;}
+.pact-btn:hover{background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
+.persona-lastseen{font-size:9px;color:#C4C4C4;margin-top:7px;text-align:right;}
+/* Mood self-update bar (non-director) */
+.mood-selfbar{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--charcoal);border-top:1px solid #333;}
+.mood-self-label{font-size:10px;color:#888;flex-shrink:0;}
+.mood-self-btns{display:flex;gap:4px;}
+.mood-self-btn{font-size:16px;cursor:pointer;padding:2px 5px;border-radius:6px;border:1.5px solid transparent;transition:all .15s;line-height:1;}
+.mood-self-btn.sel{border-color:#fff;}
+.mood-self-input{flex:1;font-size:11px;background:#2a2a2a;border:1px solid #444;color:#eee;border-radius:7px;padding:4px 8px;outline:none;font-family:'Inter',sans-serif;}
+.mood-self-save{font-size:10px;font-weight:700;padding:4px 10px;border-radius:7px;border:none;background:var(--sage);color:#fff;cursor:pointer;font-family:'Inter',sans-serif;}
 /* ── RBAC · ROLE SYSTEM ── */
 .role-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
 .pending-overlay{position:fixed;inset:0;z-index:180;background:linear-gradient(160deg,#1A1A1A 0%,#243b32 100%);display:none;align-items:center;justify-content:center;padding:24px;}
@@ -1552,7 +1590,47 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 </div>
 
 <!-- ══════════════════════════════════════
-     PAGE 8 · SEMANA EN CURSO (Time-blocking Grid)
+     PAGE 8 · PERSONAS (Team Dashboard · Director)
+════════════════════════════════════════ -->
+<div class="page" id="pg-personas">
+  <div style="padding:14px 14px 0;">
+
+    <!-- Header -->
+    <div class="card" style="background:linear-gradient(135deg,#1A1A1A,#1a2f1a);border:none;margin-bottom:12px;">
+      <div style="color:#fff;">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Director · Gestión de Talento</div>
+        <div style="font-size:16px;font-weight:800;">👥 Estado Operativo del Equipo</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">Detecta cuellos de botella y actúa de forma táctica</div>
+      </div>
+    </div>
+
+    <!-- Leyenda semáforo -->
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-size:11px;display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:#16A34A;display:inline-block;"></span>🟢 Óptimo / Avanzando</span>
+      <span style="font-size:11px;display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:#D97706;display:inline-block;"></span>🟡 Requiere apoyo</span>
+      <span style="font-size:11px;display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block;"></span>🔴 Bloqueado / Urgente</span>
+    </div>
+
+    <!-- Grid dinámico por módulo -->
+    <div id="personasContainer"></div>
+
+  </div>
+</div>
+
+<!-- ── MOOD SELF-UPDATE BAR (miembros no-director) ── -->
+<div id="moodSelfBar" class="mood-selfbar" style="display:none;position:fixed;bottom:60px;left:0;right:0;z-index:55;">
+  <span class="mood-self-label">Estado:</span>
+  <div class="mood-self-btns">
+    <span class="mood-self-btn" id="msb-green" onclick="selectSelfMood('green',this)" title="Óptimo">🟢</span>
+    <span class="mood-self-btn" id="msb-yellow" onclick="selectSelfMood('yellow',this)" title="Requiere apoyo">🟡</span>
+    <span class="mood-self-btn" id="msb-red" onclick="selectSelfMood('red',this)" title="Bloqueado">🔴</span>
+  </div>
+  <input class="mood-self-input" id="moodSelfInput" type="text" placeholder="Nota rápida... (ej: Esperando aprobación)">
+  <button class="mood-self-save" onclick="saveSelfMood()">Guardar</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 9 · SEMANA EN CURSO (Time-blocking Grid)
 ════════════════════════════════════════ -->
 <div class="page" id="pg-semana">
 
@@ -1700,7 +1778,7 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','equipo','coach','control','roles'], canReadAll:true,  canApprove:true},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','roles'], canReadAll:true,  canApprove:true},
   mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','equipo','coach'],  canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['tareas','semana','coach'],                           canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['tareas','semana','coach'],                           canReadAll:false},
@@ -1724,8 +1802,9 @@ const NAV_META = {
   equipo:  {icon:'👥', label:'Equipo'},
   coach:   {icon:'🧠', label:'Coach'},
   control: {icon:'🎛️', label:'Control'},
-  roles:   {icon:'🔑', label:'Roles'},
-  semana:  {icon:'📅', label:'Semana'},
+  roles:    {icon:'🔑', label:'Roles'},
+  semana:   {icon:'📅', label:'Semana'},
+  personas: {icon:'🫂', label:'Equipo'},
 };
 
 let currentRole = 'pending';
@@ -1814,8 +1893,9 @@ function showPage(p){
   if(p==='club')  {renderClubPage();}
   if(p==='bazar') {renderBazarPage();}
   if(p==='tienda'){renderTiendaPage();}
-  if(p==='roles') {renderRolesPanel();}
-  if(p==='semana'){renderWeekPlanner();}
+  if(p==='roles')    {renderRolesPanel();}
+  if(p==='semana')   {renderWeekPlanner();}
+  if(p==='personas') {renderPersonasPanel();}
   window.scrollTo(0,0);
 }
 
@@ -1851,6 +1931,7 @@ function mountRoleUI(role, profile){
 
   // Director loads org
   if(currentRole === 'director') setTimeout(()=>window.loadOrgData&&window.loadOrgData(), 600);
+  else setTimeout(initMoodSelfBar, 400);
 
   // Inicializar módulos según rol
   const rc2 = ROLES[currentRole]||{};
@@ -4457,6 +4538,195 @@ function initDirectorCasaTasks(){
     saveTasks(); renderTasks();
   }
 }
+
+// ═══════════════ TEAM DASHBOARD · PERSONAS ═══════════════
+
+// Dataset demo por módulo (se fusiona con orgMembers reales si existen)
+const PERSONAS_MOCK = {
+  casa: [
+    {uid:'pm_mama', displayName:'Mamá', role:'mama', emoji:'👩', color:'#DB2777',
+     currentMood:'green', statusMessage:'Todo al día. Nómina Bazar subida ✓', lastSeen:'hace 10 min'},
+    {uid:'pm_h1',  displayName:'Hijo 1', role:'hijo1', emoji:'👦', color:'#2563EB',
+     currentMood:'yellow', statusMessage:'Faltan 2 repasos de matemáticas. Agotado post-colegio.', lastSeen:'hace 1h'},
+    {uid:'pm_h2',  displayName:'Hijo 2', role:'hijo2', emoji:'👧', color:'#7C3AED',
+     currentMood:'green', statusMessage:'Check-in emocional completado ✓ Con energía.', lastSeen:'hace 30 min'},
+  ],
+  club: [
+    {uid:'pm_pub', displayName:'Publicista', role:'publicista', emoji:'📣', color:'#D97706',
+     currentMood:'yellow', statusMessage:'Esperando aprobación de 2 diseños del Director.', lastSeen:'hace 45 min'},
+    {uid:'pm_dis', displayName:'Diseñador/a', role:'disenador', emoji:'🎨', color:'#7C3AED',
+     currentMood:'green', statusMessage:'3 piezas publicadas esta semana. Meta cumplida ✓', lastSeen:'hace 1h'},
+    {uid:'pm_cb',  displayName:'Coord. Bazares', role:'coordinadora_bazares', emoji:'🎪', color:'#0891B2',
+     currentMood:'red', statusMessage:'🚨 Bloqueada: Permisos AIM sin confirmar. Necesita gestión.', lastSeen:'hace 5 min'},
+  ],
+  bazar: [
+    {uid:'pm_stf', displayName:'Staff Montaje', role:'staff_montaje', emoji:'🔧', color:'#64748B',
+     currentMood:'green', statusMessage:'Confirmé disponibilidad para el jueves ✓', lastSeen:'hace 2h'},
+  ],
+  tienda: [
+    {uid:'pm_ct',  displayName:'Coord. Tienda', role:'coordinadora_tienda', emoji:'🏪', color:'#16A34A',
+     currentMood:'yellow', statusMessage:'Esperando reporte mensual de 3 emprendedores.', lastSeen:'hace 1h'},
+    {uid:'pm_vend',displayName:'Vendedor/a', role:'vendedor', emoji:'💼', color:'#0F766E',
+     currentMood:'green', statusMessage:'Tienda abierta. Sin novedades de inventario.', lastSeen:'hace 5 min'},
+    {uid:'pm_nat', displayName:'Nathaniel', role:'programador', emoji:'💻', color:'#1D4ED8',
+     currentMood:'green', statusMessage:'Kanban al día. 3 ítems esperando validación de precios.', lastSeen:'hace 20 min'},
+  ],
+};
+
+const MODULE_LABELS_P = {
+  casa:  {icon:'🏠', label:'Casa · Familia'},
+  club:  {icon:'🟢', label:'Club Patio'},
+  bazar: {icon:'🛍️', label:'Bazar'},
+  tienda:{icon:'🏪', label:'Tienda'},
+};
+
+const MOOD_META = {
+  green:  {dot:'mood-green',  label:'🟢 Óptimo',        bar:'sm-green'},
+  yellow: {dot:'mood-yellow', label:'🟡 Requiere apoyo', bar:'sm-yellow'},
+  red:    {dot:'mood-red',    label:'🔴 Bloqueado',      bar:'sm-red'},
+};
+
+function renderPersonasPanel(){
+  if(currentRole!=='director') return;
+  const container=document.getElementById('personasContainer'); if(!container) return;
+  container.innerHTML='';
+
+  // Fusionar datos reales con mock
+  const realByModule = {};
+  (window.orgMembers||[]).filter(m=>m.role&&m.role!=='director'&&m.role!=='pending').forEach(m=>{
+    const mods=(ROLES[m.role]||{}).modules||[];
+    mods.forEach(mod=>{
+      if(!realByModule[mod]) realByModule[mod]=[];
+      realByModule[mod].push({...m, uid:m.uid||m.email, emoji:(ROLES[m.role]||{}).emoji||'👤', color:(ROLES[m.role]||{}).color||'#888', currentMood:m.currentMood||'green', statusMessage:m.statusMessage||'Sin nota de estado.'});
+    });
+  });
+
+  Object.entries(MODULE_LABELS_P).forEach(([mod, meta])=>{
+    // Usar datos reales si hay, si no usar mock
+    const people = Object.keys(realByModule).length
+      ? (realByModule[mod]||[])
+      : (PERSONAS_MOCK[mod]||[]);
+    if(!people.length) return;
+
+    // Header del módulo
+    const sec=document.createElement('div');
+    sec.innerHTML=`
+      <div class="personas-module-hdr" style="border-color:${getModColor(mod)}33;">
+        <span class="personas-module-icon">${meta.icon}</span>
+        <span class="personas-module-title" style="color:${getModColor(mod)}">${meta.label}</span>
+        <span class="personas-module-count">${people.length} persona${people.length!==1?'s':''}</span>
+      </div>
+      <div class="personas-grid" id="pgrid-${mod}"></div>`;
+    container.appendChild(sec);
+
+    const grid=sec.querySelector('#pgrid-'+mod);
+    people.forEach(p=>grid.appendChild(makePersonaCard(p,mod)));
+  });
+}
+
+function getModColor(mod){
+  return {casa:'#B5651D',club:'#1F7A52',bazar:'#2A5FCC',tienda:'#0F766E'}[mod]||'#6B7280';
+}
+
+function makePersonaCard(p, mod){
+  const mood=MOOD_META[p.currentMood]||MOOD_META.green;
+  const rc=ROLES[p.role]||{};
+
+  // Tareas asignadas a esta persona
+  const personTasks=tasks.filter(t=>t.owner===p.displayName||t.owner===p.uid);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const pending=personTasks.filter(t=>!t.done).length;
+  const overdue=personTasks.filter(t=>!t.done&&t.deadline&&new Date(t.deadline+'T00:00:00')<today).length;
+  const done=personTasks.filter(t=>t.done).length;
+
+  const card=document.createElement('div');
+  card.className='persona-card';
+  card.style.setProperty('border-top-color', p.color);
+  card.style.borderTop='3px solid '+p.color;
+
+  card.innerHTML=`
+    <div class="persona-card-top">
+      <div class="persona-avatar" style="background:${p.color}18;color:${p.color};">${p.emoji}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="persona-name">${p.displayName}</div>
+        <div class="persona-role-label">${rc.label||p.role}</div>
+      </div>
+      <div class="persona-mood-dot ${mood.dot}" title="${mood.label}"></div>
+    </div>
+    <div class="persona-load">
+      ${pending>0?`<span class="load-chip load-pending">📋 ${pending} pendiente${pending!==1?'s':''}</span>`:''}
+      ${overdue>0?`<span class="load-chip load-overdue">🚨 ${overdue} vencida${overdue!==1?'s':''}</span>`:''}
+      ${done>0?`<span class="load-chip load-done">✓ ${done} lista${done!==1?'s':''}</span>`:''}
+      ${!pending&&!overdue&&!done?`<span class="load-chip" style="background:#F3F4F6;color:#9CA3AF;">Sin tareas asignadas</span>`:''}
+    </div>
+    <div class="persona-status ${mood.bar}">${p.statusMessage||'Sin nota de estado.'}</div>
+    <div style="font-size:9px;color:var(--mid);margin-bottom:8px;">${mood.label} · Visto ${p.lastSeen||'–'}</div>
+    <div class="persona-actions">
+      <button class="pact-btn" onclick="personaMsg('${p.displayName}')">💬 Mensaje</button>
+      <button class="pact-btn" onclick="personaMeeting('${p.displayName}')">📅 Reunión</button>
+      <button class="pact-btn" onclick="personaTasks('${p.displayName}')">🔄 Tareas</button>
+    </div>`;
+  return card;
+}
+
+// Acciones rápidas del Director
+function personaMsg(name){
+  toast('💬 Mensaje para '+name+' — integración WhatsApp próximamente');
+  writeAuditEntry&&writeAuditEntry('director_msg_intent',{emoji:'💬',target:name});
+}
+function personaMeeting(name){
+  const today=new Date();
+  const dl=new Date(today); dl.setDate(today.getDate()+1);
+  tasks.unshift({id:uid(),text:'📅 Reunión con '+name,ctx:'club',prio:'p1',freq:'unica',deadline:dl.toISOString().split('T')[0],time:'10:00',dur:30,done:false,ts:Date.now(),owner:'Director',autoGenerated:false});
+  saveTasks(); renderTasks();
+  toast('📅 Reunión agendada con '+name+' para mañana 10:00');
+  showPage('tareas');
+}
+function personaTasks(name){
+  setCF('todo'); setSort('prioridad');
+  showPage('tareas');
+  setTimeout(()=>{
+    const inp=document.getElementById('captureInput');
+    if(inp) inp.placeholder='Mostrando tareas de '+name+'...';
+    const filtered=tasks.filter(t=>t.owner===name);
+    const list=document.getElementById('taskList'); if(!list)return;
+    if(!filtered.length){toast('Sin tareas asignadas a '+name);return;}
+    toast('🔍 Filtrando '+filtered.length+' tarea'+( filtered.length!==1?'s':'')+' de '+name);
+  },200);
+}
+window.personaMsg=personaMsg; window.personaMeeting=personaMeeting; window.personaTasks=personaTasks;
+
+// ── Mood self-update (usuarios no-director) ──
+let selfMoodSelected='green';
+
+function initMoodSelfBar(){
+  if(currentRole==='director'||currentRole==='pending') return;
+  const bar=document.getElementById('moodSelfBar');
+  if(bar) bar.style.display='flex';
+  // Cargar estado guardado
+  const saved=currentProfile.currentMood;
+  if(saved){ selectSelfMood(saved, document.getElementById('msb-'+saved)); }
+  const inp=document.getElementById('moodSelfInput');
+  if(inp&&currentProfile.statusMessage) inp.value=currentProfile.statusMessage;
+}
+
+function selectSelfMood(mood, el){
+  selfMoodSelected=mood;
+  document.querySelectorAll('.mood-self-btn').forEach(b=>b.classList.remove('sel'));
+  if(el) el.classList.add('sel');
+}
+window.selectSelfMood=selectSelfMood;
+
+function saveSelfMood(){
+  const msg=(document.getElementById('moodSelfInput')||{}).value||'';
+  currentProfile.currentMood=selfMoodSelected;
+  currentProfile.statusMessage=msg;
+  window.cloudSet&&window.cloudSet('currentMood',selfMoodSelected);
+  window.cloudSet&&window.cloudSet('statusMessage',msg);
+  toast('✅ Estado actualizado');
+  writeAuditEntry&&writeAuditEntry('mood_self_update',{emoji:'🎭',mood:selfMoodSelected,msg:msg.slice(0,40)});
+}
+window.saveSelfMood=saveSelfMood;
 
 // ═══════════════ WEEK PLANNER · TIME-BLOCKING GRID ═══════════════
 
