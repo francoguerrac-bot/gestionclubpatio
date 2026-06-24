@@ -2072,6 +2072,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <label class="nm-label">Mensaje adicional (opcional)</label>
       <textarea id="permMensaje" class="nm-input" rows="2" placeholder="Algo más que quieras comentar..." style="resize:none;"></textarea>
     </div>
+
+    <!-- Campo obligatorio: Mi Compromiso (psicología de negociación responsable) -->
+    <div class="nm-field">
+      <label class="nm-label" style="color:var(--primary-blue);">🤝 Mi Compromiso * <span style="font-size:9px;font-weight:400;color:var(--text-muted);">(obligatorio)</span></label>
+      <textarea id="permCompromiso" class="nm-input" rows="3"
+        placeholder="Si me dan este permiso, me comprometo a..."
+        style="resize:none;border-color:var(--primary-blue);"></textarea>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">
+        Escribe qué harás a cambio o cómo cumplirás con tus responsabilidades.
+      </div>
+    </div>
+
     <div style="background:var(--bg-main);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--text-muted);margin-bottom:14px;">
       🔑 Esta solicitud requiere la aprobación de <strong>Mamá</strong> y <strong>Papá</strong> para activarse.
     </div>
@@ -2625,8 +2637,10 @@ function mountRoleUI(role, profile){
   if(first) showPage(first);
 
   // Director loads org
-  if(currentRole === 'director') setTimeout(()=>window.loadOrgData&&window.loadOrgData(), 600);
-  else setTimeout(initMoodSelfBar, 400);
+  if(currentRole === 'director'){
+    setTimeout(()=>window.loadOrgData&&window.loadOrgData(), 600);
+    setTimeout(()=>window.checkPendingPermissions&&window.checkPendingPermissions(), 1500);
+  } else setTimeout(initMoodSelfBar, 400);
 
   // Inicializar módulos (rc.modules ya fusionado para multi-rol)
   if(rc.modules&&rc.modules.includes('casa'))  setTimeout(initCasaModule,  200);
@@ -5869,10 +5883,12 @@ function renderMyProposals(){
 
 // ── PERMISOS: Solicitud y Doble Llave ──
 function openPermissionModal(){
-  ['permError','permSuccess'].forEach(id=>{const e=document.getElementById(id);e.style.display='none';e.textContent='';});
-  ['permMotivo','permLugar','permAcomp','permMensaje'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('permFecha').value=new Date().toISOString().split('T')[0];
-  document.getElementById('permModal'||'permissionModal').style.display='flex';
+  ['permError','permSuccess'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.display='none';e.textContent='';}});
+  ['permMotivo','permLugar','permAcomp','permMensaje','permCompromiso'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const fd=document.getElementById('permFecha'); if(fd) fd.value=new Date().toISOString().split('T')[0];
+  document.getElementById('permissionModal').style.display='flex'; // ← bug fix: ID correcto
 }
 window.openPermissionModal=openPermissionModal;
 function closePermissionModal(){ document.getElementById('permissionModal').style.display='none'; }
@@ -5883,8 +5899,15 @@ async function submitPermissionRequest(){
   const lugar=document.getElementById('permLugar').value.trim();
   const fecha=document.getElementById('permFecha').value;
   const horaFin=document.getElementById('permHoraFin').value;
+  const compromiso = (document.getElementById('permCompromiso')||{}).value?.trim()||'';
   if(!motivo||!lugar||!fecha||!horaFin){
-    const e=document.getElementById('permError');e.style.display='block';e.textContent='Completa motivo, lugar, fecha y hora de regreso.';return;
+    const e=document.getElementById('permError');e.style.display='block';
+    e.textContent='Completa motivo, lugar, fecha y hora de regreso.';return;
+  }
+  if(!compromiso){
+    const e=document.getElementById('permError');e.style.display='block';
+    e.textContent='⚠️ El campo "Mi Compromiso" es obligatorio. Escribe qué harás a cambio.';
+    document.getElementById('permCompromiso').focus();return;
   }
   const req={
     id:uid(), orgId:ORG_ID,
@@ -5892,8 +5915,10 @@ async function submitPermissionRequest(){
     requesterRole:currentRole, requesterEmoji:(ROLES[currentRole]||{}).emoji||'👤',
     motivo, lugar, acompañantes:document.getElementById('permAcomp').value.trim(),
     mensaje:document.getElementById('permMensaje').value.trim(),
+    compromiso,                       // ← campo nuevo obligatorio
     fecha, horaInicio:document.getElementById('permHoraInicio').value, horaFin,
     status:'pending', approvedByMom:false, approvedByDad:false,
+    notifiedToDirector:false,         // ← para el badge del Director
     createdAt:new Date().toISOString(), ts:Date.now()
   };
   const btn=document.getElementById('permSubmitBtn');
@@ -5965,6 +5990,9 @@ async function renderPermissionsCenter(){
             ${p.acompañantes?'· 👥 '+p.acompañantes:''}
           </div>
           ${p.mensaje?`<div class="perm-detail" style="margin-top:4px;font-style:italic;">"${p.mensaje}"</div>`:''}
+          ${p.compromiso?`<div class="perm-detail" style="margin-top:6px;padding:6px 8px;background:var(--sage-dim);border-radius:7px;border-left:3px solid var(--primary-blue);">
+            <strong style="font-size:9px;color:var(--primary-blue);">🤝 COMPROMISO:</strong><br>${p.compromiso}
+          </div>`:''}
         </div>
       </div>
       <div class="perm-signatures">
@@ -7376,6 +7404,46 @@ window.createUserForDirector = async function(email, pass, profileData){
       Promise.resolve().then(()=>deleteApp(secondaryApp)).catch(()=>{});
     }
   }
+};
+
+// ── Notificación de permisos pendientes al Director ──
+window.checkPendingPermissions = async function(){
+  if(!currentUser) return;
+  try{
+    const { collection:col2, getDocs:gd2, query:q2, where:w2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await gd2(q2(col2(db,'permission_requests'),
+      w2('orgId','==',ORG_ID), w2('status','==','pending')
+    ));
+    const count = snap.size;
+    console.log('[Permisos] Solicitudes pendientes:', count);
+
+    if(count > 0){
+      // Badge rojo en la tab de permisos
+      let badge = document.getElementById('permNavBadge');
+      const permBtn = document.getElementById('nav-permisos');
+      if(permBtn && !badge){
+        badge = document.createElement('div');
+        badge.id = 'permNavBadge';
+        badge.className = 'nav-badge';
+        permBtn.style.position = 'relative';
+        permBtn.appendChild(badge);
+      }
+      if(badge) badge.textContent = count > 9 ? '9+' : count;
+
+      // Toast de aviso (solo la primera vez en la sesión)
+      const toastKey = 'gpc_perm_notif_' + new Date().toLocaleDateString();
+      if(!sessionStorage.getItem(toastKey)){
+        sessionStorage.setItem(toastKey,'1');
+        setTimeout(()=>{
+          if(window.toast) window.toast(`🔑 ${count} solicitud${count>1?'es':''} de permiso pendiente${count>1?'s':''} de los hijos`);
+        }, 1500);
+      }
+    } else {
+      const badge = document.getElementById('permNavBadge');
+      if(badge) badge.remove();
+    }
+  }catch(e){ console.warn('[checkPendingPermissions]', e.message); }
 };
 
 // ── mood_history: registro cross-user para consultas del Director ──
