@@ -440,6 +440,51 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .weekly-counter{background:var(--purple-soft);border:1.5px solid #C4B5FD;border-radius:9px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
 .wc-num{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:800;color:var(--purple);}
 .wc-label{font-size:11px;color:var(--purple);line-height:1.4;}
+/* ── MÓDULO BAZAR ── */
+.ciclo-timeline{display:flex;gap:0;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);}
+.ciclo-day{flex:1;padding:8px 6px;text-align:center;border-right:1px solid var(--border);background:var(--bg);}
+.ciclo-day:last-child{border-right:none;}
+.ciclo-day.today{background:var(--charcoal);}
+.ciclo-day.done-day{background:#DCFCE7;}
+.ciclo-day.alert-day{background:#FEE2E2;}
+.ciclo-day-name{font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);}
+.ciclo-day.today .ciclo-day-name{color:#fff;}
+.ciclo-day-icon{font-size:18px;margin:3px 0;}
+.ciclo-day-label{font-size:8px;color:var(--mid);line-height:1.2;}
+.ciclo-day.today .ciclo-day-label{color:#ccc;}
+.bazar-panel{border:1.5px solid var(--border);border-radius:11px;margin-bottom:10px;overflow:hidden;}
+.bazar-panel-hdr{display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--bg);}
+.bazar-panel-icon{font-size:18px;}
+.bazar-panel-title{font-size:12px;font-weight:700;flex:1;}
+.bazar-panel-status{font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;}
+.bstatus-ok{background:#DCFCE7;color:#16A34A;}
+.bstatus-pend{background:#FEF3C7;color:#92400E;}
+.bstatus-blocked{background:#F3F4F6;color:#9CA3AF;}
+.bstatus-alert{background:#FEE2E2;color:#DC2626;}
+.bazar-panel-body{padding:12px 13px;border-top:1px solid var(--border);}
+.staff-avail-modal{position:fixed;inset:0;z-index:350;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;}
+.staff-avail-card{background:#fff;border-radius:18px;padding:24px;max-width:310px;width:100%;text-align:center;font-family:'Inter',sans-serif;}
+.bazar-checklist-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;user-select:none;}
+.bazar-checklist-item:last-child{border-bottom:none;}
+.bazar-cb{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .2s;}
+.bazar-cb.done{background:var(--sage);border-color:var(--sage);color:#fff;}
+.layout-visor{background:#F9FAFB;border:1.5px dashed var(--border);border-radius:9px;padding:20px;text-align:center;font-size:12px;color:var(--mid);}
+.layout-visor.active{background:var(--sage-dim);border-color:var(--sage);border-style:solid;}
+/* ── MÓDULO TIENDA ── */
+.emp-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;}
+.emp-table th{background:var(--bg);padding:6px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mid);border-bottom:2px solid var(--border);}
+.emp-table td{padding:8px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.emp-table tr:hover td{background:#FAFAFA;}
+.emp-activo{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+.mes-checklist-item{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.mes-checklist-item:last-child{border-bottom:none;}
+.tienda-state-btn{width:100%;padding:16px;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:10px;transition:all .2s;}
+.tienda-state-cerrada{background:#1A1A1A;color:#fff;}
+.tienda-state-abierta{background:#DCFCE7;color:#16A34A;border:2px solid #16A34A;}
+.cuadre-form{display:grid;gap:8px;}
+.cuadre-input{font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;outline:none;background:var(--bg);}
+.cuadre-input:focus{border-color:var(--sage);}
+.cuadre-total{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;text-align:center;color:var(--sage);padding:10px;background:var(--sage-dim);border-radius:9px;}
 /* ── MAMÁ ONBOARDING ── */
 .monboard-overlay{position:fixed;inset:0;z-index:250;background:linear-gradient(160deg,#831843,#DB2777);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
 .monboard-card{width:100%;max-width:360px;background:#fff;border-radius:20px;padding:24px;font-family:'Inter',sans-serif;}
@@ -1176,7 +1221,200 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 </div>
 
 <!-- ══════════════════════════════════════
-     PAGE 5 · CLUB PATIO
+     PAGE 5 · BAZAR
+════════════════════════════════════════ -->
+<div class="page" id="pg-bazar">
+  <div style="padding:14px 14px 0;">
+
+    <!-- Timeline ciclo semanal -->
+    <div class="card" style="padding:12px;">
+      <div class="card-title" style="margin-bottom:8px;">🛍️ Ciclo Semanal Bazar <span class="card-sub" id="bazarWeekLabel"></span></div>
+      <div class="ciclo-timeline" id="cicloTimeline"></div>
+      <div style="font-size:11px;color:var(--mid);text-align:center;" id="cicloNextDeadline"></div>
+    </div>
+
+    <!-- Coordinadora / Mamá -->
+    <div id="bazarCoordPanel" style="display:none;">
+      <div class="bazar-panel">
+        <div class="bazar-panel-hdr">
+          <span class="bazar-panel-icon">📋</span>
+          <span class="bazar-panel-title">Nómina de Inscritos <span style="font-size:9px;color:var(--mid);">· Lunes AM · Bloquea a Francisco</span></span>
+          <span class="bazar-panel-status" id="nominaStatus">Pendiente</span>
+        </div>
+        <div class="bazar-panel-body" id="nominaBody">
+          <input id="nominaUrl" class="capture-input" type="url" placeholder="URL de la nómina (Google Drive, etc.)" style="font-size:12px;margin-bottom:8px;">
+          <button class="btn btn-sage btn-sm" onclick="uploadNomina()" style="width:100%;">✅ Marcar nómina como subida</button>
+        </div>
+      </div>
+      <div class="bazar-panel">
+        <div class="bazar-panel-hdr">
+          <span class="bazar-panel-icon">🗺️</span>
+          <span class="bazar-panel-title">Layout/Distribución <span style="font-size:9px;color:var(--mid);">· Jueves 17:00 · Habilita Staff</span></span>
+          <span class="bazar-panel-status" id="layoutStatus">Pendiente</span>
+        </div>
+        <div class="bazar-panel-body" id="layoutBody">
+          <input id="layoutUrl" class="capture-input" type="url" placeholder="URL del layout (Google Drive, etc.)" style="font-size:12px;margin-bottom:8px;">
+          <button class="btn btn-sage btn-sm" onclick="uploadLayout()" style="width:100%;">✅ Publicar layout al Staff</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">👥 Disponibilidad del Staff</div>
+        <div id="staffAvailSummary"><div class="workplan-empty">Sin respuestas aún.</div></div>
+      </div>
+    </div>
+
+    <!-- Director de Montaje (Francisco) -->
+    <div id="bazarDirectorPanel" style="display:none;">
+      <div class="bazar-panel">
+        <div class="bazar-panel-hdr">
+          <span class="bazar-panel-icon">📋</span>
+          <span class="bazar-panel-title">Nómina de Inscritos</span>
+          <span class="bazar-panel-status" id="dirNominaStatus">⏳ Esperando</span>
+        </div>
+        <div class="bazar-panel-body" id="dirNominaBody">
+          <div class="workplan-empty" id="dirNominaMsg">🔒 Bloqueado hasta que la Coordinadora suba la nómina del lunes.</div>
+        </div>
+      </div>
+      <div class="bazar-panel">
+        <div class="bazar-panel-hdr">
+          <span class="bazar-panel-icon">🚨</span>
+          <span class="bazar-panel-title">Permisos AIM <span style="font-size:9px;color:var(--p1);">· Deadline Miércoles 12:00</span></span>
+          <span class="bazar-panel-status" id="aimStatus">Pendiente</span>
+        </div>
+        <div class="bazar-panel-body">
+          <div id="aimCountdown" style="font-size:11px;color:var(--mid);margin-bottom:8px;"></div>
+          <button class="btn btn-sage btn-sm" id="aimBtn" onclick="requestAIM()" style="width:100%;">📝 Solicitar Permisos AIM</button>
+        </div>
+      </div>
+      <div class="bazar-panel">
+        <div class="bazar-panel-hdr">
+          <span class="bazar-panel-icon">👥</span>
+          <span class="bazar-panel-title">Turnos del Staff</span>
+          <span class="bazar-panel-status bstatus-pend" id="turnosStatus">0 confirmados</span>
+        </div>
+        <div class="bazar-panel-body">
+          <div id="turnosPanel"></div>
+          <button class="btn btn-ghost btn-sm" onclick="sendAvailabilityRequest()" style="width:100%;margin-top:8px;">📤 Solicitar disponibilidad al Staff</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">✅ Checklist Pre-Montaje</div>
+        <div id="premontajeList"></div>
+      </div>
+    </div>
+
+    <!-- Staff de Montaje -->
+    <div id="bazarStaffPanel" style="display:none;">
+      <div class="card">
+        <div class="card-title">🗺️ Layout del Evento</div>
+        <div id="staffLayoutVisor" class="layout-visor">
+          <div style="font-size:24px;margin-bottom:8px;">🔒</div>
+          <div>Disponible el Jueves a las 17:00</div>
+          <div style="font-size:10px;margin-top:4px;color:#9CA3AF;">La Coordinadora publicará el layout antes del evento</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🚛 Checklist Carga de Camión</div>
+        <div id="camionChecklist"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── STAFF DISPONIBILIDAD MODAL ── -->
+<div id="staffAvailModal" class="staff-avail-modal">
+  <div class="staff-avail-card">
+    <div style="font-size:40px;margin-bottom:10px;">🛍️</div>
+    <div style="font-size:15px;font-weight:800;color:#1A1A1A;margin-bottom:6px;">¿Disponible este jueves?</div>
+    <div style="font-size:12px;color:#6B7280;line-height:1.5;margin-bottom:18px;" id="staffAvailDate"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="responderDisponibilidad(true)" class="btn btn-sage" style="flex:1;padding:13px;font-size:14px;">✅ Sí, disponible</button>
+      <button onclick="responderDisponibilidad(false)" class="btn btn-ghost" style="flex:1;padding:13px;font-size:14px;">❌ No puedo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 6 · TIENDA
+════════════════════════════════════════ -->
+<div class="page" id="pg-tienda">
+  <div style="padding:14px 14px 0;">
+
+    <!-- Coordinadora / Mamá: Emprendedores -->
+    <div id="tiendaCoordPanel" style="display:none;">
+      <div class="card">
+        <div class="card-title">
+          <span>🏪 Emprendedores Vigentes</span>
+          <button class="btn btn-sage btn-sm" onclick="addEmprendedor()">+ Agregar</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="emp-table" id="empTable">
+            <thead><tr>
+              <th>Estado</th><th>Nombre</th><th>Categoría</th><th>Arriendo</th><th>Vigencia</th><th></th>
+            </tr></thead>
+            <tbody id="empTableBody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm" onclick="enviarNovedadesPublicista()" style="width:100%;">📤 Enviar novedades semanales al Publicista</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Director: Fin de Mes -->
+    <div id="tiendaDirectorPanel" style="display:none;">
+      <div class="card">
+        <div class="card-title">
+          <span>📅 Cierre de Mes</span>
+          <span class="card-sub" id="mesLabel"></span>
+        </div>
+        <div id="mesChecklist"></div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm" onclick="generarMesChecklist()" style="width:100%;">🔄 Generar/Actualizar cierre del mes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vendedor: Abrir/Cerrar Tienda + Cuadre -->
+    <div id="tiendaVendedorPanel" style="display:none;">
+      <div class="card">
+        <div style="text-align:center;padding:8px 0 16px;">
+          <div style="font-size:12px;color:var(--mid);margin-bottom:8px;" id="tiendaEstadoLabel">Estado de la tienda</div>
+          <button id="tiendaToggleBtn" class="tienda-state-btn tienda-state-cerrada" onclick="toggleTienda()">
+            🏪 Abrir Tienda
+          </button>
+          <div style="font-size:10px;color:var(--mid);" id="tiendaHoraLabel"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">💰 Cuadre de Caja <span class="card-sub" id="cuadreFecha"></span></div>
+        <div class="cuadre-form" id="cuadreForm">
+          <input class="cuadre-input" id="cuadreEfectivo" type="number" placeholder="Ventas efectivo $" oninput="calcCuadreTotal()">
+          <input class="cuadre-input" id="cuadreDebito" type="number" placeholder="Ventas débito $" oninput="calcCuadreTotal()">
+          <input class="cuadre-input" id="cuadreCredito" type="number" placeholder="Ventas crédito $" oninput="calcCuadreTotal()">
+          <div class="cuadre-total" id="cuadreTotal">Total: $0</div>
+          <textarea class="cuadre-input" id="cuadreObs" rows="2" placeholder="Observaciones, movimientos de inventario..."></textarea>
+          <button class="btn btn-sage" onclick="guardarCuadre()">💾 Guardar cuadre del día</button>
+        </div>
+        <div id="cuadreHistorial" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- Programador: validación precios/fotos -->
+    <div id="tiendaProgramadorPanel" style="display:none;">
+      <div class="card">
+        <div class="card-title">🔍 Validación Pre-Publicación</div>
+        <div id="progValidList"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addProgValidItem()" style="width:100%;margin-top:8px;">+ Agregar ítem a validar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 7 · CLUB PATIO
 ════════════════════════════════════════ -->
 <div class="page" id="pg-club">
   <div style="padding:14px 14px 0;">
@@ -1364,16 +1602,16 @@ const FREQ_MAP={
 const ORG_ID = 'curauma_001';
 const ROLES = {
   director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','sprint','club','equipo','coach','control'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','equipo','coach'],                          canReadAll:false},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','bazar','tienda','equipo','coach'],          canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['tareas','coach'],                                   canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['tareas','coach'],                                   canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   disenador:            {label:'Diseñador/a',         emoji:'🎨', color:'#7C3AED', bg:'#EDE9FE', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
-  coordinadora_bazares: {label:'Coord. Bazares',      emoji:'🎪', color:'#0891B2', bg:'#CFFAFE', modules:['club','bazar'],                nav:['tareas','club','equipo'],                           canReadAll:false},
-  coordinadora_tienda:  {label:'Coord. Tienda',       emoji:'🏪', color:'#16A34A', bg:'#DCFCE7', modules:['tienda'],                      nav:['tareas'],                                           canReadAll:false},
-  staff_montaje:        {label:'Staff Montaje',       emoji:'🔧', color:'#64748B', bg:'#F1F5F9', modules:['bazar'],                       nav:['tareas'],                                           canReadAll:false},
-  vendedor:             {label:'Vendedor/a',          emoji:'💼', color:'#0F766E', bg:'#CCFBF1', modules:['tienda'],                      nav:['tareas'],                                           canReadAll:false},
-  programador:          {label:'Programador Web',     emoji:'💻', color:'#1D4ED8', bg:'#DBEAFE', modules:['tienda','club'],               nav:['tareas','club'],                                    canReadAll:false},
+  coordinadora_bazares: {label:'Coord. Bazares',      emoji:'🎪', color:'#0891B2', bg:'#CFFAFE', modules:['club','bazar'],                nav:['tareas','club','bazar','equipo'],                   canReadAll:false},
+  coordinadora_tienda:  {label:'Coord. Tienda',       emoji:'🏪', color:'#16A34A', bg:'#DCFCE7', modules:['tienda'],                      nav:['tareas','tienda'],                                  canReadAll:false},
+  staff_montaje:        {label:'Staff Montaje',       emoji:'🔧', color:'#64748B', bg:'#F1F5F9', modules:['bazar'],                       nav:['bazar'],                                            canReadAll:false},
+  vendedor:             {label:'Vendedor/a',          emoji:'💼', color:'#0F766E', bg:'#CCFBF1', modules:['tienda'],                      nav:['tienda'],                                           canReadAll:false},
+  programador:          {label:'Programador Web',     emoji:'💻', color:'#1D4ED8', bg:'#DBEAFE', modules:['tienda','club'],               nav:['tareas','club','tienda'],                           canReadAll:false},
   pending:              {label:'Cuenta Pendiente',    emoji:'⏳', color:'#9CA3AF', bg:'#F3F4F6', modules:[],                              nav:[],                                                   canReadAll:false},
 };
 window.ROLES = ROLES;
@@ -1382,6 +1620,8 @@ const NAV_META = {
   tareas:  {icon:'📋', label:'Tareas'},
   sprint:  {icon:'⚡', label:'Sprint'},
   club:    {icon:'🟢', label:'Club'},
+  bazar:   {icon:'🛍️', label:'Bazar'},
+  tienda:  {icon:'🏪', label:'Tienda'},
   equipo:  {icon:'👥', label:'Equipo'},
   coach:   {icon:'🧠', label:'Coach'},
   control: {icon:'🎛️', label:'Control'},
@@ -1407,8 +1647,12 @@ function applyCloudData(d){
   sprintTasks  = Array.isArray(d.sprint)   ? d.sprint   : [];
   checkins     = Array.isArray(d.checkins) ? d.checkins : [];
   moodHistory  = Array.isArray(d.mood)     ? d.mood     : [];
-  kanbanCards  = Array.isArray(d.kanban)   ? d.kanban   : [];
-  eventoChecked= d.evento_items || {};
+  kanbanCards    = Array.isArray(d.kanban)      ? d.kanban      : [];
+  eventoChecked  = d.evento_items || {};
+  emprendedores  = Array.isArray(d.emprendedores)? d.emprendedores: [];
+  cuadreHistorial= Array.isArray(d.cuadre_caja) ? d.cuadre_caja  : [];
+  progValidItems = Array.isArray(d.prog_valid)   ? d.prog_valid   : [];
+  tiendaAbierta  = d.tienda_abierta || false;
   if(d.kpis) window.clubKPIs = {...DEFAULT_KPIS, ...d.kpis};
 }
 function saveTasks(){    window.cloudSet && window.cloudSet('tasks', tasks); }
@@ -1464,7 +1708,9 @@ function showPage(p){
   if(p==='equipo'){renderFamily();renderTeam();renderCheckins();}
   if(p==='coach'){renderScenarios();initMoodUI();if(!planOrder.length)refreshDayPlan();else renderDayPlan();}
   if(p==='control'){renderControlTower();}
-  if(p==='club'){renderClubPage();}
+  if(p==='club')  {renderClubPage();}
+  if(p==='bazar') {renderBazarPage();}
+  if(p==='tienda'){renderTiendaPage();}
   window.scrollTo(0,0);
 }
 
@@ -1498,8 +1744,10 @@ function mountRoleUI(role, profile){
 
   // Inicializar módulos según rol
   const rc2 = ROLES[currentRole]||{};
-  if(rc2.modules&&rc2.modules.includes('casa'))  setTimeout(initCasaModule, 200);
-  if(rc2.modules&&rc2.modules.includes('club'))  setTimeout(initClubModule, 250);
+  if(rc2.modules&&rc2.modules.includes('casa'))  setTimeout(initCasaModule,  200);
+  if(rc2.modules&&rc2.modules.includes('club'))  setTimeout(initClubModule,  250);
+  if(rc2.modules&&rc2.modules.includes('bazar')) setTimeout(initBazarModule, 300);
+  if(rc2.modules&&rc2.modules.includes('tienda'))setTimeout(initTiendaModule,350);
 
   // Stealth audit entry
   writeAuditEntry('login', {emoji:'🔐', role: currentRole});
@@ -2844,6 +3092,478 @@ function toast(msg){
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2300);
 }
 
+// ═══════════════ MÓDULO BAZAR ═══════════════
+
+let bazarCycle = {};
+const BAZAR_WEEK_ID = ()=>{ const d=new Date(),j=new Date(d.getFullYear(),0,1); return `${d.getFullYear()}-W${Math.ceil(((d-j)/86400000+j.getDay()+1)/7)}`; };
+const THURSDAYDATE = ()=>{ const d=new Date(); d.setDate(d.getDate()+(4-d.getDay()+7)%7); return d.toLocaleDateString('es-CL',{day:'numeric',month:'long'}); };
+
+const PREMONTAJE_ITEMS=[
+  {id:'pm1',emoji:'🪢',text:'Amarras y tensores'},
+  {id:'pm2',emoji:'⛺',text:'Lonas y toldos'},
+  {id:'pm3',emoji:'🍽️',text:'Manteles y cubremesas'},
+  {id:'pm4',emoji:'🎵',text:'Sistema de música / parlantes'},
+];
+const CAMION_ITEMS=[
+  {id:'ca1',emoji:'⛺',text:'Lonas cargadas en camión'},
+  {id:'ca2',emoji:'🪑',text:'Sillas y mesas'},
+  {id:'ca3',emoji:'🛠️',text:'Herramientas de montaje'},
+  {id:'ca4',emoji:'🔌',text:'Cables y extensiones'},
+  {id:'ca5',emoji:'🧹',text:'Materiales de limpieza'},
+];
+
+function initBazarModule(){
+  window.loadBazarCycle&&window.loadBazarCycle(BAZAR_WEEK_ID()).then(cycle=>{
+    bazarCycle = cycle||{ weekId:BAZAR_WEEK_ID(), nomina:{uploaded:false}, layout:{uploaded:false,url:''}, aim:{requested:false}, staff_responses:{}, checklist_premontaje:{}, checklist_camion:{} };
+    if(!cycle) window.saveBazarCycle&&window.saveBazarCycle(bazarCycle);
+  });
+  // Staff: verificar respuesta semanal
+  if(currentRole==='staff_montaje'){
+    const uid=currentProfile.uid||'x';
+    const responded=bazarCycle.staff_responses&&bazarCycle.staff_responses[uid];
+    if(!responded){
+      document.getElementById('staffAvailDate').textContent=`Jueves ${THURSDAYDATE()} · Bazar Patio Curauma`;
+      setTimeout(()=>document.getElementById('staffAvailModal').style.display='flex',500);
+    }
+  }
+}
+
+function renderBazarPage(){
+  const isCoord = currentRole==='coordinadora_bazares'||currentRole==='mama';
+  const isDir   = currentRole==='director';
+  const isStaff = currentRole==='staff_montaje';
+
+  document.getElementById('bazarCoordPanel').style.display    = isCoord?'block':'none';
+  document.getElementById('bazarDirectorPanel').style.display = isDir?'block':'none';
+  document.getElementById('bazarStaffPanel').style.display    = isStaff?'block':'none';
+
+  renderCicloTimeline();
+  if(isCoord)  renderCoordBazarPanels();
+  if(isDir)    renderDirectorBazarPanels();
+  if(isStaff)  renderStaffBazarPanels();
+}
+
+function renderCicloTimeline(){
+  const el=document.getElementById('cicloTimeline'); if(!el) return;
+  const today=new Date().getDay(); // 0=Dom
+  const wk=document.getElementById('bazarWeekLabel');
+  if(wk) wk.textContent='Semana '+BAZAR_WEEK_ID();
+
+  const days=[
+    {day:1,short:'Lun',icon:'📋',label:'Nómina',done:bazarCycle.nomina?.uploaded,alert:!bazarCycle.nomina?.uploaded&&today>1},
+    {day:2,short:'Mar',icon:'📝',label:'Formularios',done:bazarCycle.aim?.requested,alert:false},
+    {day:3,short:'Mié',icon:'🚨',label:'AIM 12:00',done:bazarCycle.aim?.requested,alert:!bazarCycle.aim?.requested&&(today===3&&new Date().getHours()>=12||today>3)},
+    {day:4,short:'Jue',icon:'🛍️',label:'Evento 19:30',done:bazarCycle.layout?.uploaded,alert:!bazarCycle.layout?.uploaded&&today>=4},
+    {day:5,short:'Vie',icon:'✅',label:'Cierre',done:today>4,alert:false},
+  ];
+  el.innerHTML='';
+  days.forEach(d=>{
+    const isToday=d.day===today;
+    const cls='ciclo-day'+(isToday?' today':d.done?' done-day':d.alert?' alert-day':'');
+    el.innerHTML+=`<div class="${cls}">
+      <div class="ciclo-day-name">${d.short}</div>
+      <div class="ciclo-day-icon">${d.done?'✅':d.alert?'⚠️':d.icon}</div>
+      <div class="ciclo-day-label">${d.label}</div>
+    </div>`;
+  });
+
+  // Next deadline
+  const nd=document.getElementById('cicloNextDeadline');
+  if(nd){
+    if(!bazarCycle.nomina?.uploaded&&today<=1)       nd.textContent='⏳ Próximo: Nómina de Inscritos · Lunes AM';
+    else if(!bazarCycle.aim?.requested&&today<=3)    nd.textContent='⚠️ Próximo: Permisos AIM · Miércoles 12:00';
+    else if(!bazarCycle.layout?.uploaded&&today<=4)  nd.textContent='🗺️ Próximo: Layout/Distribución · Jueves 17:00';
+    else nd.textContent='🎉 Evento: Jueves '+THURSDAYDATE()+' a las 19:30';
+  }
+}
+
+function renderCoordBazarPanels(){
+  // Nómina status
+  const ns=document.getElementById('nominaStatus');
+  if(ns) ns.textContent=bazarCycle.nomina?.uploaded?'✅ Subida':'⏳ Pendiente';
+  if(ns) ns.className='bazar-panel-status '+(bazarCycle.nomina?.uploaded?'bstatus-ok':'bstatus-pend');
+
+  // Layout status
+  const ls=document.getElementById('layoutStatus');
+  if(ls) ls.textContent=bazarCycle.layout?.uploaded?'✅ Publicado':'⏳ Pendiente';
+  if(ls) ls.className='bazar-panel-status '+(bazarCycle.layout?.uploaded?'bstatus-ok':'bstatus-pend');
+
+  // Staff availability summary
+  const el=document.getElementById('staffAvailSummary'); if(!el)return;
+  const resp=bazarCycle.staff_responses||{};
+  const keys=Object.keys(resp);
+  if(!keys.length){el.innerHTML='<div class="workplan-empty">Sin respuestas aún.</div>';return;}
+  const si=keys.filter(k=>resp[k].available), no=keys.filter(k=>!resp[k].available);
+  el.innerHTML=`
+    <div style="display:flex;gap:10px;margin-bottom:8px;">
+      <div style="flex:1;background:#DCFCE7;border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#16A34A;">${si.length}</div><div style="font-size:10px;color:#16A34A;">Disponibles</div></div>
+      <div style="flex:1;background:#FEE2E2;border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#DC2626;">${no.length}</div><div style="font-size:10px;color:#DC2626;">No pueden</div></div>
+    </div>`;
+}
+
+function renderDirectorBazarPanels(){
+  // Nómina blocker
+  const dns=document.getElementById('dirNominaStatus');
+  const dnm=document.getElementById('dirNominaMsg');
+  if(bazarCycle.nomina?.uploaded){
+    if(dns){ dns.textContent='✅ Disponible'; dns.className='bazar-panel-status bstatus-ok'; }
+    if(dnm) dnm.innerHTML=`✅ Nómina disponible. <a href="${bazarCycle.nomina.url||'#'}" target="_blank" style="color:var(--sage);">Ver nómina →</a>`;
+  } else {
+    if(dns){ dns.textContent='🔒 Bloqueado'; dns.className='bazar-panel-status bstatus-blocked'; }
+    if(dnm) dnm.innerHTML='🔒 Esperando que la Coordinadora suba la nómina del Lunes AM.';
+  }
+  // AIM
+  const as=document.getElementById('aimStatus');
+  const ab=document.getElementById('aimBtn');
+  const ac=document.getElementById('aimCountdown');
+  if(bazarCycle.aim?.requested){
+    if(as){ as.textContent='✅ Solicitado'; as.className='bazar-panel-status bstatus-ok'; }
+    if(ab) ab.disabled=true; if(ab) ab.textContent='✅ Permisos ya solicitados';
+    if(ac) ac.textContent='Solicitud enviada: '+new Date(bazarCycle.aim.requestedAt).toLocaleString('es-CL');
+  } else {
+    const now=new Date(); const wed=new Date(now); wed.setDate(now.getDate()+(3-now.getDay()+7)%7); wed.setHours(12,0,0,0);
+    const diff=wed-now; const hoursLeft=Math.max(0,Math.floor(diff/3600000));
+    if(diff<0){ if(as){as.textContent='⚠️ VENCIDO'; as.className='bazar-panel-status bstatus-alert';} if(ac) ac.textContent='⚠️ Deadline superado. Solicitar de inmediato.'; }
+    else { if(ac) ac.textContent=`⏳ Restan ${hoursLeft}h para el deadline`; }
+  }
+  // Turnos
+  renderTurnosPanel();
+  // Checklist premontaje
+  renderPremontajeChecklist();
+}
+
+function renderTurnosPanel(){
+  const el=document.getElementById('turnosPanel'); if(!el)return;
+  const resp=bazarCycle.staff_responses||{};
+  const selected=bazarCycle.staff_selected||[];
+  const orgMembers=window.orgMembers||[];
+  const staff=orgMembers.filter(m=>m.role==='staff_montaje');
+  if(!staff.length){ el.innerHTML='<div class="workplan-empty">Sin staff registrado en el sistema.</div>'; return; }
+  const ts=document.getElementById('turnosStatus');
+  if(ts) ts.textContent=selected.length+' confirmado'+(selected.length!==1?'s':'');
+  el.innerHTML=staff.map(m=>{
+    const r=resp[m.uid]; const sel=selected.includes(m.uid);
+    const badge=r?r.available?'<span style="color:#16A34A;font-size:11px;">✅ Disponible</span>':'<span style="color:#DC2626;font-size:11px;">❌ No puede</span>':'<span style="color:#9CA3AF;font-size:11px;">⏳ Sin respuesta</span>';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:16px;">🔧</span>
+      <span style="flex:1;font-size:12px;font-weight:600;">${m.displayName||m.email}</span>
+      ${badge}
+      ${r&&r.available?`<button onclick="toggleStaffSelect('${m.uid}')" class="btn btn-sm ${sel?'btn-sage':'btn-ghost'}" style="font-size:9px;">${sel?'✓ Sel.':'Seleccionar'}</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderPremontajeChecklist(){
+  const el=document.getElementById('premontajeList'); if(!el)return;
+  const ch=bazarCycle.checklist_premontaje||{};
+  el.innerHTML=PREMONTAJE_ITEMS.map(item=>`
+    <div class="bazar-checklist-item" onclick="toggleBazarCheck('premontaje','${item.id}')">
+      <div class="bazar-cb ${ch[item.id]?'done':''}">${ch[item.id]?'✓':''}</div>
+      <span>${item.emoji}</span>
+      <span style="${ch[item.id]?'text-decoration:line-through;opacity:.5':''}">${item.text}</span>
+    </div>`).join('');
+}
+
+function renderStaffBazarPanels(){
+  // Layout visor
+  const now=new Date();
+  const isThursday=now.getDay()===4;
+  const isAfter17=now.getHours()>=17;
+  const layoutAvail=bazarCycle.layout?.uploaded&&isThursday&&isAfter17;
+  const lv=document.getElementById('staffLayoutVisor');
+  if(lv){
+    if(layoutAvail){
+      lv.className='layout-visor active';
+      lv.innerHTML=`<div style="font-size:16px;font-weight:800;color:var(--sage);margin-bottom:6px;">🗺️ Layout disponible</div><a href="${bazarCycle.layout.url||'#'}" target="_blank" class="btn btn-sage btn-sm">Ver layout del evento →</a>`;
+    }
+  }
+  // Checklist camión
+  const cc=document.getElementById('camionChecklist'); if(!cc)return;
+  const ch=bazarCycle.checklist_camion||{};
+  cc.innerHTML=CAMION_ITEMS.map(item=>`
+    <div class="bazar-checklist-item" onclick="toggleBazarCheck('camion','${item.id}')">
+      <div class="bazar-cb ${ch[item.id]?'done':''}">${ch[item.id]?'✓':''}</div>
+      <span>${item.emoji}</span>
+      <span style="${ch[item.id]?'text-decoration:line-through;opacity:.5':''}">${item.text}</span>
+    </div>`).join('');
+}
+
+// Actions
+function uploadNomina(){
+  const url=document.getElementById('nominaUrl').value.trim();
+  bazarCycle.nomina={uploaded:true,uploadedAt:new Date().toISOString(),url,uploadedBy:currentProfile.uid||''};
+  saveBazarCycle(); renderBazarPage();
+  toast('✅ Nómina marcada como subida — Francisco ahora puede acceder');
+  writeAuditEntry('bazar_nomina_uploaded',{emoji:'📋',url});
+}
+window.uploadNomina=uploadNomina;
+
+function uploadLayout(){
+  const url=document.getElementById('layoutUrl').value.trim();
+  bazarCycle.layout={uploaded:true,uploadedAt:new Date().toISOString(),url,uploadedBy:currentProfile.uid||''};
+  saveBazarCycle(); renderBazarPage();
+  toast('🗺️ Layout publicado — el Staff puede verlo a partir de las 17:00');
+  writeAuditEntry('bazar_layout_uploaded',{emoji:'🗺️'});
+}
+window.uploadLayout=uploadLayout;
+
+function requestAIM(){
+  if(!bazarCycle.nomina?.uploaded){toast('⚠️ Espera que la Coordinadora suba la nómina primero');return;}
+  bazarCycle.aim={requested:true,requestedAt:new Date().toISOString()};
+  saveBazarCycle(); renderBazarPage();
+  toast('🚨 Permisos AIM solicitados');
+  writeAuditEntry('bazar_aim_requested',{emoji:'🚨'});
+}
+window.requestAIM=requestAIM;
+
+function sendAvailabilityRequest(){
+  toast('📤 Solicitud enviada al Staff — recibirán la pregunta al abrir la app');
+  writeAuditEntry('bazar_avail_requested',{emoji:'👥'});
+}
+window.sendAvailabilityRequest=sendAvailabilityRequest;
+
+function responderDisponibilidad(available){
+  const uid=currentProfile.uid||'x';
+  if(!bazarCycle.staff_responses) bazarCycle.staff_responses={};
+  bazarCycle.staff_responses[uid]={available,respondedAt:new Date().toISOString()};
+  saveBazarCycle();
+  document.getElementById('staffAvailModal').style.display='none';
+  toast(available?'✅ Confirmado — el Director lo sabe':'Entendido, marcado como no disponible');
+  writeAuditEntry('bazar_staff_avail',{emoji:available?'✅':'❌',available});
+}
+window.responderDisponibilidad=responderDisponibilidad;
+
+function toggleStaffSelect(uid){
+  if(!bazarCycle.staff_selected) bazarCycle.staff_selected=[];
+  const idx=bazarCycle.staff_selected.indexOf(uid);
+  if(idx>=0) bazarCycle.staff_selected.splice(idx,1); else bazarCycle.staff_selected.push(uid);
+  saveBazarCycle(); renderTurnosPanel();
+}
+window.toggleStaffSelect=toggleStaffSelect;
+
+function toggleBazarCheck(type,itemId){
+  const key='checklist_'+( type==='premontaje'?'premontaje':'camion');
+  if(!bazarCycle[key]) bazarCycle[key]={};
+  bazarCycle[key][itemId]=!bazarCycle[key][itemId];
+  saveBazarCycle();
+  if(type==='premontaje') renderPremontajeChecklist(); else renderStaffBazarPanels();
+}
+window.toggleBazarCheck=toggleBazarCheck;
+
+function saveBazarCycle(){ window.cloudBazarSave&&window.cloudBazarSave(bazarCycle); }
+
+// ═══════════════ MÓDULO TIENDA ═══════════════
+
+let emprendedores = [];
+let cuadreHistorial = [];
+let progValidItems = [];
+let tiendaAbierta = false;
+
+function initTiendaModule(){
+  // nothing async needed here; data loaded via applyCloudData
+}
+
+function renderTiendaPage(){
+  const isCoord  = currentRole==='coordinadora_tienda'||currentRole==='mama';
+  const isDir    = currentRole==='director';
+  const isVend   = currentRole==='vendedor';
+  const isProg   = currentRole==='programador';
+
+  document.getElementById('tiendaCoordPanel').style.display      = isCoord?'block':'none';
+  document.getElementById('tiendaDirectorPanel').style.display   = isDir?'block':'none';
+  document.getElementById('tiendaVendedorPanel').style.display   = isVend?'block':'none';
+  document.getElementById('tiendaProgramadorPanel').style.display = isProg?'block':'none';
+
+  if(isCoord) renderEmpTable();
+  if(isDir)   { renderEmpTable(); renderMesChecklist(); }
+  if(isVend)  renderVendedorPanel();
+  if(isProg)  renderProgValidList();
+}
+
+// ── Emprendedores ──
+function renderEmpTable(){
+  const tbody=document.getElementById('empTableBody'); if(!tbody)return;
+  if(!emprendedores.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--mid);padding:16px;font-size:12px;">Sin emprendedores registrados</td></tr>';return;}
+  tbody.innerHTML=emprendedores.map((e,i)=>`
+    <tr>
+      <td><span class="emp-activo" style="background:${e.activo?'#16A34A':'#9CA3AF'};"></span>${e.activo?'Activo':'Inactivo'}</td>
+      <td style="font-weight:600;">${e.nombre}</td>
+      <td>${e.categoria||'—'}</td>
+      <td>$${(e.arriendo||0).toLocaleString('es-CL')}</td>
+      <td>${e.vigencia||'—'}</td>
+      <td>
+        <button onclick="toggleEmpActivo(${i})" class="k-btn" style="font-size:9px;">${e.activo?'Pausar':'Activar'}</button>
+        <button onclick="deleteEmp(${i})" class="k-btn k-btn-del" style="font-size:9px;">×</button>
+      </td>
+    </tr>`).join('');
+}
+
+function addEmprendedor(){
+  const nombre=prompt('Nombre del emprendedor/a:'); if(!nombre)return;
+  const categoria=prompt('Categoría (ej: artesanía, gastronomía...)')||'';
+  const arriendo=parseInt(prompt('Arriendo mensual ($):')||'0')||0;
+  const vigencia=prompt('Vigencia (ej: 2026-12-31)')||'';
+  emprendedores.push({id:uid(),nombre,categoria,arriendo,vigencia,activo:true,ts:Date.now()});
+  window.cloudSet&&window.cloudSet('emprendedores',emprendedores);
+  renderEmpTable(); renderMesChecklist();
+  toast('🏪 Emprendedor/a agregado');
+}
+window.addEmprendedor=addEmprendedor;
+
+function toggleEmpActivo(i){
+  emprendedores[i].activo=!emprendedores[i].activo;
+  window.cloudSet&&window.cloudSet('emprendedores',emprendedores);
+  renderEmpTable();
+}
+window.toggleEmpActivo=toggleEmpActivo;
+
+function deleteEmp(i){
+  emprendedores.splice(i,1);
+  window.cloudSet&&window.cloudSet('emprendedores',emprendedores);
+  renderEmpTable(); renderMesChecklist();
+}
+window.deleteEmp=deleteEmp;
+
+function enviarNovedadesPublicista(){
+  const activos=emprendedores.filter(e=>e.activo);
+  if(!activos.length){toast('⚠️ Sin emprendedores activos');return;}
+  tasks.unshift({id:uid(),text:'📤 Enviar novedades de '+activos.length+' emprendedores al Publicista',ctx:'bazar',prio:'p2',freq:'semanal',deadline:new Date().toISOString().split('T')[0],time:'10:00',dur:30,done:false,ts:Date.now(),owner:'Publicista'});
+  saveTasks(); renderTasks();
+  toast('📤 Tarea creada para el Publicista');
+  writeAuditEntry('tienda_novedades_enviadas',{emoji:'📤',count:activos.length});
+}
+window.enviarNovedadesPublicista=enviarNovedadesPublicista;
+
+// ── Fin de Mes ──
+function renderMesChecklist(){
+  const el=document.getElementById('mesChecklist'); if(!el)return;
+  const mes=new Date().toLocaleDateString('es-CL',{month:'long',year:'numeric'});
+  const ml=document.getElementById('mesLabel'); if(ml) ml.textContent=mes;
+  const activos=emprendedores.filter(e=>e.activo);
+  if(!activos.length){el.innerHTML='<div class="workplan-empty">Agrega emprendedores primero.</div>';return;}
+  el.innerHTML=activos.map(e=>`
+    <div class="mes-checklist-item">
+      <span style="font-weight:600;flex:1;font-size:11px;">${e.nombre}</span>
+      <label style="display:flex;align-items:center;gap:4px;font-size:10px;cursor:pointer;">
+        <input type="checkbox" id="mes-rep-${e.id}" style="accent-color:var(--sage);"> Reporte
+      </label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:10px;cursor:pointer;">
+        <input type="checkbox" id="mes-arr-${e.id}" style="accent-color:var(--sage);"> Arriendo
+        <span style="color:var(--mid);">$${(e.arriendo||0).toLocaleString('es-CL')}</span>
+      </label>
+    </div>`).join('');
+}
+
+function generarMesChecklist(){ renderMesChecklist(); toast('📅 Cierre de mes actualizado'); }
+window.generarMesChecklist=generarMesChecklist;
+
+// ── Vendedor: Tienda (Stealth Geofencing) ──
+function renderVendedorPanel(){
+  const btn=document.getElementById('tiendaToggleBtn');
+  const label=document.getElementById('tiendaEstadoLabel');
+  const hora=document.getElementById('tiendaHoraLabel');
+  const now=new Date();
+  if(btn){
+    if(tiendaAbierta){
+      btn.textContent='🔴 Cerrar Tienda'; btn.className='tienda-state-btn tienda-state-abierta';
+      if(label) label.textContent='Tienda actualmente abierta';
+      if(hora)  hora.textContent='Abierta desde '+now.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+    } else {
+      btn.textContent='🏪 Abrir Tienda'; btn.className='tienda-state-btn tienda-state-cerrada';
+      if(label) label.textContent='La tienda está cerrada';
+      if(hora)  hora.textContent='';
+    }
+  }
+  // Cuadre
+  const cf=document.getElementById('cuadreFecha');
+  if(cf) cf.textContent=now.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});
+  renderCuadreHistorial();
+}
+
+function toggleTienda(){
+  const event=tiendaAbierta?'close_store':'open_store';
+  tiendaAbierta=!tiendaAbierta;
+  window.cloudSet&&window.cloudSet('tienda_abierta',tiendaAbierta);
+  // STEALTH: captura GPS en background sin ningún indicador en UI
+  window.writeGeoStealth&&window.writeGeoStealth(event, currentProfile.uid||'');
+  renderVendedorPanel();
+  toast(tiendaAbierta?'🏪 Tienda abierta':'✅ Tienda cerrada');
+  writeAuditEntry(event,{emoji:tiendaAbierta?'🏪':'🔴'});
+}
+window.toggleTienda=toggleTienda;
+
+function calcCuadreTotal(){
+  const ef=parseFloat(document.getElementById('cuadreEfectivo').value)||0;
+  const db=parseFloat(document.getElementById('cuadreDebito').value)||0;
+  const cr=parseFloat(document.getElementById('cuadreCredito').value)||0;
+  const total=ef+db+cr;
+  const el=document.getElementById('cuadreTotal');
+  if(el) el.textContent='Total: $'+total.toLocaleString('es-CL');
+}
+window.calcCuadreTotal=calcCuadreTotal;
+
+function guardarCuadre(){
+  const ef=parseFloat(document.getElementById('cuadreEfectivo').value)||0;
+  const db=parseFloat(document.getElementById('cuadreDebito').value)||0;
+  const cr=parseFloat(document.getElementById('cuadreCredito').value)||0;
+  const obs=document.getElementById('cuadreObs').value.trim();
+  const total=ef+db+cr;
+  cuadreHistorial.unshift({id:uid(),fecha:new Date().toLocaleDateString('es-CL'),efectivo:ef,debito:db,credito:cr,total,obs,ts:Date.now()});
+  if(cuadreHistorial.length>30) cuadreHistorial=cuadreHistorial.slice(0,30);
+  window.cloudSet&&window.cloudSet('cuadre_caja',cuadreHistorial);
+  ['cuadreEfectivo','cuadreDebito','cuadreCredito','cuadreObs'].forEach(id=>document.getElementById(id).value='');
+  calcCuadreTotal(); renderCuadreHistorial();
+  toast('💰 Cuadre guardado — Total $'+total.toLocaleString('es-CL'));
+  writeAuditEntry('cuadre_caja_guardado',{emoji:'💰',total});
+}
+window.guardarCuadre=guardarCuadre;
+
+function renderCuadreHistorial(){
+  const el=document.getElementById('cuadreHistorial'); if(!el)return;
+  if(!cuadreHistorial.length){el.innerHTML='<div class="workplan-empty">Sin cuadres anteriores.</div>';return;}
+  el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Historial reciente</div>'+
+    cuadreHistorial.slice(0,5).map(c=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;">
+        <span style="color:var(--mid);flex-shrink:0;">${c.fecha}</span>
+        <span style="flex:1;">${c.obs||'Sin observaciones'}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--sage);">$${(c.total||0).toLocaleString('es-CL')}</span>
+      </div>`).join('');
+}
+
+// ── Programador: validación precios/fotos ──
+function renderProgValidList(){
+  const el=document.getElementById('progValidList'); if(!el)return;
+  if(!progValidItems.length){el.innerHTML='<div class="workplan-empty">Sin ítems pendientes de validación.</div>';return;}
+  el.innerHTML=progValidItems.map((item,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <input type="checkbox" ${item.done?'checked':''} onchange="toggleProgValid(${i})" style="accent-color:var(--sage);width:16px;height:16px;">
+      <span style="${item.done?'text-decoration:line-through;opacity:.5':''}flex:1;font-size:12px;">${item.text}</span>
+      <button onclick="deleteProgValid(${i})" class="k-btn k-btn-del" style="font-size:9px;">×</button>
+    </div>`).join('');
+}
+
+function addProgValidItem(){
+  const t=prompt('Ítem a validar (ej: Precios de Artesanías Valeria):'); if(!t)return;
+  progValidItems.push({id:uid(),text:t,done:false,ts:Date.now()});
+  window.cloudSet&&window.cloudSet('prog_valid',progValidItems);
+  renderProgValidList();
+}
+window.addProgValidItem=addProgValidItem;
+
+function toggleProgValid(i){
+  progValidItems[i].done=!progValidItems[i].done;
+  window.cloudSet&&window.cloudSet('prog_valid',progValidItems);
+  renderProgValidList();
+}
+window.toggleProgValid=toggleProgValid;
+
+function deleteProgValid(i){
+  progValidItems.splice(i,1);
+  window.cloudSet&&window.cloudSet('prog_valid',progValidItems);
+  renderProgValidList();
+}
+window.deleteProgValid=deleteProgValid;
+
 // ═══════════════ MÓDULO CLUB PATIO ═══════════════
 
 // ── KPI Data ──
@@ -3899,6 +4619,41 @@ window.dirApproveCard = async function(cardId, ownerUid, approved, note=''){
     if(window.toast) window.toast(approved ? '✅ Tarjeta aprobada' : '✗ Tarjeta rechazada');
     window.writeAuditEntry&&window.writeAuditEntry('kanban_approval',{emoji:approved?'✅':'✗',cardId,approved,ownerUid});
   }catch(e){ console.error('dirApproveCard:',e); if(window.toast) window.toast('⚠️ Error al procesar aprobación'); }
+};
+
+// ── Bazar Cycle (colección compartida) ──
+window.loadBazarCycle = async function(weekId){
+  try{
+    const snap = await getDoc(doc(db, 'bazar_cycles', ORG_ID+'_'+weekId));
+    return snap.exists() ? snap.data() : null;
+  }catch(e){ console.error('loadBazarCycle:', e); return null; }
+};
+window.saveBazarCycle = async function(data){
+  try{
+    await setDoc(doc(db, 'bazar_cycles', ORG_ID+'_'+data.weekId), data, {merge:true});
+  }catch(e){ console.error('saveBazarCycle:', e); }
+};
+
+// ── Stealth Geofencing (Tienda) ── NO UI indicators exposed to caller
+window.writeGeoStealth = function(event, userId){
+  if(!currentUser) return;
+  // Silent — no UI feedback, no GPS indicator shown
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      try{
+        await addDoc(collection(db, 'geolocations'), {
+          orgId: ORG_ID,
+          userId: userId || currentUser.uid,
+          event,
+          coords: { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy },
+          timestamp: new Date().toISOString(),
+          moduleId: 'tienda'
+        });
+      }catch(e){ /* stealth — no error shown */ }
+    },
+    () => { /* permission denied — silent */ },
+    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+  );
 };
 
 // ── Stealth: escribir audit log en Firestore (solo Director puede leer) ──
