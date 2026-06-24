@@ -5226,10 +5226,10 @@ window.rejectPermission=rejectPermission;
 
 // ═══════════════ TEAM DASHBOARD · PERSONAS ═══════════════
 
-// Dataset demo por módulo (se fusiona con orgMembers reales si existen)
+// Dataset demo por módulo — phone: '' hasta que el Director registre el número real
 const PERSONAS_MOCK = {
   casa: [
-    {uid:'pm_mama', displayName:'Mamá', role:'mama', emoji:'👩', color:'#DB2777', phone:'912345678',
+    {uid:'pm_mama', displayName:'Mamá', role:'mama', emoji:'👩', color:'#DB2777', phone:'',
      currentMood:'green', statusMessage:'Todo al día. Nómina Bazar subida ✓', lastSeen:'hace 10 min'},
     {uid:'pm_h1',  displayName:'Hijo 1', role:'hijo1', emoji:'👦', color:'#2563EB', phone:'',
      currentMood:'yellow', statusMessage:'Faltan 2 repasos de matemáticas. Agotado post-colegio.', lastSeen:'hace 1h'},
@@ -5237,23 +5237,23 @@ const PERSONAS_MOCK = {
      currentMood:'green', statusMessage:'Check-in emocional completado ✓ Con energía.', lastSeen:'hace 30 min'},
   ],
   club: [
-    {uid:'pm_pub', displayName:'Publicista', role:'publicista', emoji:'📣', color:'#D97706', phone:'987654321',
+    {uid:'pm_pub', displayName:'Publicista', role:'publicista', emoji:'📣', color:'#D97706', phone:'',
      currentMood:'yellow', statusMessage:'Esperando aprobación de 2 diseños del Director.', lastSeen:'hace 45 min'},
-    {uid:'pm_dis', displayName:'Diseñador/a', role:'disenador', emoji:'🎨', color:'#7C3AED', phone:'911223344',
+    {uid:'pm_dis', displayName:'Diseñador/a', role:'disenador', emoji:'🎨', color:'#7C3AED', phone:'',
      currentMood:'green', statusMessage:'3 piezas publicadas esta semana. Meta cumplida ✓', lastSeen:'hace 1h'},
-    {uid:'pm_cb',  displayName:'Coord. Bazares', role:'coordinadora_bazares', emoji:'🎪', color:'#0891B2', phone:'922334455',
+    {uid:'pm_cb',  displayName:'Coord. Bazares', role:'coordinadora_bazares', emoji:'🎪', color:'#0891B2', phone:'',
      currentMood:'red', statusMessage:'🚨 Bloqueada: Permisos AIM sin confirmar. Necesita gestión.', lastSeen:'hace 5 min'},
   ],
   bazar: [
-    {uid:'pm_stf', displayName:'Staff Montaje', role:'staff_montaje', emoji:'🔧', color:'#64748B', phone:'933445566',
+    {uid:'pm_stf', displayName:'Staff Montaje', role:'staff_montaje', emoji:'🔧', color:'#64748B', phone:'',
      currentMood:'green', statusMessage:'Confirmé disponibilidad para el jueves ✓', lastSeen:'hace 2h'},
   ],
   tienda: [
-    {uid:'pm_ct',  displayName:'Coord. Tienda', role:'coordinadora_tienda', emoji:'🏪', color:'#16A34A', phone:'944556677',
+    {uid:'pm_ct',  displayName:'Coord. Tienda', role:'coordinadora_tienda', emoji:'🏪', color:'#16A34A', phone:'',
      currentMood:'yellow', statusMessage:'Esperando reporte mensual de 3 emprendedores.', lastSeen:'hace 1h'},
-    {uid:'pm_vend',displayName:'Vendedor/a', role:'vendedor', emoji:'💼', color:'#0F766E', phone:'955667788',
+    {uid:'pm_vend',displayName:'Vendedor/a', role:'vendedor', emoji:'💼', color:'#0F766E', phone:'',
      currentMood:'green', statusMessage:'Tienda abierta. Sin novedades de inventario.', lastSeen:'hace 5 min'},
-    {uid:'pm_nat', displayName:'Nathaniel', role:'programador', emoji:'💻', color:'#1D4ED8', phone:'966778899',
+    {uid:'pm_nat', displayName:'Nathaniel', role:'programador', emoji:'💻', color:'#1D4ED8', phone:'',
      currentMood:'green', statusMessage:'Kanban al día. 3 ítems esperando validación de precios.', lastSeen:'hace 20 min'},
   ],
 };
@@ -5438,11 +5438,20 @@ window.createNewMember=createNewMember;
 
 // ── Generador de URL WhatsApp con mensaje contextual ──
 function generateWaURL(person){
-  const raw=(person.phone||'').replace(/\D/g,'');
-  if(!raw) return null;
-  let num=raw.startsWith('56')?raw.slice(2):raw;
-  if(!num.startsWith('9')) num='9'+num;
+  // 1. Limpiar el número: solo dígitos, sin espacios ni símbolos
+  const raw = (person.phone||'').replace(/\D/g,'').trim();
 
+  // 2. Si no hay número → retornar null (el botón lo maneja)
+  if(!raw) return null;
+
+  // 3. Normalizar formato chileno: eliminar prefijo 56 si ya está, asegurar que empiece con 9
+  let num = raw.startsWith('56') ? raw.slice(2) : raw;
+  if(!num.startsWith('9')) num = '9' + num;
+
+  // 4. Validar longitud (9 dígitos = formato chileno correcto)
+  if(num.length !== 9) return null;
+
+  // 5. Construir mensaje contextual según estado de tareas
   const today=new Date(); today.setHours(0,0,0,0);
   const pTasks=tasks.filter(t=>t.owner===person.displayName);
   const overdue=pTasks.filter(t=>!t.done&&t.deadline&&new Date(t.deadline+'T00:00:00')<today);
@@ -5451,12 +5460,14 @@ function generateWaURL(person){
 
   let msg;
   if(overdue.length>0){
-    msg=`Hola ${person.displayName}, revisando la plataforma veo que tienes ${overdue.length} tarea${overdue.length>1?'s':''} vencida${overdue.length>1?'s':''} de ${modLabel}. ¿Necesitas apoyo o recursos para avanzar?`;
+    msg=`Hola ${person.displayName} 👋, revisando la plataforma veo que tienes ${overdue.length} tarea${overdue.length>1?'s':''} vencida${overdue.length>1?'s':''} de ${modLabel}. ¿Necesitas apoyo o recursos para avanzar?`;
   } else if(pending.length>0){
-    msg=`Hola ${person.displayName}, tienes ${pending.length} tarea${pending.length>1?'s':''} pendiente${pending.length>1?'s':''} en ${modLabel}. ¿Cómo va el avance? ¿Necesitas algo?`;
+    msg=`Hola ${person.displayName} 👋, tienes ${pending.length} tarea${pending.length>1?'s':''} pendiente${pending.length>1?'s':''} en ${modLabel}. ¿Cómo va el avance? ¿Necesitas algo?`;
   } else {
-    msg=`Hola ${person.displayName}, excelente trabajo con las tareas de ${modLabel}. ¡Todo al día! Sigamos así 💪`;
+    msg=`Hola ${person.displayName} 👋, excelente trabajo con las tareas de ${modLabel}. ¡Todo al día! Sigamos así 💪`;
   }
+
+  // 6. URL final limpia: +56 9XXXXXXXX
   return `https://wa.me/56${num}?text=${encodeURIComponent(msg)}`;
 }
 
@@ -5549,7 +5560,10 @@ function makePersonaCard(p, mod){
     <div class="persona-status ${mood.bar}">${p.statusMessage||'Sin nota de estado.'}</div>
     <div style="font-size:9px;color:var(--mid);margin-bottom:8px;">${mood.label} · Visto ${p.lastSeen||'–'}</div>
     <div class="persona-actions">
-      <button class="pact-btn" onclick="personaMsg('${p.uid}')" title="${p.phone?'WhatsApp: +56 9'+p.phone:'Sin teléfono registrado'}">💬 WA</button>
+      <button class="pact-btn" onclick="personaMsg('${p.uid}')"
+        title="${p.phone?'WhatsApp: +56 '+p.phone:'Sin teléfono registrado — agrega el número desde el modal de edición'}"
+        style="${!p.phone?'opacity:.4;cursor:not-allowed;':''}"
+        >💬 WA${!p.phone?' 🚫':''}</button>
       <button class="pact-btn" onclick="personaMeeting('${p.displayName}')">📅 Reunión</button>
       <button class="pact-btn" onclick="personaTasks('${p.displayName}')">🔄 Tareas</button>
     </div>`;
