@@ -476,6 +476,31 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .psb-approved{background:#DCFCE7;color:#16A34A;}
 .psb-rejected{background:#FEE2E2;color:#DC2626;}
 .hijo-perm-status{background:var(--bg-main);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;}
+/* ── HISTORIAL EMOCIONAL 7 DÍAS ── */
+.mh-section{background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 10px rgba(45,49,66,.06);}
+.mh-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.mh-row:last-child{border-bottom:none;}
+.mh-row.alert-row{border-radius:8px;padding:8px;margin:-2px;background:rgba(239,68,68,.04);animation:mh-glow 2s ease-in-out infinite;}
+@keyframes mh-glow{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.0)}50%{box-shadow:0 0 0 4px rgba(239,68,68,.2)}}
+.mh-avatar{width:34px;height:34px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mh-name{font-size:12px;font-weight:700;color:var(--text-main);flex:0 0 80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mh-dots{display:flex;gap:5px;flex:1;align-items:center;}
+.mh-dot-wrap{position:relative;flex:1;max-width:32px;}
+.mh-dot{width:100%;aspect-ratio:1;border-radius:50%;cursor:pointer;transition:transform .15s;display:block;min-width:18px;max-width:32px;}
+.mh-dot:hover{transform:scale(1.25);}
+.mh-dot.mood-g{background:#16A34A;}
+.mh-dot.mood-y{background:#D97706;}
+.mh-dot.mood-r{background:#DC2626;}
+.mh-dot.mood-n{background:#E5E7EB;}
+/* Tooltip */
+.mh-tooltip{display:none;position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:#1E2D3D;color:#fff;font-size:10px;padding:7px 10px;border-radius:8px;white-space:nowrap;z-index:200;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25);}
+.mh-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1E2D3D;}
+.mh-dot-wrap:hover .mh-tooltip,.mh-dot-wrap.tip-open .mh-tooltip{display:block;}
+.mh-tooltip-date{font-weight:700;margin-bottom:2px;}
+.mh-tooltip-mood{color:#9CA3AF;}
+.mh-alert-badge{font-size:9px;font-weight:800;background:#FEE2E2;color:#DC2626;padding:2px 7px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
+.mh-day-label{display:flex;gap:5px;flex:1;padding-left:94px;margin-bottom:4px;}
+.mh-day-lbl{flex:1;max-width:32px;text-align:center;font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;}
 /* ── ORGANIGRAMA ── */
 .org-section{margin-bottom:20px;}
 .org-section-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px 12px 0 0;margin-bottom:0;}
@@ -2326,13 +2351,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <div id="ctAuditLog"><div class="workplan-empty">Sin actividad registrada aún.</div></div>
     </div>
 
-    <!-- Kids mood overview (stealth) -->
+    <!-- Historial Emocional 7 Días (Stealth) -->
     <div class="card">
       <div class="card-title">
-        <span>🌡️ Estado emocional · Hijos</span>
-        <span class="card-sub" style="color:var(--p1);">Stealth</span>
+        <span>🌡️ Evolución Emocional · 7 Días</span>
+        <span class="card-sub" style="color:var(--p1);">Stealth · Solo Director</span>
       </div>
-      <div id="ctMoodOverview"><div class="workplan-empty">Sin check-ins registrados.</div></div>
+      <div id="moodHistoryPanel">
+        <div class="workplan-empty">Cargando historial...</div>
+      </div>
     </div>
 
   </div>
@@ -2647,6 +2674,7 @@ function renderControlTower(){
   renderCtPendingAlert();
   renderCtAudit();
   renderCtMoodOverview();
+  renderMoodHistory(); // historial emocional 7 días
 }
 
 function renderCtStats(){
@@ -5777,10 +5805,18 @@ function saveDiaryMood(){
   currentProfile.diaryMood=history;
   window.cloudSet&&window.cloudSet('diaryMood',history);
   // También actualizar currentMood para el panel del Director
-  window.cloudSet&&window.cloudSet('currentMood',
-    diaryMoodSelected==='motivado'||diaryMoodSelected==='feliz'?'green':
-    diaryMoodSelected==='cansado'||diaryMoodSelected==='estresado'?'yellow':'red');
+  const moodLevel = diaryMoodSelected==='motivado'||diaryMoodSelected==='feliz'?'green':
+                    diaryMoodSelected==='cansado'||diaryMoodSelected==='estresado'?'yellow':'red';
+  window.cloudSet&&window.cloudSet('currentMood', moodLevel);
   window.cloudSet&&window.cloudSet('statusMessage','Hoy me siento '+m.label+' '+m.emoji);
+  // Escribir a /mood_history para consultas del Director
+  window.saveMoodHistoryDoc&&window.saveMoodHistoryDoc({
+    userId: currentProfile.uid||'', userEmail: currentProfile.email||'',
+    displayName: currentProfile.displayName||'', role: currentRole,
+    date: new Date().toISOString().split('T')[0], dateTs: Date.now(),
+    moodValue: diaryMoodSelected, moodLevel, emoji: m.emoji, label: m.label,
+    orgId: ORG_ID
+  });
   diaryMoodSelected=null; renderMiPanel();
   toast('✅ Estado guardado · '+m.emoji+' '+m.label);
   writeAuditEntry&&writeAuditEntry('diary_mood',{emoji:m.emoji,mood:m.value});
@@ -6711,6 +6747,148 @@ function toggleWeekTask(id){
 }
 window.toggleWeekTask=toggleWeekTask;
 
+// ═══════════════ HISTORIAL EMOCIONAL 7 DÍAS ═══════════════
+
+const MOOD_LEVEL_MAP = {
+  motivado:  'g', feliz: 'g',
+  tranquilo: 'g', bien:  'g', excelente: 'g',
+  cansado:   'y', regular: 'y', difícil: 'y',
+  estresado: 'y', presionado: 'y', ansioso: 'y',
+  triste:    'r', mal: 'r', estresado2: 'r', meh: 'r',
+};
+const MOOD_COLORS = { g:'#16A34A', y:'#D97706', r:'#DC2626', n:'#E5E7EB' };
+const MOOD_LABELS_ES = { g:'😊 Positivo', y:'😴 Neutro/Cansado', r:'😟 Bajo/Necesita apoyo', n:'Sin registro' };
+
+function getMoodLevel(moodValue){
+  if(!moodValue) return 'n';
+  if(moodValue==='motivado'||moodValue==='feliz'||moodValue==='bien'||moodValue==='excelente') return 'g';
+  if(moodValue==='cansado'||moodValue==='regular'||moodValue==='estresado'||
+     moodValue==='ansioso'||moodValue==='presionado'||moodValue==='difícil') return 'y';
+  if(moodValue==='triste'||moodValue==='mal'||moodValue==='meh') return 'r';
+  return MOOD_LEVEL_MAP[moodValue]||'n';
+}
+
+async function renderMoodHistory(){
+  const el = document.getElementById('moodHistoryPanel'); if(!el) return;
+  el.innerHTML = '<div class="workplan-empty">⏳ Cargando historial...</div>';
+
+  // Obtener los últimos 7 días como strings ISO YYYY-MM-DD
+  const today = new Date(); today.setHours(0,0,0,0);
+  const last7 = Array.from({length:7},(_,i)=>{
+    const d = new Date(today); d.setDate(today.getDate()-6+i);
+    return d;
+  });
+  const last7Strs = last7.map(d=>d.toISOString().split('T')[0]);
+  const dayNames  = last7.map(d=>d.toLocaleDateString('es-CL',{weekday:'short',day:'numeric'}));
+
+  // Hijos del sistema
+  const kids = (window.orgMembers||[]).filter(m=>m&&(m.role==='hijo1'||m.role==='hijo2'));
+  if(!kids.length){
+    el.innerHTML = `<div class="workplan-empty">Sin hijos registrados en el sistema.<br>
+      <span style="font-size:11px;">Agrega Hijo 1 / Hijo 2 desde "+ Nuevo Integrante".</span></div>`;
+    return;
+  }
+
+  // Cargar mood_history de Firestore (también usar diaryMood como fallback)
+  let historyRecords = [];
+  try { historyRecords = await window.loadMoodHistory7Days() || []; } catch(e){}
+
+  // Labels de día (header)
+  const labelRow = `<div class="mh-day-label">${dayNames.map(d=>`<span class="mh-day-lbl">${d}</span>`).join('')}</div>`;
+
+  // Construir filas por hijo
+  const rows = kids.map(kid=>{
+    const rc = ROLES[kid.role]||{};
+
+    // Combinar mood_history (Firestore) con diaryMood (doc del usuario) para tener ambas fuentes
+    const kidHistory = historyRecords.filter(r=>r.userId===kid.uid);
+
+    // También buscar en diaryMood cargado en orgMembers
+    const diaryMood = kid._diaryMood || [];
+
+    // Construir mapa fecha → {level, label, emoji, taskCount}
+    const dayMap = {};
+    diaryMood.forEach(entry=>{
+      if(!entry.ts) return;
+      const d = new Date(entry.ts).toISOString().split('T')[0];
+      dayMap[d] = {
+        level: getMoodLevel(entry.mood||entry.profileKey),
+        label: entry.label||entry.mood||'',
+        emoji: entry.emoji||'',
+        taskCount: null
+      };
+    });
+    // Sobrescribir con mood_history si hay datos más recientes
+    kidHistory.forEach(r=>{
+      dayMap[r.date] = {
+        level: getMoodLevel(r.moodValue),
+        label: r.label||r.moodValue||'',
+        emoji: r.emoji||'',
+        taskCount: r.taskCount||null
+      };
+    });
+
+    // Calcular tareas completadas por día
+    const kidTasks = tasks.filter(t=>t.owner===kid.displayName&&t.done&&t.doneAt);
+    kidTasks.forEach(t=>{
+      const d = new Date(t.doneAt||t.ts).toISOString().split('T')[0];
+      if(dayMap[d]) dayMap[d].taskCount = (dayMap[d].taskCount||0)+1;
+    });
+
+    // Construir array de 7 puntos
+    const dots = last7Strs.map((ds,i)=>{
+      const entry = dayMap[ds];
+      const level = entry ? entry.level : 'n';
+      const label = entry ? (entry.emoji+' '+entry.label) : 'Sin registro';
+      const tasks_ = entry&&entry.taskCount!=null ? `<br>✓ ${entry.taskCount} tarea${entry.taskCount!==1?'s':''} completadas` : '';
+      const dayFmt = last7[i].toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'short'});
+      return `<div class="mh-dot-wrap" ontouchstart="toggleMhTip(this)" ontouchend="event.preventDefault()">
+        <div class="mh-dot mood-${level}" style="background:${MOOD_COLORS[level]};"></div>
+        <div class="mh-tooltip">
+          <div class="mh-tooltip-date">${dayFmt}</div>
+          <div class="mh-tooltip-mood">${label}${tasks_}</div>
+        </div>
+      </div>`;
+    });
+
+    // Detectar alerta: 2+ días consecutivos con yellow o red
+    const levels = last7Strs.map(ds=>(dayMap[ds]||{}).level||'n');
+    let maxStreak=0, streak=0;
+    levels.forEach(l=>{ if(l==='y'||l==='r'){streak++;maxStreak=Math.max(maxStreak,streak);}else{streak=0;} });
+    const isAlert = maxStreak >= 2;
+
+    const moodIcon = getMoodLevel(kid.currentMood);
+    return `<div class="mh-row ${isAlert?'alert-row':''}">
+      <div class="mh-avatar" style="background:${rc.color||'#888'}18;color:${rc.color||'#888'};">${rc.emoji||'👤'}</div>
+      <div class="mh-name" title="${kid.displayName}">${kid.displayName||kid.role}</div>
+      <div class="mh-dots">${dots.join('')}</div>
+      ${isAlert?`<span class="mh-alert-badge">⚠️ Tendencia</span>`:''}
+    </div>`;
+  });
+
+  el.innerHTML = `
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16A34A;margin-right:4px;"></span>Positivo</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D97706;margin-right:4px;"></span>Neutro/Cansado</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#DC2626;margin-right:4px;"></span>Bajo · Necesita apoyo</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#E5E7EB;margin-right:4px;"></span>Sin registro</span>
+    </div>
+    <div class="mh-section">
+      ${labelRow}
+      ${rows.join('')}
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:8px;">
+      ⚠️ Borde pulsante = 2+ días consecutivos en estado neutro o bajo. Intervención recomendada.
+    </div>`;
+}
+window.renderMoodHistory=renderMoodHistory;
+
+function toggleMhTip(el){
+  el.classList.toggle('tip-open');
+  setTimeout(()=>el.classList.remove('tip-open'), 2500);
+}
+window.toggleMhTip=toggleMhTip;
+
 // ═══════════════ PANEL DE ROLES (Admin Dashboard) ═══════════════
 const ROLE_PERMS = {
   director:             ['👁️ Ver TODO el sistema','✅ Aprobar tareas de cualquier rol','🔑 Asignar/cambiar roles','📊 Auditoría stealth (geoloc, logs)','🎛️ Control Tower completo','💰 Cierre de mes Tienda','🗺️ Selección de Staff Bazar'],
@@ -7073,6 +7251,7 @@ window.loadOrgData = async function(){
           m._tasks        = ud.data().tasks||[];
           m._kanban       = ud.data().kanban||[];
           m._lastCheckin  = (ud.data().mood||[])[0]||null;
+          m._diaryMood    = ud.data().diaryMood||[]; // historial emocional 7 días
         }
       }catch(e2){}
       members.push(m);
@@ -7196,6 +7375,36 @@ window.createUserForDirector = async function(email, pass, profileData){
     if(secondaryApp){
       Promise.resolve().then(()=>deleteApp(secondaryApp)).catch(()=>{});
     }
+  }
+};
+
+// ── mood_history: registro cross-user para consultas del Director ──
+// Schema: {userId, userEmail, displayName, role, date (YYYY-MM-DD), dateTs,
+//          moodValue, moodLevel (green/yellow/red), emoji, label, orgId}
+window.saveMoodHistoryDoc = async function(data){
+  try{
+    const docId = `${data.userId}_${data.date}`;
+    await setDoc(doc(db,'mood_history',docId), data, {merge:true});
+  }catch(e){ console.warn('[mood_history] write error:', e.message); }
+};
+
+// Cargar los últimos 7 días de historial para todos los hijos
+window.loadMoodHistory7Days = async function(){
+  try{
+    const today   = new Date(); today.setHours(23,59,59,999);
+    const weekAgo = new Date(today); weekAgo.setDate(today.getDate()-6); weekAgo.setHours(0,0,0,0);
+    const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await gd2(q2(col2(db,'mood_history'),
+      w2('orgId','==',ORG_ID),
+      w2('dateTs','>=',weekAgo.getTime())
+    ));
+    const records = snap.docs.map(d=>d.data());
+    console.log('[mood_history] Cargados:', records.length, 'registros últimos 7 días');
+    return records;
+  }catch(e){
+    console.warn('[mood_history] load error:', e.message);
+    return [];
   }
 };
 
