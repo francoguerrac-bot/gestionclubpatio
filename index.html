@@ -565,7 +565,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .personas-module-icon{font-size:18px;}
 .personas-module-title{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);}
 .personas-module-count{font-size:10px;font-weight:600;background:var(--border);color:var(--mid);padding:2px 8px;border-radius:99px;margin-left:auto;}
-.personas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px;}
+.personas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:16px;}
 .persona-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:0;transition:box-shadow .2s;position:relative;overflow:hidden;}
 .persona-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .persona-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);}
@@ -2340,6 +2340,7 @@ const ROLES = {
   programador:          {label:'Encargado Web',       emoji:'💻', color:'#1D4ED8', bg:'#DBEAFE', modules:['tienda','club'],               nav:['tareas','club','tienda'],                           canReadAll:false},
   disenador_pub:        {label:'Diseñador/Publicista',emoji:'🎨', color:'#7C3AED', bg:'#EDE9FE', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   staff_eventos:        {label:'Staff Eventos',       emoji:'⚽', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas'],                                           canReadAll:false},
+  soporte_app:          {label:'Soporte Aplicaciones',emoji:'🛠️', color:'#0891B2', bg:'#CFFAFE', modules:['club'],                        nav:['tareas'],                                           canReadAll:false},
   logistica:            {label:'Logística',            emoji:'🚛', color:'#0891B2', bg:'#CFFAFE', modules:['bazar','tienda'],              nav:['tareas','bazar'],                                   canReadAll:false},
   pending:              {label:'Cuenta Pendiente',    emoji:'⏳', color:'#9CA3AF', bg:'#F3F4F6', modules:[],                              nav:[],                                                   canReadAll:false},
 };
@@ -5921,7 +5922,7 @@ const PERSONAS_MOCK = {
 // ── Roles disponibles por módulo (para cascade legacy) ──
 const MODULE_ROLES_MAP = {
   casa:   [{value:'mama',label:'👩 Mamá'},{value:'hijo1',label:'👦 Hijo 1'},{value:'hijo2',label:'👧 Hijo 2'}],
-  club:   [{value:'publicista',label:'📣 Publicista'},{value:'disenador',label:'🎨 Diseñador/a'},{value:'coordinadora_bazares',label:'🎪 Coord. Bazares'},{value:'disenador_pub',label:'🎨 Diseñador/Publicista'},{value:'staff_eventos',label:'⚽ Staff Eventos'}],
+  club:   [{value:'publicista',label:'📣 Publicista'},{value:'disenador',label:'🎨 Diseñador/a'},{value:'coordinadora_bazares',label:'🎪 Coord. Bazares'},{value:'disenador_pub',label:'🎨 Diseñador/Publicista'},{value:'staff_eventos',label:'⚽ Staff Eventos'},{value:'soporte_app',label:'🛠️ Soporte Aplicaciones'}],
   bazar:  [{value:'coordinadora_bazares',label:'🎪 Coord. Bazares'},{value:'staff_montaje',label:'🔧 Staff Montaje'},{value:'logistica',label:'🚛 Logística'}],
   tienda: [{value:'coordinadora_tienda',label:'🏪 Coord. Tienda'},{value:'vendedor',label:'💼 Vendedor/a'},{value:'programador',label:'💻 Encargado Web'}],
 };
@@ -5930,7 +5931,7 @@ const MODULE_ROLES_MAP = {
 // Grupos de roles para mostrar en el modal
 const ROLES_GROUPS = [
   { group:'🏠 Casa', roles:['mama','hijo1','hijo2'] },
-  { group:'🟢 Club',  roles:['publicista','disenador','disenador_pub','coordinadora_bazares','staff_eventos'] },
+  { group:'🟢 Club',  roles:['publicista','disenador','disenador_pub','coordinadora_bazares','staff_eventos','soporte_app'] },
   { group:'🛍️ Bazar', roles:['staff_montaje','logistica'] },
   { group:'🏪 Tienda',roles:['coordinadora_tienda','vendedor','programador'] },
 ];
@@ -6129,74 +6130,77 @@ function renderPersonasPanel(){
   if(currentRole!=='director') return;
   const container=document.getElementById('personasContainer'); if(!container) return;
 
-  const users = (window.orgMembers||[]).filter(m=>m&&m.role&&m.role!=='director'&&m.role!=='pending');
-  if(!users || users.length === 0){
+  // ── Deduplicación por UID: cada persona aparece UNA SOLA VEZ ──
+  const rawMembers = (window.orgMembers||[]).filter(m=>m&&m.role&&m.role!=='director'&&m.role!=='pending');
+
+  // Construir mapa UID → persona (elimina duplicados automáticamente)
+  const byUid = new Map();
+  rawMembers.forEach(m=>{
+    const key = m.uid || m.email || 'unknown';
+    if(!byUid.has(key)){
+      const roleList = (Array.isArray(m.roles)&&m.roles.filter(Boolean).length)
+        ? m.roles.filter(Boolean) : (m.role?[m.role]:[]);
+      byUid.set(key, {
+        uid:           key,
+        displayName:   m.displayName  || m.email || '—',
+        email:         m.email        || '',
+        role:          m.role         || 'pending',
+        roles:         roleList,
+        modules:       Array.isArray(m.modules)?m.modules:[],
+        phone:         m.phone        || '',
+        currentMood:   m.currentMood  || 'green',
+        statusMessage: m.statusMessage|| 'Sin nota de estado.',
+        lastSeen:      m.lastSeen     || '—',
+        _tasks:        Array.isArray(m._tasks)?m._tasks:[],
+      });
+    }
+  });
+
+  // Usar mock si no hay datos reales
+  const uniquePeople = byUid.size > 0
+    ? [...byUid.values()]
+    : Object.values(PERSONAS_MOCK).flat();
+
+  if(!uniquePeople.length){
     console.warn('[Personas] No hay usuarios registrados o la base de datos está vacía.');
     container.innerHTML = `<div style="text-align:center;padding:32px 20px;color:var(--text-muted);">
       <div style="font-size:40px;margin-bottom:12px;opacity:.3;">👥</div>
       <div style="font-size:14px;font-weight:700;margin-bottom:6px;">No hay integrantes registrados</div>
-      <div style="font-size:12px;line-height:1.5;">Agrega el primer integrante con el botón<br><strong>"+ Nuevo Integrante"</strong> o recarga los datos con <strong>🎛️ Control</strong>.</div>
+      <div style="font-size:12px;line-height:1.5;">Agrega el primer integrante con el botón<br>
+      <strong>"+ Nuevo Integrante"</strong> o recarga con <strong>🎛️ Control</strong>.</div>
     </div>`;
     return;
   }
 
-  container.innerHTML='';
-
-  // Fusionar datos reales con mock — null-safe en todos los campos
-  const realByModule = {};
-  (window.orgMembers||[]).filter(m=>m&&m.role&&m.role!=='director'&&m.role!=='pending').forEach(m=>{
-    // Soporte multi-rol: si tiene roles[], expandir; si no, usar role single
-    const roleList = Array.isArray(m.roles)&&m.roles.length ? m.roles : [m.role];
-    const allMods  = [...new Set(roleList.flatMap(r=>(ROLES[r]||{}).modules||[]))];
-    allMods.forEach(mod=>{
-      if(!realByModule[mod]) realByModule[mod]=[];
-      realByModule[mod].push({
-        uid:          m.uid           || m.email || 'unknown',
-        displayName:  m.displayName   || m.email || '—',
-        email:        m.email         || '',
-        role:         m.role          || 'pending',
-        roles:        roleList,
-        emoji:        (ROLES[m.role]||{}).emoji  || '👤',
-        color:        (ROLES[m.role]||{}).color  || '#888',
-        phone:        m.phone         || '',
-        currentMood:  m.currentMood   || 'green',
-        statusMessage:m.statusMessage || 'Sin nota de estado.',
-        lastSeen:     m.lastSeen      || '—',
-        _tasks:       Array.isArray(m._tasks)?m._tasks:[],
-      });
-    });
-  });
-
-  Object.entries(MODULE_LABELS_P).forEach(([mod, meta])=>{
-    // Usar datos reales si hay, si no usar mock
-    const people = Object.keys(realByModule).length
-      ? (realByModule[mod]||[])
-      : (PERSONAS_MOCK[mod]||[]);
-    if(!people.length) return;
-
-    // Header del módulo
-    const sec=document.createElement('div');
-    sec.innerHTML=`
-      <div class="personas-module-hdr" style="border-color:${getModColor(mod)}33;">
-        <span class="personas-module-icon">${meta.icon}</span>
-        <span class="personas-module-title" style="color:${getModColor(mod)}">${meta.label}</span>
-        <span class="personas-module-count">${people.length} persona${people.length!==1?'s':''}</span>
+  // ── Vista unificada: UN grid sin secciones por módulo ──
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;">
+        👥 ${uniquePeople.length} integrante${uniquePeople.length!==1?'s':''} · Sin duplicados
       </div>
-      <div class="personas-grid" id="pgrid-${mod}"></div>`;
-    container.appendChild(sec);
+    </div>
+    <div class="personas-grid" id="pgridAll"></div>`;
 
-    const grid=sec.querySelector('#pgrid-'+mod);
-    people.forEach(p=>grid.appendChild(makePersonaCard(p,mod)));
-  });
+  const grid = container.querySelector('#pgridAll');
+  uniquePeople
+    .sort((a,b)=>(a.displayName||'').localeCompare(b.displayName||''))
+    .forEach(p => grid.appendChild(makePersonaCard(p)));
 }
 
 function getModColor(mod){
   return {casa:'#B5651D',club:'#1F7A52',bazar:'#2A5FCC',tienda:'#0F766E'}[mod]||'#6B7280';
 }
 
-function makePersonaCard(p, mod){
+function makePersonaCard(p){
   const mood=MOOD_META[p.currentMood]||MOOD_META.green;
-  const rc=ROLES[p.role]||{};
+  const roleList=(Array.isArray(p.roles)&&p.roles.filter(Boolean).length)?p.roles.filter(Boolean):[p.role||'pending'];
+  const rc=ROLES[roleList[0]]||{}; // color/emoji del rol primario
+
+  // Badges de TODOS los roles del integrante
+  const rolesBadges=roleList.map(r=>{
+    const rr=ROLES[r]||{};
+    return `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;background:${rr.bg||'#f0f0f0'};color:${rr.color||'#666'};white-space:nowrap;">${rr.emoji||''}${rr.label||r}</span>`;
+  }).join('');
 
   // Tareas asignadas a esta persona
   const personTasks=tasks.filter(t=>t.owner===p.displayName||t.owner===p.uid);
@@ -6212,10 +6216,11 @@ function makePersonaCard(p, mod){
 
   card.innerHTML=`
     <div class="persona-card-top">
-      <div class="persona-avatar" style="background:${p.color}18;color:${p.color};">${p.emoji}</div>
+      <div class="persona-avatar" style="background:${rc.color||'#888'}18;color:${rc.color||'#888'};">${rc.emoji||'👤'}</div>
       <div style="flex:1;min-width:0;">
         <div class="persona-name">${p.displayName}</div>
-        <div class="persona-role-label">${rc.label||p.role}</div>
+        <!-- Badges de todos los roles — sin duplicados -->
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${rolesBadges}</div>
       </div>
       <div class="persona-mood-dot ${mood.dot}" title="${mood.label}"></div>
     </div>
