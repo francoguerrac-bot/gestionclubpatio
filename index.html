@@ -6104,10 +6104,11 @@ const PRESET_ROLES = {
 };
 
 // ── Parche de datos: correcciones de teléfono por email ──
-// Se aplica automáticamente en el login si el campo está vacío o incorrecto
+// Se aplica automáticamente en el login Y cuando el Director carga la org
 const PHONE_PATCHES = {
   'czapatauv@gmail.com': '+56973567652', // Carolina Zapata Morales
 };
+window.PHONE_PATCHES = PHONE_PATCHES; // exponer al módulo Firebase
 
 // ── Crear perfil de usuario en /users/{uid} ──
 async function createUserProfile(uid, email){
@@ -6150,6 +6151,20 @@ window.loadOrgData = async function(){
     }
     window.orgMembers = members;
     if(window.renderControlTower) window.renderControlTower();
+
+    // ── Aplicar PHONE_PATCHES para miembros con teléfono vacío o incorrecto ──
+    // El Director tiene permisos de escritura en docs de otros usuarios (ver firestore.rules)
+    for(const m of members){
+      const patch = (window.PHONE_PATCHES||{})[m.email?.toLowerCase()];
+      if(patch && (!m.phone || m.phone==='' || m.phone==='+56912345678')){
+        try{
+          await setDoc(doc(db,'users',m.uid),{phone:patch},{merge:true});
+          m.phone = patch; // actualizar en memoria también
+          console.log('[PHONE_PATCH via Director]', m.email, '→', patch);
+        }catch(pe){ console.warn('No se pudo patchear teléfono de', m.email, pe.message); }
+      }
+    }
+
     // Si el usuario actual era 'pending' y fue activado, remontar UI
     const me = members.find(m=>m.uid===currentUser.uid);
     if(me && me.role !== 'pending' && window.currentRole === 'pending'){
