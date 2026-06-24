@@ -6449,12 +6449,29 @@ const PRESET_ROLES = {
   'francoguerrac@gmail.com': { role:'director', displayName:'Francisco', emoji:'👨', color:'#059669' },
 };
 
-// ── Parche de datos: correcciones de teléfono por email ──
-// Se aplica automáticamente en el login Y cuando el Director carga la org
+// ── Parche de teléfonos ──
 const PHONE_PATCHES = {
-  'czapatauv@gmail.com': '+56973567652', // Carolina Zapata Morales
+  'czapatauv@gmail.com': '+56973567652',
 };
-window.PHONE_PATCHES = PHONE_PATCHES; // exponer al módulo Firebase
+window.PHONE_PATCHES = PHONE_PATCHES;
+
+// ── Parche completo de perfiles por email ──
+// Se aplica en el login si el perfil está incompleto (sin roles o sin módulos)
+const PROFILE_PATCHES = {
+  'czapatauv@gmail.com': {
+    displayName:      'Carolina Zapata Morales',
+    phone:            '+56973567652',
+    role:             'mama',
+    roles:            ['mama', 'coordinadora_bazares', 'coordinadora_tienda'],
+    modules:          ['casa', 'bazar', 'tienda'],
+    orgId:             ORG_ID,
+    onboardingComplete: true,
+    profile:          { avatarEmoji: '👩', color: '#DB2777' },
+    currentMood:      'green',
+    statusMessage:    'Coordinadora Casa · Bazar · Tienda',
+  }
+};
+window.PROFILE_PATCHES = PROFILE_PATCHES;
 
 // ── Crear perfil de usuario en /users/{uid} ──
 async function createUserProfile(uid, email){
@@ -6498,16 +6515,30 @@ window.loadOrgData = async function(){
     window.orgMembers = members;
     if(window.renderControlTower) window.renderControlTower();
 
-    // ── Aplicar PHONE_PATCHES para miembros con teléfono vacío o incorrecto ──
-    // El Director tiene permisos de escritura en docs de otros usuarios (ver firestore.rules)
+    // ── Aplicar PROFILE_PATCHES y PHONE_PATCHES para miembros con datos incompletos ──
     for(const m of members){
-      const patch = (window.PHONE_PATCHES||{})[m.email?.toLowerCase()];
-      if(patch && (!m.phone || m.phone==='' || m.phone==='+56912345678')){
+      if(!m.uid || !m.email) continue;
+      const email = m.email.toLowerCase();
+
+      // Parche completo de perfil (roles/módulos faltantes)
+      const pp = (window.PROFILE_PATCHES||{})[email];
+      const needsFix = pp && (!m.roles||!m.roles.length||!m.modules||m.role==='pending');
+      if(needsFix){
         try{
-          await setDoc(doc(db,'users',m.uid),{phone:patch},{merge:true});
-          m.phone = patch; // actualizar en memoria también
-          console.log('[PHONE_PATCH via Director]', m.email, '→', patch);
-        }catch(pe){ console.warn('No se pudo patchear teléfono de', m.email, pe.message); }
+          const fix = {...pp, uid:m.uid, updatedAt:new Date().toISOString()};
+          await setDoc(doc(db,'users',m.uid), fix, {merge:true});
+          Object.assign(m, fix);
+          console.log('[PROFILE_PATCH via Director]', m.email);
+        }catch(e){ console.warn('Profile patch error:', m.email, e.message); }
+      }
+
+      // Parche de teléfono
+      const tp = (window.PHONE_PATCHES||{})[email];
+      if(tp && (!m.phone||m.phone==='')){
+        try{
+          await setDoc(doc(db,'users',m.uid),{phone:tp},{merge:true});
+          m.phone = tp;
+        }catch(e){}
       }
     }
 
@@ -6769,7 +6800,23 @@ onAuthStateChanged(auth, async (user)=>{
         data    = {...data,    ...update};
       }
 
-      // Parche de teléfono (solo si phone está vacío o incorrecto)
+      // ── Parche completo de perfil (PROFILE_PATCHES) ──
+      // Se aplica si el perfil no tiene roles válidos (perfil incompleto o mal guardado)
+      const profilePatch = (window.PROFILE_PATCHES||{})[(user.email||'').toLowerCase()];
+      const needsPatch   = profilePatch && (
+        !profile.roles || !Array.isArray(profile.roles) || profile.roles.length === 0 ||
+        !profile.modules || profile.modules.length === 0 ||
+        !profile.role || profile.role === 'pending'
+      );
+      if(needsPatch){
+        const fullPatch = { ...profilePatch, uid: user.uid, updatedAt: new Date().toISOString() };
+        await setDoc(doc(db,'users',user.uid), fullPatch, {merge:true}).catch(e=>console.warn('[PROFILE_PATCH] error:', e.message));
+        profile = { ...profile, ...fullPatch };
+        data    = { ...data,    ...fullPatch };
+        console.log('[PROFILE_PATCH] Perfil reparado para', user.email, '→ roles:', fullPatch.roles);
+      }
+
+      // ── Parche de teléfono (solo si phone está vacío) ──
       const phonePatch = (window.PHONE_PATCHES||{})[(user.email||'').toLowerCase()];
       if(phonePatch && !profile.phone){
         await setDoc(doc(db,'users',user.uid),{phone:phonePatch},{merge:true}).catch(()=>{});
