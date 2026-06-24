@@ -1977,28 +1977,45 @@ function writeAuditEntry(action, meta){
 window.writeAuditEntry = writeAuditEntry;
 
 // ═══════════════ OWNER OPTIONS ═══════════════
-function getOwnerOpts(ctx){
-  const dirName = (currentProfile&&currentProfile.displayName)||'Director';
-  const dirEmoji= (ROLES[currentRole]||{}).emoji||'👨';
-  const base=[{value:'',label:'Sin asignar'},{value:dirName,label:dirEmoji+' '+dirName+' (yo)'}];
-  if(ctx==='casa') return [...base,
-    {value:'Hijo 1',label:'👦 Hijo 1'},
-    {value:'Hijo 2',label:'👧 Hijo 2'},
-    {value:'Mamá',  label:'👩 Mamá'},
-    {value:'Papá',  label:'👨 Papá'},
-  ];
-  return [...base,
-    {value:'Team A',label:'Team A · Comercios'},
-    {value:'Team B',label:'Team B · Contenido'},
-    {value:'Team C',label:'Team C · Soporte'},
-    {value:'Team D',label:'Team D · Marketing'},
-  ];
-}
+// ── Diccionario de asignados por módulo ──
+const MODULE_ASSIGNEES = {
+  casa: [
+    {value:'',          label:'Sin asignar'},
+    {value:'Papá',      label:'👨 Papá'},
+    {value:'Mamá',      label:'👩 Mamá'},
+    {value:'Hijo 1',    label:'👦 Hijo 1'},
+    {value:'Hijo 2',    label:'👧 Hijo 2'},
+  ],
+  club: [
+    {value:'',                    label:'Sin asignar'},
+    {value:'Director',            label:'👨 Director'},
+    {value:'Publicista',          label:'📣 Publicista'},
+    {value:'Diseñador',           label:'🎨 Diseñador/a'},
+    {value:'Coordinadora Bazares',label:'🎪 Coordinadora de Bazares'},
+  ],
+  bazar: [
+    {value:'',                    label:'Sin asignar'},
+    {value:'Coordinadora',        label:'👩 Coordinadora (Mamá)'},
+    {value:'Director Montaje',    label:'👨 Director de Montaje (Francisco)'},
+    {value:'Staff Montaje',       label:'🔧 Staff de Montaje'},
+  ],
+  tienda: [
+    {value:'',                    label:'Sin asignar'},
+    {value:'Coordinadora Tienda', label:'👩 Coordinadora (Mamá)'},
+    {value:'Administrador',       label:'👨 Administrador (Francisco)'},
+    {value:'Vendedor',            label:'💼 Vendedores'},
+    {value:'Nathaniel',           label:'💻 Programador Web (Nathaniel)'},
+  ],
+};
+
 function updateOwnerOpts(){
-  const ctx=document.getElementById('metaCtx').value;
-  const sel=document.getElementById('metaOwner');
-  const opts=getOwnerOpts(ctx);
-  sel.innerHTML=opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
+  const ctx = document.getElementById('metaCtx').value;
+  const sel = document.getElementById('metaOwner');
+  const opts = MODULE_ASSIGNEES[ctx] || MODULE_ASSIGNEES.club;
+  sel.innerHTML = opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
+  // Pre-seleccionar al usuario actual si aplica
+  const me = currentProfile&&currentProfile.displayName;
+  if(me) [...sel.options].forEach(o=>{ if(o.value===me||o.text.includes(me)) o.selected=true; });
 }
 
 // ═══════════════ FREQ ═══════════════
