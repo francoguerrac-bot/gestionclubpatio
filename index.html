@@ -457,6 +457,51 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .psb-approved{background:#DCFCE7;color:#16A34A;}
 .psb-rejected{background:#FEE2E2;color:#DC2626;}
 .hijo-perm-status{background:var(--bg-main);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;}
+/* ── PANEL DE AUDITORÍA ── */
+.audit-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.audit-filter-btn{font-size:10px;font-weight:700;padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Inter',sans-serif;}
+.audit-filter-btn.active{background:var(--text-main);color:#fff;border-color:var(--text-main);}
+.audit-filter-btn.af-error{border-color:var(--accent-coral);color:var(--accent-coral);}
+.audit-filter-btn.af-error.active{background:var(--accent-coral);color:#fff;}
+.audit-filter-btn.af-wa{border-color:var(--primary-green);color:var(--primary-green);}
+.audit-filter-btn.af-wa.active{background:var(--primary-green);color:#fff;}
+.audit-stats-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.audit-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:8px 12px;text-align:center;flex:1;min-width:70px;}
+.audit-stat-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;line-height:1;}
+.audit-stat-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+/* Member audit card */
+.audit-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;transition:box-shadow .2s;position:relative;}
+.audit-card:hover{box-shadow:0 4px 16px rgba(45,49,66,.08);}
+.audit-card.health-ok{border-left:4px solid var(--primary-green);}
+.audit-card.health-warn{border-left:4px solid var(--accent-gold);}
+.audit-card.health-error{border-left:4px solid var(--accent-coral);}
+.audit-card-hdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.audit-avatar{width:38px;height:38px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.audit-name{font-size:13px;font-weight:800;color:var(--text-main);}
+.audit-email{font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;word-break:break-all;}
+.health-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:800;padding:3px 9px;border-radius:99px;margin-left:auto;flex-shrink:0;}
+.hb-ok{background:#DCFCE7;color:#16A34A;}
+.hb-warn{background:#FEF3C7;color:#92400E;}
+.hb-error{background:#FEE2E2;color:#DC2626;}
+.audit-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+@media(max-width:400px){.audit-fields{grid-template-columns:1fr;}}
+.audit-field{background:var(--bg-main);border-radius:8px;padding:8px 10px;}
+.audit-field-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:3px;}
+.audit-field-value{font-size:12px;color:var(--text-main);word-break:break-all;}
+.audit-field-value.phone-invalid{color:var(--accent-coral);font-weight:700;}
+.audit-field-value.phone-valid{color:var(--primary-green);font-weight:700;}
+.audit-edit-input{width:100%;font-family:'Inter',sans-serif;font-size:12px;border:1.5px solid var(--primary-blue);border-radius:7px;padding:5px 8px;outline:none;background:#fff;box-sizing:border-box;}
+.audit-roles-wrap{display:flex;flex-wrap:wrap;gap:4px;}
+.audit-role-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;display:inline-block;}
+.audit-actions{display:flex;gap:6px;align-items:center;}
+.audit-edit-btn{font-size:10px;font-weight:700;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
+.audit-edit-btn:hover{background:var(--text-main);color:#fff;border-color:var(--text-main);}
+.audit-save-btn{font-size:10px;font-weight:700;padding:6px 12px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));color:#fff;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 2px 6px rgba(91,192,190,.3);}
+.audit-cancel-btn{font-size:10px;font-weight:700;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:none;color:var(--text-muted);cursor:pointer;font-family:'Inter',sans-serif;}
+.wa-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;}
+.wa-ok{background:#DCFCE7;color:#16A34A;}
+.wa-no{background:#FEE2E2;color:#DC2626;}
+.wa-miss{background:#F3F4F6;color:#9CA3AF;}
 /* ── MULTI-ROLE CHECKBOX GRID ── */
 .role-checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px;}
 @media(max-width:400px){.role-checkbox-grid{grid-template-columns:repeat(2,1fr);}}
@@ -1719,6 +1764,48 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 </div>
 
 <!-- ══════════════════════════════════════
+     PAGE: AUDITORÍA (Master Data Control)
+════════════════════════════════════════ -->
+<div class="page" id="pg-auditoria">
+  <div style="padding:14px 14px 0;">
+
+    <!-- Header -->
+    <div class="card" style="background:linear-gradient(135deg,#1E2D3D,#2D3A1A);border:none;margin-bottom:12px;">
+      <div style="color:#fff;">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Director · Solo visible aquí</div>
+        <div style="font-size:16px;font-weight:800;">🗂️ Panel de Auditoría · Master Data</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">Verifica y corrige datos de todos los integrantes</div>
+      </div>
+    </div>
+
+    <!-- Stats rápidas -->
+    <div class="audit-stats-row" id="auditStats"></div>
+
+    <!-- Barra de filtros -->
+    <div class="audit-filter-bar">
+      <button class="audit-filter-btn active" id="af-all"    onclick="setAuditFilter('all')">👥 Todos</button>
+      <button class="audit-filter-btn af-error" id="af-error" onclick="setAuditFilter('error')">⚠️ Con errores</button>
+      <button class="audit-filter-btn af-wa"    id="af-wa"    onclick="setAuditFilter('wa')">💬 WA habilitado</button>
+      <select id="af-module" class="audit-filter-btn" onchange="setAuditFilter('module',this.value)"
+        style="cursor:pointer;">
+        <option value="">📦 Todos los módulos</option>
+        <option value="casa">🏠 Casa</option>
+        <option value="club">🟢 Club Patio</option>
+        <option value="bazar">🛍️ Bazar</option>
+        <option value="tienda">🏪 Tienda</option>
+      </select>
+      <button class="audit-filter-btn" onclick="loadAuditData()" style="margin-left:auto;">🔄 Recargar</button>
+    </div>
+
+    <!-- Grid de miembros -->
+    <div id="auditGrid">
+      <div class="empty-state">Carga los datos con el botón 🔄 Recargar</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      PAGE 8 · PERSONAS (Team Dashboard · Director)
 ════════════════════════════════════════ -->
 <div class="page" id="pg-personas">
@@ -2120,7 +2207,7 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','roles'], canReadAll:true,  canApprove:true},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','auditoria'], canReadAll:true,  canApprove:true},
   mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','permisos','coach'],canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
@@ -2147,11 +2234,12 @@ const NAV_META = {
   equipo:  {icon:'👥', label:'Equipo'},
   coach:   {icon:'🧠', label:'Coach'},
   control: {icon:'🎛️', label:'Control'},
-  roles:    {icon:'🔑', label:'Roles'},
-  semana:   {icon:'📅', label:'Semana'},
-  personas: {icon:'🫂', label:'Equipo'},
-  'mi-panel':{icon:'🏠',label:'Mi Panel'},
-  permisos: {icon:'🔑', label:'Permisos'},
+  roles:     {icon:'🔑', label:'Roles'},
+  semana:    {icon:'📅', label:'Semana'},
+  personas:  {icon:'🫂', label:'Equipo'},
+  'mi-panel':{icon:'🏠', label:'Mi Panel'},
+  permisos:  {icon:'🔑', label:'Permisos'},
+  auditoria: {icon:'🗂️', label:'Auditoría'},
 };
 
 let currentRole = 'pending';
@@ -2245,6 +2333,7 @@ function showPage(p){
   if(p==='personas')  {renderPersonasPanel();}
   if(p==='mi-panel')  {renderMiPanel();}
   if(p==='permisos')  {renderPermissionsCenter();}
+  if(p==='auditoria') {loadAuditData();}
   window.scrollTo(0,0);
 }
 
@@ -3696,6 +3785,255 @@ function toast(msg){
   el.textContent=msg; el.classList.add('show');
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2300);
 }
+
+// ═══════════════ PANEL DE AUDITORÍA (Master Data Control) ═══════════════
+
+let auditData   = [];   // todos los usuarios cargados
+let auditFilter = 'all'; // 'all' | 'error' | 'wa' | 'module'
+let auditModFilter = '';
+let auditEditing = {}; // {uid: {field: tempValue}}
+
+// ── Validación de teléfono ──
+function validatePhone(phone){
+  const digits = (phone||'').replace(/\D/g,'');
+  if(!digits) return 'empty';
+  let num = digits.startsWith('56') ? digits.slice(2) : digits;
+  if(num.length < 8) return 'too_short';
+  if(num.length === 9 && num.startsWith('9')) return 'valid';
+  if(num.length >= 8) return 'valid';
+  return 'invalid';
+}
+
+// ── Estado de salud del integrante ──
+function getHealthStatus(m){
+  const hasPhone = validatePhone(m.phone) === 'valid';
+  const hasRoles = Array.isArray(m.roles)&&m.roles.filter(Boolean).length>0 || (m.role&&m.role!=='pending');
+  const hasMod   = Array.isArray(m.modules)&&m.modules.length>0;
+  if(!hasRoles)          return {status:'error', label:'❌ Sin rol',       cls:'hb-error', cardCls:'health-error'};
+  if(!hasPhone&&!hasMod) return {status:'error', label:'❌ Incompleto',    cls:'hb-error', cardCls:'health-error'};
+  if(!hasPhone)          return {status:'warn',  label:'⚠️ Sin teléfono', cls:'hb-warn',  cardCls:'health-warn'};
+  return                        {status:'ok',    label:'✅ OK',            cls:'hb-ok',    cardCls:'health-ok'};
+}
+
+// ── Cargar datos de Firestore ──
+async function loadAuditData(){
+  const grid = document.getElementById('auditGrid');
+  if(grid) grid.innerHTML = '<div class="empty-state">⏳ Cargando integrantes...</div>';
+  try {
+    auditData = await window.loadAllOrgUsers() || [];
+    renderAuditGrid();
+  } catch(e){
+    if(grid) grid.innerHTML = `<div class="empty-state">❌ Error cargando datos: ${e.message}</div>`;
+  }
+}
+window.loadAuditData = loadAuditData;
+
+// ── Filtros ──
+function setAuditFilter(mode, val){
+  auditFilter = mode;
+  if(mode==='module') auditModFilter = val||'';
+  // Update active buttons
+  ['all','error','wa'].forEach(f=>{
+    const btn=document.getElementById('af-'+f);
+    if(btn) btn.classList.toggle('active', f===mode);
+  });
+  renderAuditGrid();
+}
+window.setAuditFilter = setAuditFilter;
+
+// ── Render principal ──
+function renderAuditGrid(){
+  const grid = document.getElementById('auditGrid');
+  const stats = document.getElementById('auditStats');
+  if(!grid) return;
+
+  // Filtrar
+  let list = [...auditData].filter(m=>m.role!=='director');
+  const total = list.length;
+  const errors = list.filter(m=>getHealthStatus(m).status!=='ok').length;
+  const waOk   = list.filter(m=>validatePhone(m.phone)==='valid').length;
+
+  if(auditFilter==='error')  list=list.filter(m=>getHealthStatus(m).status!=='ok');
+  if(auditFilter==='wa')     list=list.filter(m=>validatePhone(m.phone)==='valid');
+  if(auditFilter==='module') list=list.filter(m=>(m.modules||[]).includes(auditModFilter));
+
+  // Stats
+  if(stats) stats.innerHTML = `
+    <div class="audit-stat"><div class="audit-stat-num" style="color:var(--primary-blue)">${total}</div><div class="audit-stat-lbl">Integrantes</div></div>
+    <div class="audit-stat"><div class="audit-stat-num" style="color:var(--accent-coral)">${errors}</div><div class="audit-stat-lbl">Con errores</div></div>
+    <div class="audit-stat"><div class="audit-stat-num" style="color:var(--primary-green)">${waOk}</div><div class="audit-stat-lbl">WA activo</div></div>
+    <div class="audit-stat"><div class="audit-stat-num" style="color:var(--text-muted)">${total-waOk}</div><div class="audit-stat-lbl">Sin teléfono</div></div>`;
+
+  if(!list.length){
+    grid.innerHTML = '<div class="empty-state">Sin integrantes con ese filtro.</div>';
+    return;
+  }
+
+  grid.innerHTML = '';
+  list.forEach(m => grid.appendChild(makeAuditCard(m)));
+}
+
+// ── Tarjeta de auditoría ──
+function makeAuditCard(m){
+  const health  = getHealthStatus(m);
+  const phoneV  = validatePhone(m.phone);
+  const roles   = Array.isArray(m.roles)&&m.roles.length ? m.roles.filter(Boolean) : (m.role?[m.role]:[]);
+  const mods    = Array.isArray(m.modules)&&m.modules.length ? m.modules : [];
+  const rc      = ROLES[roles[0]]||{};
+  const isEditing = !!auditEditing[m.uid];
+
+  const phoneDisplay = m.phone
+    ? `<span class="audit-field-value phone-${phoneV==='valid'?'valid':'invalid'}">${m.phone} ${phoneV==='valid'?'✅':'⚠️ inválido'}</span>`
+    : `<span class="audit-field-value" style="color:var(--text-muted);">Sin teléfono</span>`;
+
+  const rolesTags = roles.map(r=>{
+    const rr=ROLES[r]||{}; return `<span class="audit-role-tag" style="background:${rr.bg||'#f0f0f0'};color:${rr.color||'#666'};">${rr.emoji||''}${rr.label||r}</span>`;
+  }).join('') || '<span style="font-size:10px;color:var(--accent-coral);">Sin rol</span>';
+
+  const waLine = phoneV==='valid'
+    ? `<span class="wa-badge wa-ok">💬 WA listo</span>`
+    : phoneV==='empty'
+    ? `<span class="wa-badge wa-miss">💬 Sin número</span>`
+    : `<span class="wa-badge wa-no">💬 Número inválido</span>`;
+
+  const card = document.createElement('div');
+  card.className = `audit-card ${health.cardCls}`;
+  card.id = 'acard-'+m.uid;
+
+  if(!isEditing){
+    // Vista normal
+    card.innerHTML = `
+      <div class="audit-card-hdr">
+        <div class="audit-avatar" style="background:${rc.color||'#9CA3AF'}18;color:${rc.color||'#9CA3AF'};">${rc.emoji||'👤'}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="audit-name">${m.displayName||'—'}</div>
+          <div class="audit-email">${m.email||'—'}</div>
+        </div>
+        <span class="health-badge ${health.cls}">${health.label}</span>
+      </div>
+      <div class="audit-fields">
+        <div class="audit-field">
+          <div class="audit-field-label">📱 Teléfono</div>
+          ${phoneDisplay}
+        </div>
+        <div class="audit-field">
+          <div class="audit-field-label">📦 Módulos</div>
+          <div class="audit-field-value">${mods.join(' · ')||'—'}</div>
+        </div>
+        <div class="audit-field" style="grid-column:1/-1;">
+          <div class="audit-field-label">🎭 Roles</div>
+          <div class="audit-roles-wrap">${rolesTags}</div>
+        </div>
+      </div>
+      <div class="audit-actions">
+        ${waLine}
+        <button class="audit-edit-btn" onclick="startAuditEdit('${m.uid}')" style="margin-left:auto;">✏️ Editar</button>
+      </div>`;
+  } else {
+    // Vista de edición inline
+    const ed = auditEditing[m.uid]||{};
+    // Multi-role checkboxes
+    const roleCheckboxes = Object.entries(ROLES).filter(([k])=>k!=='pending'&&k!=='director').map(([k,r])=>`
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:3px 0;">
+        <input type="checkbox" value="${k}" class="aedit-role-${m.uid}" ${roles.includes(k)?'checked':''}
+          style="accent-color:var(--primary-blue);width:14px;height:14px;">
+        ${r.emoji||''} ${r.label||k}
+      </label>`).join('');
+
+    card.innerHTML = `
+      <div class="audit-card-hdr" style="margin-bottom:12px;">
+        <div class="audit-avatar" style="background:${rc.color||'#9CA3AF'}18;color:${rc.color||'#9CA3AF'};">${rc.emoji||'👤'}</div>
+        <div>
+          <div class="audit-name">${m.displayName||'—'}</div>
+          <div class="audit-email">${m.email||'—'}</div>
+        </div>
+        <span class="health-badge ${health.cls}">${health.label}</span>
+      </div>
+
+      <div class="audit-field" style="margin-bottom:8px;">
+        <div class="audit-field-label">👤 Nombre</div>
+        <input class="audit-edit-input" id="ae-name-${m.uid}" value="${m.displayName||''}" placeholder="Nombre completo">
+      </div>
+      <div class="audit-field" style="margin-bottom:8px;">
+        <div class="audit-field-label">📱 Teléfono (solo dígitos, sin +56 9)</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;font-weight:700;color:var(--text-muted);white-space:nowrap;">+56 9</span>
+          <input class="audit-edit-input" id="ae-phone-${m.uid}" type="tel" maxlength="8"
+            value="${(m.phone||'').replace(/\D/g,'').replace(/^56/,'').replace(/^9/,'')}"
+            placeholder="12345678" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,8)">
+        </div>
+        <div id="ae-phone-hint-${m.uid}" style="font-size:10px;margin-top:3px;color:var(--text-muted);"></div>
+      </div>
+      <div class="audit-field" style="margin-bottom:8px;">
+        <div class="audit-field-label">🎭 Roles (selecciona todos los que apliquen)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:4px;">
+          ${roleCheckboxes}
+        </div>
+      </div>
+
+      <div class="audit-actions" style="margin-top:10px;">
+        <button class="audit-save-btn" onclick="saveAuditMember('${m.uid}')">💾 Guardar cambios</button>
+        <button class="audit-cancel-btn" onclick="cancelAuditEdit('${m.uid}')">Cancelar</button>
+      </div>`;
+  }
+  return card;
+}
+
+function startAuditEdit(uid){
+  auditEditing[uid] = true;
+  const m = auditData.find(x=>x.uid===uid);
+  if(!m) return;
+  const card = document.getElementById('acard-'+uid);
+  if(card) card.replaceWith(makeAuditCard(m));
+}
+window.startAuditEdit = startAuditEdit;
+
+function cancelAuditEdit(uid){
+  delete auditEditing[uid];
+  const m = auditData.find(x=>x.uid===uid);
+  if(!m) return;
+  const card = document.getElementById('acard-'+uid);
+  if(card) card.replaceWith(makeAuditCard(m));
+}
+window.cancelAuditEdit = cancelAuditEdit;
+
+async function saveAuditMember(uid){
+  const m = auditData.find(x=>x.uid===uid); if(!m) return;
+  const nameVal  = (document.getElementById('ae-name-'+uid)||{}).value||'';
+  const phoneRaw = (document.getElementById('ae-phone-'+uid)||{}).value||'';
+  const phoneFormatted = phoneRaw ? '+569'+phoneRaw.replace(/\D/g,'') : '';
+
+  // Leer roles seleccionados
+  const selectedRoles = [...document.querySelectorAll('.aedit-role-'+uid+':checked')].map(cb=>cb.value);
+  const mergedModules = [...new Set(selectedRoles.flatMap(r=>(ROLES[r]||{}).modules||[]))];
+
+  const patch = {
+    displayName:  nameVal          || m.displayName,
+    phone:        phoneFormatted,
+    role:         selectedRoles[0] || m.role,
+    roles:        selectedRoles,
+    modules:      mergedModules,
+    updatedAt:    new Date().toISOString(),
+    updatedBy:    currentProfile.uid||'director'
+  };
+
+  const btn = document.querySelector(`#acard-${uid} .audit-save-btn`);
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+
+  try {
+    await window.updateMemberField(uid, patch);
+    // Actualizar en memoria
+    Object.assign(m, patch);
+    delete auditEditing[uid];
+    toast('✅ Datos de '+nameVal+' actualizados');
+    writeAuditEntry&&writeAuditEntry('audit_member_updated',{emoji:'🗂️',uid,name:nameVal});
+    renderAuditGrid();
+  } catch(e){
+    toast('⚠️ Error al guardar: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='💾 Guardar cambios';}
+  }
+}
+window.saveAuditMember = saveAuditMember;
 
 // ═══════════════ MÓDULO BAZAR ═══════════════
 
@@ -6311,6 +6649,21 @@ window.loadMyProposals = async function(uid){
     const snap = await gd(q(col(db,'proposals'), w('requesterId','==',uid)));
     return snap.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);
   }catch(e){ return []; }
+};
+
+// ── Cargar TODOS los usuarios de la org para auditoría ──
+window.loadAllOrgUsers = async function(){
+  try{
+    const q2 = query(collection(db,'users'), where('orgId','==',ORG_ID));
+    const snap = await getDocs(q2);
+    return snap.docs.map(d=>({uid:d.id, ...d.data()})).filter(m=>m.email);
+  }catch(e){ console.error('loadAllOrgUsers:', e); return []; }
+};
+
+// ── Actualizar campos específicos de un usuario (audit inline editing) ──
+window.updateMemberField = async function(uid, patch){
+  if(!uid||!patch) throw new Error('uid y patch son requeridos');
+  await setDoc(doc(db,'users',uid), patch, {merge:true});
 };
 
 // ── Actualizar perfil de usuario por email (para scripts de consola del Director) ──
