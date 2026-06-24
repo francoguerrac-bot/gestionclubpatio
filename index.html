@@ -380,6 +380,23 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 /* nav scrollable */
 .bottom-nav{overflow-x:auto;scrollbar-width:none;}
 .bottom-nav::-webkit-scrollbar{display:none;}
+/* ── NEW MEMBER MODAL ── */
+.nm-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+.nm-card{background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;font-family:'Inter',sans-serif;max-height:90vh;overflow-y:auto;}
+.nm-field{margin-bottom:12px;}
+.nm-label{font-size:11px;font-weight:700;color:var(--mid);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+.nm-input{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;outline:none;background:var(--bg);color:var(--charcoal);box-sizing:border-box;transition:border-color .2s;}
+.nm-input:focus{border-color:var(--sage);background:#fff;}
+.nm-select{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;outline:none;background:var(--bg);color:var(--charcoal);box-sizing:border-box;cursor:pointer;}
+.nm-select:focus{border-color:var(--sage);}
+/* Phone input con prefijo fijo */
+.phone-wrap{display:flex;align-items:center;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg);transition:border-color .2s;}
+.phone-wrap:focus-within{border-color:var(--sage);background:#fff;}
+.phone-prefix{padding:10px 10px 10px 14px;font-size:13px;font-weight:800;color:var(--charcoal);white-space:nowrap;border-right:1.5px solid var(--border);background:#f0f0ef;user-select:none;flex-shrink:0;}
+.phone-digits{flex:1;padding:10px 14px;font-size:13px;border:none;outline:none;background:transparent;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;min-width:0;}
+.nm-alert{border-radius:9px;padding:9px 12px;font-size:12px;margin-bottom:12px;display:none;}
+.nm-alert.err{background:#FEE2E2;color:#DC2626;}
+.nm-alert.ok{background:#DCFCE7;color:#16A34A;}
 /* ── TEAM DASHBOARD (PERSONAS) ── */
 .personas-module-hdr{display:flex;align-items:center;gap:8px;padding:10px 0 6px;border-bottom:2px solid var(--border);margin-bottom:10px;}
 .personas-module-icon{font-size:18px;}
@@ -1611,9 +1628,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
     <!-- Header -->
     <div class="card" style="background:linear-gradient(135deg,#1A1A1A,#1a2f1a);border:none;margin-bottom:12px;">
       <div style="color:#fff;">
-        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Director · Gestión de Talento</div>
-        <div style="font-size:16px;font-weight:800;">👥 Estado Operativo del Equipo</div>
-        <div style="font-size:11px;color:#aaa;margin-top:3px;">Detecta cuellos de botella y actúa de forma táctica</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Director · Gestión de Talento</div>
+            <div style="font-size:16px;font-weight:800;">👥 Estado Operativo del Equipo</div>
+            <div style="font-size:11px;color:#aaa;margin-top:3px;">Detecta cuellos de botella y actúa de forma táctica</div>
+          </div>
+          <button onclick="openNewMemberModal()" class="btn btn-sage btn-sm" style="white-space:nowrap;flex-shrink:0;margin-top:4px;">+ Nuevo Integrante</button>
+        </div>
       </div>
     </div>
 
@@ -1627,6 +1649,66 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
     <!-- Grid dinámico por módulo -->
     <div id="personasContainer"></div>
 
+  </div>
+</div>
+
+<!-- ── MODAL ALTA DE INTEGRANTE ── -->
+<div id="newMemberModal" class="nm-overlay" onclick="if(event.target===this)closeNewMemberModal()">
+  <div class="nm-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:15px;font-weight:800;">👤 Nuevo Integrante</div>
+      <button onclick="closeNewMemberModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--mid);">×</button>
+    </div>
+
+    <div class="nm-alert err" id="nmError"></div>
+    <div class="nm-alert ok"  id="nmSuccess"></div>
+
+    <div class="nm-field">
+      <label class="nm-label">Nombre Completo *</label>
+      <input id="nmName" class="nm-input" type="text" placeholder="Ej: María González">
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Email (login) *</label>
+      <input id="nmEmail" class="nm-input" type="email" placeholder="nombre@ejemplo.com">
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Contraseña inicial *</label>
+      <div style="position:relative;">
+        <input id="nmPass" class="nm-input" type="password" placeholder="Mínimo 6 caracteres" style="padding-right:42px;">
+        <button type="button" onclick="document.getElementById('nmPass').type=document.getElementById('nmPass').type==='password'?'text':'password'"
+          style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--mid);">👁️</button>
+      </div>
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Teléfono WhatsApp</label>
+      <div class="phone-wrap">
+        <span class="phone-prefix">+56 9</span>
+        <input id="nmPhone" class="phone-digits" type="tel" maxlength="8" pattern="[0-9]{8}" placeholder="12 345 678"
+          oninput="this.value=this.value.replace(/\D/g,'').slice(0,8)">
+      </div>
+      <div style="font-size:10px;color:var(--mid);margin-top:3px;">Solo los 8 dígitos restantes del celular chileno</div>
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Módulo *</label>
+      <select id="nmModule" class="nm-select" onchange="nmModuleChange()">
+        <option value="">Selecciona un módulo...</option>
+        <option value="casa">🏠 Casa</option>
+        <option value="club">🟢 Club Patio</option>
+        <option value="bazar">🛍️ Bazar</option>
+        <option value="tienda">🏪 Tienda</option>
+      </select>
+    </div>
+    <div class="nm-field">
+      <label class="nm-label">Rol *</label>
+      <select id="nmRole" class="nm-select">
+        <option value="">Selecciona módulo primero...</option>
+      </select>
+    </div>
+
+    <button id="nmSubmitBtn" class="btn btn-sage" onclick="createNewMember()"
+      style="width:100%;padding:13px;font-size:14px;margin-top:4px;">
+      ✅ Crear Integrante
+    </button>
   </div>
 </div>
 
@@ -4568,34 +4650,141 @@ function initDirectorCasaTasks(){
 // Dataset demo por módulo (se fusiona con orgMembers reales si existen)
 const PERSONAS_MOCK = {
   casa: [
-    {uid:'pm_mama', displayName:'Mamá', role:'mama', emoji:'👩', color:'#DB2777',
+    {uid:'pm_mama', displayName:'Mamá', role:'mama', emoji:'👩', color:'#DB2777', phone:'912345678',
      currentMood:'green', statusMessage:'Todo al día. Nómina Bazar subida ✓', lastSeen:'hace 10 min'},
-    {uid:'pm_h1',  displayName:'Hijo 1', role:'hijo1', emoji:'👦', color:'#2563EB',
+    {uid:'pm_h1',  displayName:'Hijo 1', role:'hijo1', emoji:'👦', color:'#2563EB', phone:'',
      currentMood:'yellow', statusMessage:'Faltan 2 repasos de matemáticas. Agotado post-colegio.', lastSeen:'hace 1h'},
-    {uid:'pm_h2',  displayName:'Hijo 2', role:'hijo2', emoji:'👧', color:'#7C3AED',
+    {uid:'pm_h2',  displayName:'Hijo 2', role:'hijo2', emoji:'👧', color:'#7C3AED', phone:'',
      currentMood:'green', statusMessage:'Check-in emocional completado ✓ Con energía.', lastSeen:'hace 30 min'},
   ],
   club: [
-    {uid:'pm_pub', displayName:'Publicista', role:'publicista', emoji:'📣', color:'#D97706',
+    {uid:'pm_pub', displayName:'Publicista', role:'publicista', emoji:'📣', color:'#D97706', phone:'987654321',
      currentMood:'yellow', statusMessage:'Esperando aprobación de 2 diseños del Director.', lastSeen:'hace 45 min'},
-    {uid:'pm_dis', displayName:'Diseñador/a', role:'disenador', emoji:'🎨', color:'#7C3AED',
+    {uid:'pm_dis', displayName:'Diseñador/a', role:'disenador', emoji:'🎨', color:'#7C3AED', phone:'911223344',
      currentMood:'green', statusMessage:'3 piezas publicadas esta semana. Meta cumplida ✓', lastSeen:'hace 1h'},
-    {uid:'pm_cb',  displayName:'Coord. Bazares', role:'coordinadora_bazares', emoji:'🎪', color:'#0891B2',
+    {uid:'pm_cb',  displayName:'Coord. Bazares', role:'coordinadora_bazares', emoji:'🎪', color:'#0891B2', phone:'922334455',
      currentMood:'red', statusMessage:'🚨 Bloqueada: Permisos AIM sin confirmar. Necesita gestión.', lastSeen:'hace 5 min'},
   ],
   bazar: [
-    {uid:'pm_stf', displayName:'Staff Montaje', role:'staff_montaje', emoji:'🔧', color:'#64748B',
+    {uid:'pm_stf', displayName:'Staff Montaje', role:'staff_montaje', emoji:'🔧', color:'#64748B', phone:'933445566',
      currentMood:'green', statusMessage:'Confirmé disponibilidad para el jueves ✓', lastSeen:'hace 2h'},
   ],
   tienda: [
-    {uid:'pm_ct',  displayName:'Coord. Tienda', role:'coordinadora_tienda', emoji:'🏪', color:'#16A34A',
+    {uid:'pm_ct',  displayName:'Coord. Tienda', role:'coordinadora_tienda', emoji:'🏪', color:'#16A34A', phone:'944556677',
      currentMood:'yellow', statusMessage:'Esperando reporte mensual de 3 emprendedores.', lastSeen:'hace 1h'},
-    {uid:'pm_vend',displayName:'Vendedor/a', role:'vendedor', emoji:'💼', color:'#0F766E',
+    {uid:'pm_vend',displayName:'Vendedor/a', role:'vendedor', emoji:'💼', color:'#0F766E', phone:'955667788',
      currentMood:'green', statusMessage:'Tienda abierta. Sin novedades de inventario.', lastSeen:'hace 5 min'},
-    {uid:'pm_nat', displayName:'Nathaniel', role:'programador', emoji:'💻', color:'#1D4ED8',
+    {uid:'pm_nat', displayName:'Nathaniel', role:'programador', emoji:'💻', color:'#1D4ED8', phone:'966778899',
      currentMood:'green', statusMessage:'Kanban al día. 3 ítems esperando validación de precios.', lastSeen:'hace 20 min'},
   ],
 };
+
+// ── Roles disponibles por módulo (cascade) ──
+const MODULE_ROLES_MAP = {
+  casa:   [{value:'mama',label:'👩 Mamá'},{value:'hijo1',label:'👦 Hijo 1'},{value:'hijo2',label:'👧 Hijo 2'}],
+  club:   [{value:'publicista',label:'📣 Publicista'},{value:'disenador',label:'🎨 Diseñador/a'},{value:'coordinadora_bazares',label:'🎪 Coordinadora de Bazares'}],
+  bazar:  [{value:'coordinadora_bazares',label:'🎪 Coordinadora Bazares'},{value:'staff_montaje',label:'🔧 Staff de Montaje'}],
+  tienda: [{value:'coordinadora_tienda',label:'🏪 Coordinadora Tienda'},{value:'vendedor',label:'💼 Vendedor/a'},{value:'programador',label:'💻 Programador Web (Nathaniel)'}],
+};
+
+// ── Modal Alta de Integrante ──
+function openNewMemberModal(){
+  if(currentRole!=='director'){toast('⛔ Solo el Director puede agregar integrantes');return;}
+  ['nmName','nmEmail','nmPass','nmPhone'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nmModule').value='';
+  document.getElementById('nmRole').innerHTML='<option value="">Selecciona módulo primero...</option>';
+  ['nmError','nmSuccess'].forEach(id=>{const el=document.getElementById(id);el.style.display='none';el.textContent='';});
+  document.getElementById('newMemberModal').style.display='flex';
+}
+window.openNewMemberModal=openNewMemberModal;
+
+function closeNewMemberModal(){
+  document.getElementById('newMemberModal').style.display='none';
+}
+window.closeNewMemberModal=closeNewMemberModal;
+
+function nmModuleChange(){
+  const mod=document.getElementById('nmModule').value;
+  const sel=document.getElementById('nmRole');
+  const opts=MODULE_ROLES_MAP[mod]||[];
+  sel.innerHTML=opts.length
+    ?'<option value="">Selecciona un rol...</option>'+opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')
+    :'<option value="">Selecciona módulo primero...</option>';
+}
+window.nmModuleChange=nmModuleChange;
+
+async function createNewMember(){
+  const name =document.getElementById('nmName').value.trim();
+  const email=document.getElementById('nmEmail').value.trim();
+  const pass =document.getElementById('nmPass').value;
+  const phone=document.getElementById('nmPhone').value.replace(/\D/g,'');
+  const mod  =document.getElementById('nmModule').value;
+  const role =document.getElementById('nmRole').value;
+  const errEl=document.getElementById('nmError');
+  const sucEl=document.getElementById('nmSuccess');
+  errEl.style.display='none'; sucEl.style.display='none';
+
+  if(!name||!email||!pass||!mod||!role){
+    errEl.style.display='block'; errEl.textContent='Completa todos los campos obligatorios (*)'; return;
+  }
+  if(pass.length<6){
+    errEl.style.display='block'; errEl.textContent='La contraseña debe tener al menos 6 caracteres'; return;
+  }
+
+  const btn=document.getElementById('nmSubmitBtn');
+  btn.disabled=true; btn.textContent='Creando cuenta...';
+
+  try {
+    const rc=(window.ROLES||{})[role]||{};
+    const profileData={
+      orgId:ORG_ID, email, displayName:name, role,
+      modules:rc.modules||[mod],
+      phone: phone?'+569'+phone:'',
+      onboardingComplete:true,
+      profile:{ avatarEmoji:rc.emoji||'👤', color:rc.color||'#6B7280' },
+      createdAt:new Date().toISOString(),
+      createdBy:currentProfile.uid||'director',
+      currentMood:'green', statusMessage:'Cuenta recién creada.'
+    };
+    const newUid = await window.createUserForDirector(email, pass, profileData);
+    sucEl.style.display='block';
+    sucEl.textContent=`✅ ¡${name} fue agregado/a! Puede iniciar sesión con ${email}.`;
+    toast('✅ Nuevo integrante: '+name);
+    writeAuditEntry&&writeAuditEntry('user_created',{emoji:'👤',name,role,email});
+    setTimeout(()=>{ window.loadOrgData&&window.loadOrgData(); renderPersonasPanel(); },1000);
+    setTimeout(closeNewMemberModal,3000);
+  } catch(e){
+    const msgs={'auth/email-already-in-use':'Este correo ya tiene una cuenta.','auth/invalid-email':'El correo no es válido.','auth/weak-password':'La contraseña es muy débil.'};
+    errEl.style.display='block'; errEl.textContent=msgs[e.code]||'Error: '+e.message;
+  } finally {
+    btn.disabled=false; btn.textContent='✅ Crear Integrante';
+  }
+}
+window.createNewMember=createNewMember;
+
+// ── Generador de URL WhatsApp con mensaje contextual ──
+function generateWaURL(person){
+  const raw=(person.phone||'').replace(/\D/g,'');
+  if(!raw) return null;
+  let num=raw.startsWith('56')?raw.slice(2):raw;
+  if(!num.startsWith('9')) num='9'+num;
+
+  const today=new Date(); today.setHours(0,0,0,0);
+  const pTasks=tasks.filter(t=>t.owner===person.displayName);
+  const overdue=pTasks.filter(t=>!t.done&&t.deadline&&new Date(t.deadline+'T00:00:00')<today);
+  const pending=pTasks.filter(t=>!t.done);
+  const rc=ROLES[person.role]||{}; const modLabel=rc.label||person.role;
+
+  let msg;
+  if(overdue.length>0){
+    msg=`Hola ${person.displayName}, revisando la plataforma veo que tienes ${overdue.length} tarea${overdue.length>1?'s':''} vencida${overdue.length>1?'s':''} de ${modLabel}. ¿Necesitas apoyo o recursos para avanzar?`;
+  } else if(pending.length>0){
+    msg=`Hola ${person.displayName}, tienes ${pending.length} tarea${pending.length>1?'s':''} pendiente${pending.length>1?'s':''} en ${modLabel}. ¿Cómo va el avance? ¿Necesitas algo?`;
+  } else {
+    msg=`Hola ${person.displayName}, excelente trabajo con las tareas de ${modLabel}. ¡Todo al día! Sigamos así 💪`;
+  }
+  return `https://wa.me/56${num}?text=${encodeURIComponent(msg)}`;
+}
 
 const MODULE_LABELS_P = {
   casa:  {icon:'🏠', label:'Casa · Familia'},
@@ -4686,7 +4875,7 @@ function makePersonaCard(p, mod){
     <div class="persona-status ${mood.bar}">${p.statusMessage||'Sin nota de estado.'}</div>
     <div style="font-size:9px;color:var(--mid);margin-bottom:8px;">${mood.label} · Visto ${p.lastSeen||'–'}</div>
     <div class="persona-actions">
-      <button class="pact-btn" onclick="personaMsg('${p.displayName}')">💬 Mensaje</button>
+      <button class="pact-btn" onclick="personaMsg('${p.uid}')" title="${p.phone?'WhatsApp: +56 9'+p.phone:'Sin teléfono registrado'}">💬 WA</button>
       <button class="pact-btn" onclick="personaMeeting('${p.displayName}')">📅 Reunión</button>
       <button class="pact-btn" onclick="personaTasks('${p.displayName}')">🔄 Tareas</button>
     </div>`;
@@ -4694,9 +4883,19 @@ function makePersonaCard(p, mod){
 }
 
 // Acciones rápidas del Director
-function personaMsg(name){
-  toast('💬 Mensaje para '+name+' — integración WhatsApp próximamente');
-  writeAuditEntry&&writeAuditEntry('director_msg_intent',{emoji:'💬',target:name});
+function personaMsg(uid){
+  // Buscar persona en mock o en orgMembers
+  let person=null;
+  Object.values(PERSONAS_MOCK).flat().forEach(p=>{if(p.uid===uid)person=p;});
+  if(!person)(window.orgMembers||[]).forEach(m=>{if(m.uid===uid)person=m;});
+  if(!person){toast('Sin datos de contacto');return;}
+  const waUrl=generateWaURL(person);
+  if(waUrl){
+    window.open(waUrl,'_blank');
+    writeAuditEntry&&writeAuditEntry('director_wa_sent',{emoji:'💬',target:person.displayName});
+  } else {
+    toast('⚠️ '+person.displayName+' no tiene número WhatsApp registrado');
+  }
 }
 function personaMeeting(name){
   const today=new Date();
@@ -5036,7 +5235,7 @@ function bootApp(cloudData, profile){
 
 <!-- ═══════════════ FIREBASE · AUTH + FIRESTORE ═══════════════ -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, signOut, sendPasswordResetEmail
@@ -5305,6 +5504,27 @@ window.dirApproveCard = async function(cardId, ownerUid, approved, note=''){
     if(window.toast) window.toast(approved ? '✅ Tarjeta aprobada' : '✗ Tarjeta rechazada');
     window.writeAuditEntry&&window.writeAuditEntry('kanban_approval',{emoji:approved?'✅':'✗',cardId,approved,ownerUid});
   }catch(e){ console.error('dirApproveCard:',e); if(window.toast) window.toast('⚠️ Error al procesar aprobación'); }
+};
+
+// ── Crear usuario sin perder la sesión del Director (secondary app) ──
+window.createUserForDirector = async function(email, pass, profileData){
+  // Usamos una instancia secundaria de Firebase Auth para no desloguear al Director
+  const secondaryApp = initializeApp(app.options, 'secondary_'+Date.now());
+  const { getAuth: getAuth2, createUserWithEmailAndPassword: createUser2, signOut: signOut2 } =
+    await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+  const secondaryAuth = getAuth2(secondaryApp);
+  try {
+    const cred = await createUser2(secondaryAuth, email, pass);
+    const uid  = cred.user.uid;
+    profileData.uid = uid;
+    await setDoc(doc(db, 'users', uid), profileData);
+    await signOut2(secondaryAuth);
+    await deleteApp(secondaryApp);
+    return uid;
+  } catch(e){
+    await deleteApp(secondaryApp).catch(()=>{});
+    throw e;
+  }
 };
 
 // ── Bazar Cycle (colección compartida) ──
