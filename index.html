@@ -776,7 +776,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
     <div class="top-name"><span class="sprint-dot"></span>Gestión de Equipos Club Patio</div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="top-date" id="topDate"></div>
-      <div id="roleBadge" class="role-badge" style="background:#2a2a2a;color:#888;">⏳ —</div>
+      <div id="roleBadge" class="role-badge" style="background:#2a2a2a;color:#888;cursor:pointer;" onclick="alert('Rol: '+currentRole+'\nEmail: '+(currentProfile&&currentProfile.email||'no auth')+'\nUID: '+(currentProfile&&currentProfile.uid||'?'))">⏳ —</div>
       <button id="logoutBtn" type="button" title="Cerrar sesión"
         style="background:none;border:1px solid #444;color:#bbb;font-size:10px;font-weight:600;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;">Salir</button>
     </div>
@@ -4349,10 +4349,20 @@ function bootApp(cloudData, profile){
   init();
   checkDeadlines();
   const role = (profile&&profile.role)||'pending';
-  mountRoleUI(role, profile||{});
-  if(role !== 'pending'){
-    setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 300);
-  }
+  // Pequeño delay para asegurar que el DOM esté listo antes de montar el rol
+  setTimeout(()=>{
+    try {
+      mountRoleUI(role, profile||{});
+    } catch(e){
+      console.error('mountRoleUI error:', e);
+      // Fallback: mostrar la pantalla pendiente manualmente
+      const po = document.getElementById('pendingOverlay');
+      if(po) po.style.display='flex';
+    }
+    if(role !== 'pending'){
+      setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 300);
+    }
+  }, 100);
 }
 // NOTA: init() ya no se llama aquí; lo dispara el login (ver módulo Firebase abajo).
 </script>
