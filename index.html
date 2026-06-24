@@ -2468,8 +2468,23 @@ function renderCtPendingAlert(){
 
 function renderCtMembers(){
   const el = document.getElementById('ctMembersGrid'); if(!el) return;
-  const active = (window.orgMembers||[]).filter(m=>m.role!=='pending');
-  if(!active.length){ el.innerHTML='<div class="workplan-empty" style="grid-column:1/-1;">Sin miembros activos. Activa cuentas desde el panel de alertas.</div>'; return; }
+  const orgMembers = window.orgMembers||[];
+
+  if(!orgMembers || orgMembers.length === 0){
+    console.warn('[Control Tower] No hay usuarios registrados o la base de datos está vacía.');
+    el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px 16px;color:var(--text-muted);">
+      <div style="font-size:32px;opacity:.3;margin-bottom:8px;">👥</div>
+      <div style="font-size:13px;font-weight:700;">Base de datos vacía</div>
+      <div style="font-size:11px;margin-top:4px;">No hay integrantes registrados en esta organización.</div>
+    </div>`;
+    return;
+  }
+
+  const active = orgMembers.filter(m=>m&&m.role&&m.role!=='pending');
+  if(!active.length){
+    el.innerHTML='<div class="workplan-empty" style="grid-column:1/-1;">Sin miembros activos. Activa cuentas pendientes desde el panel de alertas.</div>';
+    return;
+  }
   el.innerHTML = '';
   active.forEach(m=>{
     const rc = ROLES[m.role]||ROLES.pending;
@@ -3846,6 +3861,18 @@ function renderAuditGrid(){
   const grid = document.getElementById('auditGrid');
   const stats = document.getElementById('auditStats');
   if(!grid) return;
+
+  if(!auditData || auditData.length === 0){
+    console.warn('[Auditoría] No hay usuarios registrados o la base de datos está vacía.');
+    grid.innerHTML = `<div style="text-align:center;padding:32px 20px;color:var(--text-muted);">
+      <div style="font-size:36px;margin-bottom:10px;opacity:.3;">🗂️</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Base de datos vacía</div>
+      <div style="font-size:12px;line-height:1.5;">No hay integrantes registrados aún.<br>
+      Usa <strong>"+ Nuevo Integrante"</strong> en el panel de Equipo<br>o presiona <strong>🔄 Recargar</strong> si ya los registraste.</div>
+    </div>`;
+    if(stats) stats.innerHTML = '';
+    return;
+  }
 
   // Filtrar
   let list = [...auditData].filter(m=>m.role!=='director');
@@ -5820,6 +5847,18 @@ const MOOD_META = {
 function renderPersonasPanel(){
   if(currentRole!=='director') return;
   const container=document.getElementById('personasContainer'); if(!container) return;
+
+  const users = (window.orgMembers||[]).filter(m=>m&&m.role&&m.role!=='director'&&m.role!=='pending');
+  if(!users || users.length === 0){
+    console.warn('[Personas] No hay usuarios registrados o la base de datos está vacía.');
+    container.innerHTML = `<div style="text-align:center;padding:32px 20px;color:var(--text-muted);">
+      <div style="font-size:40px;margin-bottom:12px;opacity:.3;">👥</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px;">No hay integrantes registrados</div>
+      <div style="font-size:12px;line-height:1.5;">Agrega el primer integrante con el botón<br><strong>"+ Nuevo Integrante"</strong> o recarga los datos con <strong>🎛️ Control</strong>.</div>
+    </div>`;
+    return;
+  }
+
   container.innerHTML='';
 
   // Fusionar datos reales con mock — null-safe en todos los campos
