@@ -4534,14 +4534,24 @@ document.getElementById("logoutBtn").addEventListener("click", async ()=>{
   await signOut(auth);
 });
 
+// ── Cuentas con rol pre-asignado ──
+const PRESET_ROLES = {
+  'franciguerrac@gmail.com': { role:'director', displayName:'Francisco', emoji:'👨', color:'#059669' },
+  'czapatauv@gmail.com':     { role:'director', displayName:'Carolina',  emoji:'👩', color:'#DB2777' },
+};
+
 // ── Crear perfil de usuario en /users/{uid} ──
 async function createUserProfile(uid, email){
+  const preset = PRESET_ROLES[email.toLowerCase()];
+  const role   = preset ? preset.role    : 'pending';
+  const dName  = preset ? preset.displayName : email.split('@')[0];
+  const rc     = (window.ROLES||{})[role]||{};
   const profile = {
     uid, orgId: ORG_ID, email,
-    displayName: email.split('@')[0],
-    role: 'pending', modules: [],
-    profile: { avatarEmoji:'👤', color:'#9CA3AF' },
-    onboardingComplete: false,
+    displayName: dName,
+    role, modules: rc.modules||[],
+    profile: { avatarEmoji: preset?.emoji||'👤', color: preset?.color||'#9CA3AF' },
+    onboardingComplete: !!preset,
     createdAt: new Date().toISOString(),
     lastSeen: new Date().toISOString()
   };
@@ -4671,10 +4681,20 @@ onAuthStateChanged(auth, async (user)=>{
     try{
       const snap = await getDoc(doc(db,'users',user.uid));
       if(snap.exists()){
-        data = snap.data();
+        data    = snap.data();
         profile = snap.data();
+        // Si el usuario existe pero está pendiente y tiene un rol pre-asignado → actualizarlo
+        const preset = PRESET_ROLES[user.email.toLowerCase()];
+        if(preset && (!profile.role || profile.role === 'pending')){
+          const rc = (window.ROLES||{})[preset.role]||{};
+          const update = { role:preset.role, displayName:preset.displayName, modules:rc.modules||[], onboardingComplete:true, profile:{ avatarEmoji:preset.emoji, color:preset.color } };
+          await setDoc(doc(db,'users',user.uid), update, {merge:true});
+          profile = {...profile, ...update};
+          data    = {...data,    ...update};
+        }
       } else {
         profile = await createUserProfile(user.uid, user.email);
+        data    = {...profile};
       }
       // Actualizar lastSeen en background
       setDoc(doc(db,'users',user.uid),{lastSeen:new Date().toISOString()},{merge:true}).catch(()=>{});
