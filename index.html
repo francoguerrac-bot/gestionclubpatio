@@ -5506,19 +5506,31 @@ window.dirApproveCard = async function(cardId, ownerUid, approved, note=''){
   }catch(e){ console.error('dirApproveCard:',e); if(window.toast) window.toast('⚠️ Error al procesar aprobación'); }
 };
 
-// ── Crear usuario sin perder la sesión del Director (secondary app) ──
+// ── Crear usuario sin perder la sesión del Director ──
+// La escritura en Firestore la hace la app secundaria (el nuevo usuario),
+// así respeta la regla: request.auth.uid == userId
 window.createUserForDirector = async function(email, pass, profileData){
-  // Usamos una instancia secundaria de Firebase Auth para no desloguear al Director
-  const secondaryApp = initializeApp(app.options, 'secondary_'+Date.now());
-  const { getAuth: getAuth2, createUserWithEmailAndPassword: createUser2, signOut: signOut2 } =
-    await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-  const secondaryAuth = getAuth2(secondaryApp);
+  const secondaryApp = initializeApp(app.options, 'sec_'+Date.now());
   try {
-    const cred = await createUser2(secondaryAuth, email, pass);
+    // Importar módulos para la app secundaria
+    const { getAuth: getAuth2, createUserWithEmailAndPassword: createUser2, signOut: signOut2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+    const { getFirestore: getFs2, doc: doc2, setDoc: setDoc2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+    const auth2 = getAuth2(secondaryApp);
+    const db2   = getFs2(secondaryApp);    // Firestore con contexto del nuevo usuario
+
+    // 1. Crear cuenta del nuevo usuario
+    const cred = await createUser2(auth2, email, pass);
     const uid  = cred.user.uid;
     profileData.uid = uid;
-    await setDoc(doc(db, 'users', uid), profileData);
-    await signOut2(secondaryAuth);
+
+    // 2. El nuevo usuario escribe su propio doc → reglas OK
+    await setDoc2(doc2(db2, 'users', uid), profileData);
+
+    // 3. Cerrar sesión secundaria y limpiar
+    await signOut2(auth2);
     await deleteApp(secondaryApp);
     return uid;
   } catch(e){
