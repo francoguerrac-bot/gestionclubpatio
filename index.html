@@ -6103,6 +6103,12 @@ const PRESET_ROLES = {
   'francoguerrac@gmail.com': { role:'director', displayName:'Francisco', emoji:'👨', color:'#059669' },
 };
 
+// ── Parche de datos: correcciones de teléfono por email ──
+// Se aplica automáticamente en el login si el campo está vacío o incorrecto
+const PHONE_PATCHES = {
+  'czapatauv@gmail.com': '+56973567652', // Carolina Zapata Morales
+};
+
 // ── Crear perfil de usuario en /users/{uid} ──
 async function createUserProfile(uid, email){
   const preset = PRESET_ROLES[email.toLowerCase()];
@@ -6376,6 +6382,15 @@ onAuthStateChanged(auth, async (user)=>{
     
       } else if(preset) {
     
+      }
+
+      // Parche de teléfono: aplicar corrección si el campo está vacío o tiene número falso
+      const phonePatch = PHONE_PATCHES[user.email.toLowerCase()];
+      if(phonePatch && (!profile.phone || profile.phone === '' || profile.phone === '+56912345678')){
+        await setDoc(doc(db,'users',user.uid),{phone: phonePatch},{merge:true});
+        profile.phone = phonePatch;
+        data.phone    = phonePatch;
+        console.log('[PHONE_PATCH] Teléfono actualizado para', user.email, '→', phonePatch);
       }
 
       setDoc(doc(db,'users',user.uid),{lastSeen:new Date().toISOString()},{merge:true}).catch(()=>{});
