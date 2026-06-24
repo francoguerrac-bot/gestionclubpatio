@@ -4682,6 +4682,19 @@ window.cloudWriteAudit = async function(entry){
   }catch(e){ /* stealth — sin UI */ }
 };
 
+// Módulos hardcodeados por rol para no depender de window.ROLES en el módulo Firebase
+const ROLE_MODULES = {
+  director:             ['casa','club','bazar','tienda'],
+  mama:                 ['casa','bazar','tienda'],
+  hijo1:                ['casa'], hijo2: ['casa'],
+  publicista:           ['club'], disenador: ['club'],
+  coordinadora_bazares: ['club','bazar'],
+  coordinadora_tienda:  ['tienda'],
+  staff_montaje:        ['bazar'],
+  vendedor:             ['tienda'],
+  programador:          ['tienda','club'],
+};
+
 // ── Estado de sesión: punto de entrada real de la app ──
 onAuthStateChanged(auth, async (user)=>{
   if(user){
@@ -4689,35 +4702,48 @@ onAuthStateChanged(auth, async (user)=>{
     let data = {}, profile = null;
     try{
       const snap = await getDoc(doc(db,'users',user.uid));
+      const preset = PRESET_ROLES[user.email.toLowerCase()];
+
       if(snap.exists()){
         data    = snap.data();
-        profile = snap.data();
-        // Si el usuario existe pero está pendiente y tiene un rol pre-asignado → actualizarlo
-        const preset = PRESET_ROLES[user.email.toLowerCase()];
-        if(preset && (!profile.role || profile.role === 'pending')){
-          const rc = (window.ROLES||{})[preset.role]||{};
-          const update = { role:preset.role, displayName:preset.displayName, modules:rc.modules||[], onboardingComplete:true, profile:{ avatarEmoji:preset.emoji, color:preset.color } };
-          await setDoc(doc(db,'users',user.uid), update, {merge:true});
-          profile = {...profile, ...update};
-          data    = {...data,    ...update};
-        }
+        profile = {...snap.data()};
       } else {
+        // Cuenta nueva: crear documento
         profile = await createUserProfile(user.uid, user.email);
         data    = {...profile};
       }
+
+      // SIEMPRE forzar el rol correcto para emails pre-asignados
+      if(preset && profile.role !== preset.role){
+        const update = {
+          uid: user.uid,
+          orgId: ORG_ID,
+          email: user.email,
+          role: preset.role,
+          displayName: preset.displayName,
+          modules: ROLE_MODULES[preset.role] || [],
+          onboardingComplete: true,
+          profile: { avatarEmoji: preset.emoji, color: preset.color },
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(doc(db,'users',user.uid), update, {merge:true});
+        profile = {...profile, ...update};
+        data    = {...data,    ...update};
+        console.log('[RBAC] Rol asignado:', preset.role, 'para', user.email);
+      }
+
       // Actualizar lastSeen en background
       setDoc(doc(db,'users',user.uid),{lastSeen:new Date().toISOString()},{merge:true}).catch(()=>{});
     }catch(e){
       console.error('Error cargando sesión:', e);
+      // Si Firestore falla, intentar usar preset directamente
+      const preset = PRESET_ROLES[user.email.toLowerCase()];
+      if(preset) profile = { uid:user.uid, email:user.email, role:preset.role, displayName:preset.displayName, modules:ROLE_MODULES[preset.role]||[], onboardingComplete:true };
     }
+
     overlay.style.display = 'none';
-    if(!booted){
-      booted = true;
-      window.bootApp(data, profile);
-    }else{
-      window.applyCloudData(data);
-      if(window.renderTasks) window.renderTasks();
-    }
+    booted = true;
+    window.bootApp(data, profile);
   }else{
     currentUser = null;
     booted = false;
