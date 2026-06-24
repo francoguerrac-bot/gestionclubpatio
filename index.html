@@ -1734,7 +1734,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <div style="font-size:10px;color:var(--mid);margin-top:3px;">Solo los 8 dígitos restantes del celular chileno</div>
     </div>
     <div class="nm-field">
-      <label class="nm-label">Módulo *</label>
+      <label class="nm-label">Módulo Principal *</label>
       <select id="nmModule" class="nm-select" onchange="nmModuleChange()">
         <option value="">Selecciona un módulo...</option>
         <option value="casa">🏠 Casa</option>
@@ -1744,9 +1744,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       </select>
     </div>
     <div class="nm-field">
-      <label class="nm-label">Rol *</label>
+      <label class="nm-label">Rol Principal *</label>
       <select id="nmRole" class="nm-select">
         <option value="">Selecciona módulo primero...</option>
+      </select>
+    </div>
+    <!-- Segundo módulo/rol (opcional) -->
+    <div class="nm-field" style="background:var(--bg-main);border-radius:10px;padding:10px 12px;border:1px dashed var(--border);">
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">
+        ➕ Rol Adicional (opcional — ej: Casa + Bazar)
+      </div>
+      <select id="nmModule2" class="nm-select" onchange="nmModuleChange2()" style="margin-bottom:8px;">
+        <option value="">Sin rol adicional</option>
+        <option value="casa">🏠 Casa</option>
+        <option value="club">🟢 Club Patio</option>
+        <option value="bazar">🛍️ Bazar</option>
+        <option value="tienda">🏪 Tienda</option>
+      </select>
+      <select id="nmRole2" class="nm-select">
+        <option value="">—</option>
       </select>
     </div>
 
@@ -2054,13 +2070,23 @@ function dbg(msg){ console.log('[RBAC]', msg); }
 
 // ═══════════════ ROLE ROUTER ═══════════════
 function mountRoleUI(role, profile){
-  document.title = '🎭 Rol: ' + (role||'?');
   dbg('✅ mountRoleUI: rol=' + role + ' | email=' + (profile&&profile.email||'?'));
+  document.title = 'Club Patio · ' + (role||'?');
 
-  currentRole = role || 'pending';
-  window.currentRole = currentRole;
+  // ── Soporte multi-rol: leer array profile.roles si existe ──
+  const allRoles = (Array.isArray(profile&&profile.roles) && profile.roles.length)
+    ? profile.roles
+    : [role||'pending'];
+  const primaryRole = allRoles[0];
+
+  currentRole = primaryRole;
+  window.currentRole = primaryRole;
   currentProfile = profile || {};
-  const rc = ROLES[currentRole] || ROLES.pending;
+
+  // Fusionar nav y módulos de TODOS los roles del usuario
+  const mergedNav     = [...new Set(allRoles.flatMap(r=>(ROLES[r]||{}).nav    ||[]))];
+  const mergedModules = [...new Set(allRoles.flatMap(r=>(ROLES[r]||{}).modules||[]))];
+  const rc = { ...(ROLES[primaryRole]||ROLES.pending), nav:mergedNav, modules:mergedModules };
 
   // Role badge in header
   const badge = document.getElementById('roleBadge');
@@ -2084,13 +2110,12 @@ function mountRoleUI(role, profile){
   if(currentRole === 'director') setTimeout(()=>window.loadOrgData&&window.loadOrgData(), 600);
   else setTimeout(initMoodSelfBar, 400);
 
-  // Inicializar módulos según rol
-  const rc2 = ROLES[currentRole]||{};
-  if(rc2.modules&&rc2.modules.includes('casa'))  setTimeout(initCasaModule,  200);
-  if(rc2.modules&&rc2.modules.includes('club'))  setTimeout(initClubModule,  250);
-  if(rc2.modules&&rc2.modules.includes('bazar')) setTimeout(initBazarModule, 300);
+  // Inicializar módulos (rc.modules ya fusionado para multi-rol)
+  if(rc.modules&&rc.modules.includes('casa'))  setTimeout(initCasaModule,  200);
+  if(rc.modules&&rc.modules.includes('club'))  setTimeout(initClubModule,  250);
+  if(rc.modules&&rc.modules.includes('bazar')) setTimeout(initBazarModule, 300);
+  if(rc.modules&&rc.modules.includes('tienda'))setTimeout(initTiendaModule,350);
   if(currentRole==='director') setTimeout(seedDirectorCoreTasks, 800);
-  if(rc2.modules&&rc2.modules.includes('tienda'))setTimeout(initTiendaModule,350);
 
   // Stealth audit entry
   writeAuditEntry('login', {emoji:'🔐', role: currentRole});
@@ -4758,18 +4783,31 @@ function nmModuleChange(){
 }
 window.nmModuleChange=nmModuleChange;
 
+function nmModuleChange2(){
+  const mod=document.getElementById('nmModule2').value;
+  const sel=document.getElementById('nmRole2');
+  if(!mod){ sel.innerHTML='<option value="">—</option>'; return; }
+  const opts=MODULE_ROLES_MAP[mod]||[];
+  sel.innerHTML=opts.length
+    ?'<option value="">Selecciona un rol...</option>'+opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')
+    :'<option value="">—</option>';
+}
+window.nmModuleChange2=nmModuleChange2;
+
 async function createNewMember(){
-  const name =document.getElementById('nmName').value.trim();
-  const email=document.getElementById('nmEmail').value.trim();
-  const pass =document.getElementById('nmPass').value;
-  const phone=document.getElementById('nmPhone').value.replace(/\D/g,'');
-  const mod  =document.getElementById('nmModule').value;
-  const role =document.getElementById('nmRole').value;
-  const errEl=document.getElementById('nmError');
-  const sucEl=document.getElementById('nmSuccess');
+  const name  = document.getElementById('nmName').value.trim();
+  const email = document.getElementById('nmEmail').value.trim();
+  const pass  = document.getElementById('nmPass').value;
+  const phone = document.getElementById('nmPhone').value.replace(/\D/g,'');
+  const mod1  = document.getElementById('nmModule').value;
+  const role1 = document.getElementById('nmRole').value;
+  const mod2  = (document.getElementById('nmModule2')||{}).value||'';
+  const role2 = (document.getElementById('nmRole2')||{}).value||'';
+  const errEl = document.getElementById('nmError');
+  const sucEl = document.getElementById('nmSuccess');
   errEl.style.display='none'; sucEl.style.display='none';
 
-  if(!name||!email||!pass||!mod||!role){
+  if(!name||!email||!pass||!mod1||!role1){
     errEl.style.display='block'; errEl.textContent='Completa todos los campos obligatorios (*)'; return;
   }
   if(pass.length<6){
@@ -4777,31 +4815,58 @@ async function createNewMember(){
   }
 
   const btn=document.getElementById('nmSubmitBtn');
-  btn.disabled=true; btn.textContent='Creando cuenta...';
+  btn.disabled=true; btn.textContent='⏳ Creando cuenta...';
+
+  // Seguro: restaurar botón pase lo que pase (máximo 20 segundos)
+  const safetyTimer=setTimeout(()=>{
+    btn.disabled=false; btn.textContent='✅ Crear Integrante';
+    errEl.style.display='block'; errEl.textContent='⚠️ Tiempo agotado. Revisa tu conexión e inténtalo de nuevo.';
+  }, 20000);
 
   try {
-    const rc=(window.ROLES||{})[role]||{};
-    const profileData={
-      orgId:ORG_ID, email, displayName:name, role,
-      modules:rc.modules||[mod],
-      phone: phone?'+569'+phone:'',
-      onboardingComplete:true,
-      profile:{ avatarEmoji:rc.emoji||'👤', color:rc.color||'#6B7280' },
-      createdAt:new Date().toISOString(),
-      createdBy:currentProfile.uid||'director',
-      currentMood:'green', statusMessage:'Cuenta recién creada.'
+    // Construir arrays de roles y módulos (soporte multi-rol)
+    const roles   = [role1, ...(role2?[role2]:[])];
+    const allMods = [...new Set(roles.flatMap(r=>(window.ROLES||{})[r]?.modules||[]))];
+    const rc1     = (window.ROLES||{})[role1]||{};
+
+    const profileData = {
+      orgId: ORG_ID, email, displayName: name,
+      role: role1,            // rol primario (backwards compat)
+      roles,                  // array de todos los roles
+      modules: allMods,       // union de módulos de todos los roles
+      phone: phone ? '+569'+phone : '',
+      onboardingComplete: true,
+      profile: { avatarEmoji: rc1.emoji||'👤', color: rc1.color||'#6B7280' },
+      createdAt: new Date().toISOString(),
+      createdBy: currentProfile.uid||'director',
+      currentMood: 'green',
+      statusMessage: 'Cuenta recién creada.'
     };
+
     const newUid = await window.createUserForDirector(email, pass, profileData);
+    clearTimeout(safetyTimer);
+
     sucEl.style.display='block';
-    sucEl.textContent=`✅ ¡${name} fue agregado/a! Puede iniciar sesión con ${email}.`;
+    sucEl.textContent=`✅ ¡${name} fue agregado/a! Roles: ${roles.join(', ')}. Login: ${email}.`;
     toast('✅ Nuevo integrante: '+name);
-    writeAuditEntry&&writeAuditEntry('user_created',{emoji:'👤',name,role,email});
+    writeAuditEntry&&writeAuditEntry('user_created',{emoji:'👤',name,roles,email});
     setTimeout(()=>{ window.loadOrgData&&window.loadOrgData(); renderPersonasPanel(); },1000);
-    setTimeout(closeNewMemberModal,3000);
+    setTimeout(closeNewMemberModal,3500);
+
   } catch(e){
-    const msgs={'auth/email-already-in-use':'Este correo ya tiene una cuenta.','auth/invalid-email':'El correo no es válido.','auth/weak-password':'La contraseña es muy débil.'};
-    errEl.style.display='block'; errEl.textContent=msgs[e.code]||'Error: '+e.message;
+    clearTimeout(safetyTimer);
+    const MSGS = {
+      'auth/email-already-in-use': '⚠️ Este correo ya tiene una cuenta en el sistema.',
+      'auth/invalid-email':        '⚠️ El correo no tiene un formato válido.',
+      'auth/weak-password':        '⚠️ La contraseña debe tener al menos 6 caracteres.',
+      'auth/network-request-failed':'⚠️ Sin conexión. Revisa tu internet.',
+      'permission-denied':         '⚠️ Sin permisos en Firestore. Contacta al administrador.',
+    };
+    const msg = MSGS[e.code] || MSGS[e.message?.split(':')[0]] || `Error (${e.code||'?'}): ${e.message}`;
+    errEl.style.display='block'; errEl.textContent=msg;
+    console.error('[createNewMember]', e.code, e.message, e);
   } finally {
+    clearTimeout(safetyTimer);
     btn.disabled=false; btn.textContent='✅ Crear Integrante';
   }
 }
@@ -5555,33 +5620,57 @@ window.dirApproveCard = async function(cardId, ownerUid, approved, note=''){
 // La escritura en Firestore la hace la app secundaria (el nuevo usuario),
 // así respeta la regla: request.auth.uid == userId
 window.createUserForDirector = async function(email, pass, profileData){
-  const secondaryApp = initializeApp(app.options, 'sec_'+Date.now());
+  const appName   = 'sec_' + Date.now();
+  let secondaryApp = null;
+  let lastError    = null;
+
   try {
-    // Importar módulos para la app secundaria
+    secondaryApp = initializeApp(app.options, appName);
+
+    // Módulos cargados una sola vez (ya en caché del browser)
     const { getAuth: getAuth2, createUserWithEmailAndPassword: createUser2, signOut: signOut2 }
       = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
     const { getFirestore: getFs2, doc: doc2, setDoc: setDoc2 }
       = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
 
     const auth2 = getAuth2(secondaryApp);
-    const db2   = getFs2(secondaryApp);    // Firestore con contexto del nuevo usuario
+    const db2   = getFs2(secondaryApp); // Firestore con sesión del NUEVO usuario → reglas OK
 
-    // 1. Crear cuenta del nuevo usuario
+    // 1. Crear cuenta Firebase Auth
     const cred = await createUser2(auth2, email, pass);
-    const uid  = cred.user.uid;
-    profileData.uid = uid;
+    profileData.uid = cred.user.uid;
 
-    // 2. El nuevo usuario escribe su propio doc → reglas OK
-    await setDoc2(doc2(db2, 'users', uid), profileData);
+    // 2. Escribir perfil en Firestore (el nuevo usuario escribe su propio doc)
+    await setDoc2(doc2(db2, 'users', cred.user.uid), profileData);
 
-    // 3. Cerrar sesión secundaria y limpiar
-    await signOut2(auth2);
-    await deleteApp(secondaryApp);
-    return uid;
+    // 3. Cerrar sesión secundaria
+    await signOut2(auth2).catch(()=>{});
+    return cred.user.uid;
+
   } catch(e){
-    await deleteApp(secondaryApp).catch(()=>{});
-    throw e;
+    lastError = e;
+    throw e; // Re-lanza INMEDIATAMENTE, no espera el deleteApp
+  } finally {
+    // Limpiar app secundaria en background, sin bloquear el resultado
+    if(secondaryApp){
+      Promise.resolve().then(()=>deleteApp(secondaryApp)).catch(()=>{});
+    }
   }
+};
+
+// ── Actualizar perfil de usuario por email (para scripts de consola del Director) ──
+window.updateMemberProfile = async function(email, data){
+  if(!currentUser){ console.error('No hay sesión activa'); return false; }
+  try{
+    const { collection: col2, query: q2, where: w2, getDocs: gds2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await gds2(q2(col2(db,'users'), w2('email','==',email)));
+    if(snap.empty){ console.error('Usuario no encontrado:', email); return false; }
+    const userDoc = snap.docs[0];
+    await setDoc(userDoc.ref, { ...data, updatedAt:new Date().toISOString() }, {merge:true});
+    console.log('✅ Perfil actualizado para', email);
+    return true;
+  }catch(e){ console.error('updateMemberProfile error:', e); return false; }
 };
 
 // ── Bazar Cycle (colección compartida) ──
