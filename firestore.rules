@@ -2,58 +2,97 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Función helper: verificar si el solicitante es el Director ──
-    function isDirector() {
-      return request.auth != null &&
-             request.auth.token.email == 'francoguerrac@gmail.com';
-    }
+    // ════════════════════════════════════════════════
+    // FUNCIONES HELPER
+    // ════════════════════════════════════════════════
 
-    // ── Función helper: usuario autenticado ──
+    // Usuario autenticado (cualquier login válido)
     function isAuth() {
       return request.auth != null;
     }
 
-    // ── COLECCIÓN USERS ──
+    // Director identificado por email (sin get() — siempre disponible)
+    function isDirector() {
+      return request.auth != null
+          && request.auth.token.email == 'francoguerrac@gmail.com';
+    }
+
+    // El usuario está accediendo a su propio documento
+    function isOwner(userId) {
+      return request.auth != null
+          && request.auth.uid == userId;
+    }
+
+    // ════════════════════════════════════════════════
+    // COLECCIÓN: users
+    // ════════════════════════════════════════════════
     match /users/{userId} {
-      // Cualquier usuario autenticado puede leer (para Control Tower y Panel Admin)
+      // Cualquier usuario logueado puede LEER cualquier perfil
+      // (necesario para Control Tower, Panel Admin, onSnapshot del Director)
       allow read: if isAuth();
 
-      // Cada usuario escribe su propio doc, O el Director escribe cualquiera
+      // Crear: cualquier usuario puede crear su propio perfil
       allow create: if isAuth();
-      allow update: if isAuth() && (
-        request.auth.uid == userId || isDirector()
-      );
+
+      // Actualizar: propio documento O Director
+      allow update: if isOwner(userId) || isDirector();
+
+      // Eliminar: solo Director
       allow delete: if isDirector();
     }
 
-    // ── SOLICITUDES DE PERMISOS (módulo Casa - doble llave) ──
-    match /permission_requests/{reqId} {
-      allow read:   if isAuth();
-      allow create: if isAuth();
-      allow update: if isAuth();
-      allow delete: if isDirector();
-    }
-
-    // ── PROPUESTAS / BUZÓN DE IDEAS ──
-    match /proposals/{propId} {
-      allow read, write: if isAuth();
-    }
-
-    // ── CICLOS DE BAZAR ──
+    // ════════════════════════════════════════════════
+    // COLECCIÓN: bazar_cycles
+    // Ciclos semanales compartidos entre todos los roles de Bazar
+    // ════════════════════════════════════════════════
     match /bazar_cycles/{cycleId} {
       allow read, write: if isAuth();
     }
 
-    // ── AUDIT LOG (solo Director puede leer) ──
+    // ════════════════════════════════════════════════
+    // COLECCIÓN: permission_requests
+    // Solicitudes de permiso (hijos → padres, doble llave)
+    // ════════════════════════════════════════════════
+    match /permission_requests/{reqId} {
+      allow read:   if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();  // Mamá y Director pueden aprobar/rechazar
+      allow delete: if isDirector();
+    }
+
+    // ════════════════════════════════════════════════
+    // COLECCIÓN: proposals
+    // Buzón de ideas de los integrantes
+    // ════════════════════════════════════════════════
+    match /proposals/{propId} {
+      allow read, write: if isAuth();
+    }
+
+    // ════════════════════════════════════════════════
+    // COLECCIÓN: audit_log
+    // Solo Director puede leer; cualquiera puede escribir (stealth)
+    // ════════════════════════════════════════════════
     match /audit_log/{logId} {
       allow create: if isAuth();
       allow read:   if isDirector();
+      allow update, delete: if false;  // inmutable
     }
 
-    // ── GEOLOCALIZACIÓN STEALTH (solo Director puede leer) ──
+    // ════════════════════════════════════════════════
+    // COLECCIÓN: geolocations
+    // Geofencing stealth — solo Director puede leer
+    // ════════════════════════════════════════════════
     match /geolocations/{geoId} {
       allow create: if isAuth();
       allow read:   if isDirector();
+      allow update, delete: if false;  // inmutable
+    }
+
+    // ════════════════════════════════════════════════
+    // CUALQUIER OTRA COLECCIÓN (fallback seguro)
+    // ════════════════════════════════════════════════
+    match /{document=**} {
+      allow read, write: if isDirector();
     }
   }
 }
