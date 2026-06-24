@@ -1522,6 +1522,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
       </div>
     </div>
 
+    <!-- Acción rápida Director -->
+    <div style="background:var(--sage-dim);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">👨</span>
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:700;">Director · <span id="ctDirName">Francisco</span></div>
+        <div style="font-size:10px;color:var(--mid);">Vista completa de la organización</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="resetAndReloadTasks()">🔄 Reiniciar mis tareas</button>
+    </div>
+
     <!-- Stats -->
     <div class="ct-grid" id="ctStatsRow"></div>
 
@@ -1664,25 +1674,27 @@ function saveCheckins(){ window.cloudSet && window.cloudSet('checkins', checkins
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 function seedTasks(){
+  const me=(currentProfile&&currentProfile.displayName)||'Director';
   const n=new Date();
   const d=o=>{const x=new Date(n);x.setDate(x.getDate()+o);return x.toISOString().split('T')[0];};
   tasks=[
-    {id:uid(),text:'Preparar despachos tienda colaborativa',ctx:'bazar',prio:'p1',freq:'unica',deadline:d(0),time:'10:00',dur:60,done:false,ts:Date.now()-8},
-    {id:uid(),text:'Enviar campaña WhatsApp segmento VIP',ctx:'club',prio:'p1',freq:'unica',deadline:d(1),time:'09:00',dur:45,done:false,ts:Date.now()-7},
-    {id:uid(),text:'Pagar cuenta de luz',ctx:'casa',prio:'p2',freq:'unica',deadline:d(2),time:'',dur:0,done:false,ts:Date.now()-6},
-    {id:uid(),text:'Publicar posts semana Instagram Club Patio',ctx:'club',prio:'p2',freq:'semanal',deadline:d(3),time:'11:00',dur:90,done:false,ts:Date.now()-5},
-    {id:uid(),text:'Revisión stock bazar · inventario',ctx:'bazar',prio:'p2',freq:'semanal',deadline:d(5),time:'15:00',dur:60,done:false,ts:Date.now()-4},
-    {id:uid(),text:'Chequear métricas app Club Patio',ctx:'club',prio:'p3',freq:'diaria',deadline:'',time:'08:30',dur:15,done:false,ts:Date.now()-3},
-    {id:uid(),text:'Reunión nuevos comercios Quilpué',ctx:'club',prio:'p2',freq:'unica',deadline:d(8),time:'14:00',dur:120,done:false,ts:Date.now()-2},
-    {id:uid(),text:'Comprar materiales aseo casa',ctx:'casa',prio:'p4',freq:'casual',deadline:'',time:'',dur:0,done:false,ts:Date.now()-1},
+    {id:uid(),text:'📋 Revisar hitos escolares de la semana',ctx:'casa',prio:'p2',freq:'semanal',deadline:d(2),time:'17:00',dur:30,done:false,ts:Date.now()-9,owner:me},
+    {id:uid(),text:'📲 Enviar campaña WhatsApp segmento VIP',ctx:'club',prio:'p1',freq:'unica',deadline:d(0),time:'09:00',dur:45,done:false,ts:Date.now()-7,owner:me},
+    {id:uid(),text:'🏪 Revisión de nuevos comercios Quilpué',ctx:'club',prio:'p2',freq:'unica',deadline:d(3),time:'14:00',dur:120,done:false,ts:Date.now()-6,owner:me},
+    {id:uid(),text:'💰 Pagar cuentas del hogar',ctx:'casa',prio:'p1',freq:'unica',deadline:d(1),time:'10:00',dur:45,done:false,ts:Date.now()-5,owner:me},
+    {id:uid(),text:'📊 Chequear métricas app Club Patio',ctx:'club',prio:'p3',freq:'diaria',deadline:'',time:'08:30',dur:15,done:false,ts:Date.now()-4,owner:me},
+    {id:uid(),text:'❤️ Reunión de pareja',ctx:'casa',prio:'p2',freq:'semanal',deadline:d(4),time:'20:30',dur:60,done:false,ts:Date.now()-3,owner:me},
+    {id:uid(),text:'📸 Aprobar posts Instagram semana',ctx:'club',prio:'p2',freq:'semanal',deadline:d(2),time:'11:00',dur:20,done:false,ts:Date.now()-2,owner:me},
+    {id:uid(),text:'🏛️ Seguimiento Corfo Consolida 2026',ctx:'club',prio:'p3',freq:'semanal',deadline:d(5),time:'15:00',dur:60,done:false,ts:Date.now()-1,owner:me},
   ];
   saveTasks();
 }
 function seedSprint(){
+  const me=(currentProfile&&currentProfile.displayName)||'Director';
   sprintTasks=[
-    {id:uid(),text:'Enviar campaña WhatsApp segmento VIP',owner:'Carolina',prio:'p1',done:false},
-    {id:uid(),text:'Publicar posts semana Instagram',owner:'Team B',prio:'p2',done:false},
-    {id:uid(),text:'Chequear métricas app',owner:'Carolina',prio:'p3',done:true},
+    {id:uid(),text:'Enviar campaña WhatsApp segmento VIP',owner:me,prio:'p1',done:false},
+    {id:uid(),text:'Aprobar posts Instagram semana',owner:me,prio:'p2',done:false},
+    {id:uid(),text:'Chequear métricas app',owner:'Team A',prio:'p3',done:true},
   ];
   saveSprint();
 }
@@ -1941,33 +1953,27 @@ function writeAuditEntry(action, meta){
 window.writeAuditEntry = writeAuditEntry;
 
 // ═══════════════ OWNER OPTIONS ═══════════════
-const OWNER_OPTS={
-  casa:[
-    {value:'',label:'Sin asignar'},
+function getOwnerOpts(ctx){
+  const dirName = (currentProfile&&currentProfile.displayName)||'Director';
+  const dirEmoji= (ROLES[currentRole]||{}).emoji||'👨';
+  const base=[{value:'',label:'Sin asignar'},{value:dirName,label:dirEmoji+' '+dirName+' (yo)'}];
+  if(ctx==='casa') return [...base,
     {value:'Hijo 1',label:'👦 Hijo 1'},
     {value:'Hijo 2',label:'👧 Hijo 2'},
-    {value:'Mamá',label:'👩 Mamá'},
-    {value:'Papá',label:'👨 Papá'},
-  ],
-  bazar:[
-    {value:'',label:'Sin asignar'},
+    {value:'Mamá',  label:'👩 Mamá'},
+    {value:'Papá',  label:'👨 Papá'},
+  ];
+  return [...base,
     {value:'Team A',label:'Team A · Comercios'},
     {value:'Team B',label:'Team B · Contenido'},
     {value:'Team C',label:'Team C · Soporte'},
     {value:'Team D',label:'Team D · Marketing'},
-  ],
-  club:[
-    {value:'',label:'Sin asignar'},
-    {value:'Team A',label:'Team A · Comercios'},
-    {value:'Team B',label:'Team B · Contenido'},
-    {value:'Team C',label:'Team C · Soporte'},
-    {value:'Team D',label:'Team D · Marketing'},
-  ],
-};
+  ];
+}
 function updateOwnerOpts(){
   const ctx=document.getElementById('metaCtx').value;
   const sel=document.getElementById('metaOwner');
-  const opts=OWNER_OPTS[ctx]||OWNER_OPTS.club;
+  const opts=getOwnerOpts(ctx);
   sel.innerHTML=opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
 }
 
@@ -4327,29 +4333,41 @@ function initDirectorCasaTasks(){
   const day=today.getDay(); // 0=Dom,5=Vie
   const date=today.getDate();
 
+  const me=(currentProfile&&currentProfile.displayName)||'Director';
   const toSeed=[];
+  const nextFri=new Date(today); nextFri.setDate(today.getDate()+(5-day+7)%7||7);
+  const nextTue=new Date(today); nextTue.setDate(today.getDate()+(2-day+7)%7||7);
 
-  // Hitos escolares (Viernes y Domingo)
-  if(day===5||day===0){
-    const exists=tasks.some(t=>t.autoGenSource==='director_hitos'&&t.deadline===todayStr&&!t.done);
-    if(!exists) toSeed.push({text:'📅 Revisar hitos escolares de la semana',ctx:'casa',prio:'p2',freq:'semanal',deadline:todayStr,time:day===5?'17:00':'10:00',dur:30,autoGenSource:'director_hitos'});
+  // Hitos escolares — siempre visible esta semana
+  if(!tasks.some(t=>t.autoGenSource==='director_hitos'&&!t.done))
+    toSeed.push({text:'📅 Revisar hitos escolares de la semana',ctx:'casa',prio:'p2',freq:'semanal',deadline:nextFri.toISOString().split('T')[0],time:'17:00',dur:30,autoGenSource:'director_hitos'});
+
+  // Cuentas del hogar — recordatorio permanente si no existe
+  if(!tasks.some(t=>t.autoGenSource==='director_cuentas'&&!t.done)){
+    const dueDay10=new Date(today.getFullYear(),today.getMonth(), date>10?today.getMonth()+1:today.getMonth(), 10);
+    const d10=new Date(today.getFullYear(),today.getMonth(),10);
+    toSeed.push({text:'💰 Pagar cuentas del hogar',ctx:'casa',prio:'p1',freq:'unica',deadline:d10.toISOString().split('T')[0],time:'10:00',dur:45,autoGenSource:'director_cuentas'});
   }
-  // Cuentas del hogar (día 10 de cada mes)
-  if(date===10){
-    const exists=tasks.some(t=>t.autoGenSource==='director_cuentas'&&t.deadline===todayStr&&!t.done);
-    if(!exists) toSeed.push({text:'💰 Pagar cuentas del hogar',ctx:'casa',prio:'p1',freq:'unica',deadline:todayStr,time:'10:00',dur:45,autoGenSource:'director_cuentas'});
-  }
-  // Reunión de pareja (Martes)
-  if(day===2){
-    const exists=tasks.some(t=>t.autoGenSource==='director_pareja'&&t.deadline===todayStr&&!t.done);
-    if(!exists) toSeed.push({text:'❤️ Reunión de pareja',ctx:'casa',prio:'p2',freq:'semanal',deadline:todayStr,time:'20:30',dur:60,autoGenSource:'director_pareja'});
-  }
+  // Reunión de pareja — próximo martes
+  if(!tasks.some(t=>t.autoGenSource==='director_pareja'&&!t.done))
+    toSeed.push({text:'❤️ Reunión de pareja',ctx:'casa',prio:'p2',freq:'semanal',deadline:nextTue.toISOString().split('T')[0],time:'20:30',dur:60,autoGenSource:'director_pareja'});
 
   if(toSeed.length){
-    toSeed.forEach(t=>{tasks.unshift({id:uid(),...t,done:false,ts:Date.now(),autoGenerated:true,owner:'Director'});});
+    toSeed.forEach(t=>tasks.unshift({id:uid(),...t,done:false,ts:Date.now(),autoGenerated:true,owner:me}));
     saveTasks(); renderTasks();
   }
 }
+
+// ═══════════════ RESET TAREAS DIRECTOR ═══════════════
+function resetAndReloadTasks(){
+  if(!confirm('Esto borrará las tareas demo y cargará tus tareas reales como Director. ¿Continuar?')) return;
+  tasks=[];
+  saveTasks();
+  seedTasks();
+  showPage('tareas');
+  toast('✅ Tareas reiniciadas con tus asignaciones como Director');
+}
+window.resetAndReloadTasks=resetAndReloadTasks;
 
 // ═══════════════ INIT ═══════════════
 function init(){
