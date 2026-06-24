@@ -589,6 +589,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .persona-actions{display:flex;gap:5px;flex-wrap:wrap;}
 .pact-btn{flex:1;font-size:10px;font-weight:600;padding:6px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--charcoal);cursor:pointer;text-align:center;transition:all .15s;white-space:nowrap;font-family:'Inter',sans-serif;}
 .pact-btn:hover{background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
+/* WhatsApp button states */
+.btn-whatsapp-active{flex:1;font-size:10px;font-weight:700;padding:7px 8px;border-radius:8px;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;cursor:pointer;text-align:center;transition:all .2s;white-space:nowrap;font-family:'Inter',sans-serif;box-shadow:0 2px 6px rgba(37,211,102,.3);}
+.btn-whatsapp-active:hover{box-shadow:0 4px 12px rgba(37,211,102,.45);transform:translateY(-1px);}
+.btn-whatsapp-disabled{flex:1;font-size:10px;font-weight:600;padding:7px 8px;border-radius:8px;border:1.5px dashed #D1D5DB;background:#F9FAFB;color:#9CA3AF;cursor:not-allowed;text-align:center;white-space:nowrap;font-family:'Inter',sans-serif;opacity:.65;}
 .persona-lastseen{font-size:9px;color:#C4C4C4;margin-top:7px;text-align:right;}
 /* Mood self-update bar (non-director) */
 .mood-selfbar{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--charcoal);border-top:1px solid #333;}
@@ -6224,10 +6228,19 @@ function makePersonaCard(p, mod){
     <div class="persona-status ${mood.bar}">${p.statusMessage||'Sin nota de estado.'}</div>
     <div style="font-size:9px;color:var(--mid);margin-bottom:8px;">${mood.label} · Visto ${p.lastSeen||'–'}</div>
     <div class="persona-actions">
-      ${p && p.phone ? `<button class="pact-btn" onclick="personaMsg('${p.uid||''}')" title="WhatsApp: ${p.phone}">💬 WA</button>`
-        : `<button class="pact-btn" style="opacity:.35;cursor:not-allowed;" title="Sin teléfono registrado" disabled>💬 WA 🚫</button>`}
-      <button class="pact-btn" onclick="personaMeeting('${p.displayName}')">📅 Reunión</button>
-      <button class="pact-btn" onclick="personaTasks('${p.displayName}')">🔄 Tareas</button>
+      ${(p && p.phone && p.phone.replace(/\D/g,'').length >= 8)
+        ? `<button class="btn-whatsapp-active"
+              onclick="personaMsg('${p.uid||''}')"
+              title="Abrir WhatsApp: ${p.phone}">
+              💬 WhatsApp
+           </button>`
+        : `<button class="btn-whatsapp-disabled"
+              onclick="toast('📱 ${(p.displayName||'Este integrante').replace(/'/g,'').slice(0,20)} no tiene teléfono registrado. Usa ✏️ Editar en el panel 🗂️ Auditoría para asignárselo.')"
+              title="Sin número registrado — clic para más info">
+              💬 Sin número
+           </button>`}
+      <button class="pact-btn" onclick="personaMeeting('${p.displayName||''}')">📅 Reunión</button>
+      <button class="pact-btn" onclick="personaTasks('${p.displayName||''}')">🔄 Tareas</button>
     </div>`;
   return card;
 }
