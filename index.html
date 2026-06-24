@@ -8,33 +8,66 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --casa-color:#B5651D; --casa-soft:#FEF3E4; --casa-border:#F2D9B8;
-  --bazar-color:#2A5FCC; --bazar-soft:#EAF0FE; --bazar-border:#BDD0F5;
-  --club-color:#1F7A52;  --club-soft:#E4F5EE;  --club-border:#AEDDC8;
-  --p1:#DC2626; --p2:#D97706; --p3:#2563EB; --p4:#6B7280;
-  --sage:#4A7B6F; --sage-light:#6BA399; --sage-dim:#E8F0EE;
-  --coral:#E84040; --coral-soft:#FDE8E8;
-  --gold:#C9973A; --gold-soft:#FDF4E4;
-  --purple:#5B4FCF; --purple-soft:#F0F0FF;
-  --bg:#F4F4F2; --surface:#FFFFFF; --charcoal:#1A1A1A; --mid:#6B7280; --border:#E5E7EB;
+  /* ── PALETA CORPORATIVA CLUB PATIO CURAUMA ── */
+  --primary-blue:  #5BC0BE; /* Celeste del agua */
+  --primary-green: #9BC53D; /* Verde de las montañas */
+  --accent-gold:   #E9B872; /* Ocre del sol */
+  --accent-coral:  #F25C54; /* Naranja/Coral */
+  --bg-main:       #F4F7F6; /* Fondo general (nunca blanco puro) */
+  --bg-card:       #FFFFFF; /* Fondo tarjetas */
+  --text-main:     #2D3142; /* Texto principal (nunca negro puro) */
+  --text-muted:    #9095A0; /* Texto secundario */
+
+  /* ── REMAPEO de variables antiguas a paleta corporativa ── */
+  --bg:       var(--bg-main);
+  --surface:  var(--bg-card);
+  --charcoal: var(--text-main);
+  --mid:      var(--text-muted);
+  --border:   #DDE3E7;
+
+  /* Sage → Primary Blue (acciones principales) */
+  --sage:       var(--primary-blue);
+  --sage-light: #7ECFCD;
+  --sage-dim:   #EAF6F6;
+
+  /* Coral → Accent Coral (urgencias/notificaciones) */
+  --coral:      var(--accent-coral);
+  --coral-soft: #FDECEA;
+
+  /* Gold → Accent Gold (badges/alertas) */
+  --gold:      var(--accent-gold);
+  --gold-soft: #FDF4E3;
+
+  /* Módulos (mantienen identidad visual pero más suaves) */
+  --casa-color:#C47A35;  --casa-soft:#FEF4E6;  --casa-border:#F5DDB5;
+  --bazar-color:#3A6FCC; --bazar-soft:#EBF0FD; --bazar-border:#BDD0F5;
+  --club-color: var(--primary-green); --club-soft:#EEF6D5; --club-border:#CBE08A;
+
+  /* Prioridades */
+  --p1:var(--accent-coral); --p2:var(--accent-gold); --p3:#4A90D9; --p4:#9095A0;
+
+  /* Misceláneos */
+  --purple:#7C5CBF; --purple-soft:#F0EAFA;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);min-height:100vh;padding-bottom:80px;}
+body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-main);min-height:100vh;padding-bottom:80px;}
+/* Importar fuentes adicionales para la marca */
 
 /* ── HEADER ── */
-.top-bar{background:var(--charcoal);padding:14px 16px 0;position:sticky;top:0;z-index:60;}
+.top-bar{background:linear-gradient(135deg,#1E2D3D 0%,#2D3142 100%);padding:14px 16px 0;position:sticky;top:0;z-index:60;box-shadow:0 2px 12px rgba(45,49,66,.25);}
 .top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.top-name{font-size:13px;font-weight:800;color:#fff;letter-spacing:0.04em;}
-.top-date{font-family:'JetBrains Mono',monospace;font-size:10px;color:#777;}
-.sprint-dot{width:8px;height:8px;border-radius:50%;background:var(--coral);display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
+.top-logo{width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;border:2px solid rgba(91,192,190,.4);flex-shrink:0;}
+.top-name{font-size:13px;font-weight:800;color:#fff;letter-spacing:0.04em;display:flex;align-items:center;}
+.top-date{font-family:'JetBrains Mono',monospace;font-size:10px;color:#9095A0;}
+.sprint-dot{width:8px;height:8px;border-radius:50%;background:var(--primary-blue);display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
 /* ── BOTTOM NAV ── */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--charcoal);border-top:1px solid #333;display:flex;z-index:60;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#1E2D3D,#2D3142);border-top:1px solid rgba(91,192,190,.2);display:flex;z-index:60;box-shadow:0 -2px 12px rgba(45,49,66,.2);}
 .nav-item{flex:1;padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:none;transition:all .2s;}
 .nav-icon{font-size:20px;line-height:1;}
 .nav-label{font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#666;transition:color .2s;}
-.nav-item.active .nav-label{color:var(--coral);}
+.nav-item.active .nav-label{color:var(--primary-blue);}
 .nav-item.active .nav-icon{transform:translateY(-2px);}
 
 /* ── PAGES ── */
@@ -42,8 +75,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .page.active{display:block;}
 
 /* ── CARDS ── */
-.card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
-.card-title{font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.card{background:var(--bg-card);border:1px solid rgba(221,227,231,.7);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 12px rgba(45,49,66,.06);transition:box-shadow .2s;}
+.card:hover{box-shadow:0 4px 20px rgba(45,49,66,.1);}
+.card-title{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
 .card-sub{font-size:10px;font-weight:600;color:var(--mid);letter-spacing:.06em;text-transform:uppercase;}
 
 /* ── STATS ROW ── */
@@ -53,12 +87,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .stat-lbl{font-size:9px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
 
 /* ── CAPTURE ── */
-.capture-wrap{padding:12px 14px 10px;background:var(--surface);border-bottom:1px solid var(--border);}
+.capture-wrap{padding:14px 16px 12px;background:var(--bg-card);border-bottom:1px solid var(--border);box-shadow:0 2px 8px rgba(45,49,66,.06);}
 .capture-input-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
-.capture-input{flex:1;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;border:2px solid var(--border);border-radius:10px;padding:10px 14px;outline:none;color:var(--charcoal);background:var(--bg);transition:border-color .2s;}
-.capture-input:focus{border-color:var(--sage);background:#fff;}
-.capture-input::placeholder{color:#bbb;font-weight:400;}
-.capture-btn{width:42px;height:42px;border-radius:10px;border:none;background:var(--charcoal);color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.capture-input{flex:1;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;border:1.5px solid var(--border);border-radius:12px;padding:11px 16px;outline:none;color:var(--text-main);background:var(--bg-main);transition:all .2s;}
+.capture-input:focus{border-color:var(--primary-blue);background:var(--bg-card);box-shadow:0 0 0 3px rgba(91,192,190,.12);}
+.capture-input::placeholder{color:#B0B7C0;font-weight:400;}
+.capture-btn{width:44px;height:44px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(91,192,190,.3);}
 .meta-row{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
 .meta-select,.meta-time,.meta-date-in{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;background:var(--bg);color:var(--charcoal);outline:none;cursor:pointer;flex:1;min-width:80px;}
 .meta-time,.meta-date-in{font-family:'JetBrains Mono',monospace;}
@@ -75,7 +109,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .sort-btn.active{background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
 
 /* ── TASK CARDS ── */
-.task-card{background:var(--surface);border:1.5px solid var(--border);border-radius:11px;padding:12px 12px 10px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;position:relative;overflow:hidden;transition:all .2s;}
+.task-card{background:var(--bg-card);border:1px solid rgba(221,227,231,.6);border-radius:14px;padding:13px 13px 11px;margin-bottom:9px;display:flex;gap:10px;align-items:flex-start;position:relative;overflow:hidden;transition:all .2s;box-shadow:0 1px 6px rgba(45,49,66,.05);}
+.task-card:hover{box-shadow:0 3px 14px rgba(45,49,66,.09);transform:translateY(-1px);}
 .task-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:11px 0 0 11px;}
 .task-card.ctx-casa::before{background:var(--casa-color);}
 .task-card.ctx-bazar::before{background:var(--bazar-color);}
@@ -126,7 +161,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .section-header{display:flex;align-items:center;justify-content:space-between;margin:14px 0 7px;}
 .section-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);}
 .section-count{font-size:10px;font-weight:600;background:var(--border);color:var(--mid);padding:2px 8px;border-radius:99px;}
-.empty-state{text-align:center;padding:28px 16px;color:var(--mid);font-size:13px;}
+.empty-state{text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;position:relative;}
+.empty-state::before{content:'';position:absolute;inset:0;background:url('./assets/Logo2.png') center/70px no-repeat;opacity:.05;pointer-events:none;border-radius:12px;}
 
 /* ── SPRINT ── */
 .sprint-bar-wrap{height:7px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:10px;}
@@ -210,10 +246,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .goal-kpi{font-size:11px;color:var(--mid);margin-top:5px;font-style:italic;}
 
 /* ── UTILS ── */
-.btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;border:none;cursor:pointer;transition:all .2s;}
-.btn-sage{background:var(--sage);color:#fff;} .btn-sage:hover{background:var(--sage-light);}
-.btn-ghost{background:var(--bg);color:var(--charcoal);border:1.5px solid var(--border);}
-.btn-sm{font-size:11px;padding:5px 10px;}
+.btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;padding:9px 16px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;letter-spacing:.01em;}
+.btn-sage{background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));color:#fff;box-shadow:0 2px 8px rgba(91,192,190,.3);}
+.btn-sage:hover{box-shadow:0 4px 14px rgba(91,192,190,.45);transform:translateY(-1px);}
+.btn-ghost{background:var(--bg-main);color:var(--text-main);border:1.5px solid var(--border);}
+.btn-ghost:hover{background:var(--bg-card);border-color:var(--primary-blue);color:var(--primary-blue);}
+.btn-sm{font-size:11px;padding:5px 11px;border-radius:8px;}
 .swipe-hint{text-align:center;font-size:10px;color:#C4C4C4;padding:8px 0;letter-spacing:.04em;}
 .toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--charcoal);color:#fff;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:500;z-index:999;transition:transform .25s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none;}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -613,12 +651,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 <body>
 
 <!-- ── LOGIN / AUTH OVERLAY ── -->
-<div id="authOverlay" style="position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1A1A1A 0%,#243b32 100%);display:flex;align-items:center;justify-content:center;padding:24px;">
-  <div style="width:100%;max-width:360px;background:#fff;border-radius:18px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:'Inter',sans-serif;">
-    <div style="text-align:center;margin-bottom:22px;">
-      <div style="font-size:34px;line-height:1;margin-bottom:8px;">🟢</div>
-      <div style="font-size:17px;font-weight:800;color:#1A1A1A;">Gestión de Equipos Club Patio</div>
-      <div style="font-size:12px;color:#6B7280;margin-top:3px;" id="authSubtitle">Inicia sesión para continuar</div>
+<div id="authOverlay" style="position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1E2D3D 0%,#2D4A3E 60%,#1E3D2E 100%);display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="width:100%;max-width:360px;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);border-radius:22px;padding:30px 26px;box-shadow:0 24px 60px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.1);font-family:'Inter',sans-serif;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <img src="./assets/Logo2.png" alt="Club Patio Curauma"
+        onerror="this.style.display='none';document.getElementById('loginFallbackEmoji').style.display='block'"
+        style="width:110px;height:110px;object-fit:contain;margin:0 auto 12px;display:block;border-radius:50%;box-shadow:0 4px 20px rgba(91,192,190,.25);border:3px solid rgba(91,192,190,.2);">
+      <span id="loginFallbackEmoji" style="font-size:48px;display:none;line-height:1;margin-bottom:8px;">🟢</span>
+      <div style="font-size:17px;font-weight:800;color:#2D3142;letter-spacing:-.01em;">Gestión de Equipos Club Patio</div>
+      <div style="font-size:12px;color:#9095A0;margin-top:3px;" id="authSubtitle">Inicia sesión para continuar</div>
     </div>
     <input id="authEmail" type="email" autocomplete="email" placeholder="Correo electrónico"
       style="width:100%;padding:13px 14px;margin-bottom:10px;border:1.5px solid #E5E7EB;border-radius:11px;font-size:14px;outline:none;font-family:inherit;">
@@ -636,7 +677,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
     <div id="authError" style="color:#DC2626;font-size:12px;min-height:16px;margin:4px 2px 10px;"></div>
     <div id="authSuccess" style="color:#1F7A52;font-size:12px;min-height:16px;margin:4px 2px 10px;display:none;"></div>
     <button id="authPrimaryBtn" type="button"
-      style="width:100%;padding:13px;background:#1F7A52;color:#fff;border:none;border-radius:11px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;">Entrar</button>
+      style="width:100%;padding:14px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(91,192,190,.35);letter-spacing:.02em;transition:all .2s;">Entrar</button>
     <div style="text-align:center;margin-top:16px;font-size:12.5px;color:#6B7280;">
       <span id="authToggleText">¿No tienes cuenta?</span>
       <a id="authToggleLink" href="#" style="color:#1F7A52;font-weight:700;text-decoration:none;margin-left:4px;">Crear cuenta</a>
@@ -882,7 +923,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 <!-- ── HEADER ── -->
 <div class="top-bar">
   <div class="top-row">
-    <div class="top-name"><span class="sprint-dot"></span>Gestión de Equipos Club Patio</div>
+    <div class="top-name">
+      <img src="./assets/Logo2.png" alt="CP" class="top-logo"
+        onerror="this.style.display='none'">
+      <span class="sprint-dot"></span>Club Patio
+    </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="top-date" id="topDate"></div>
       <div id="roleBadge" class="role-badge" style="background:#2a2a2a;color:#888;cursor:pointer;" onclick="alert('Rol: '+currentRole+'\nEmail: '+(currentProfile&&currentProfile.email||'no auth')+'\nUID: '+(currentProfile&&currentProfile.uid||'?'))">⏳ —</div>
