@@ -1664,8 +1664,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 
 <div class="toast" id="toast"></div>
 
-<!-- ── PANEL DE DIAGNÓSTICO VISIBLE ── -->
-<div id="rbacDebug" style="display:none;position:fixed;bottom:90px;left:10px;right:10px;z-index:9999;background:#1A1A1A;color:#fff;border-radius:12px;padding:14px;font-family:monospace;font-size:11px;line-height:1.8;border:2px solid #E84040;max-height:200px;overflow-y:auto;"></div>
+<!-- debug panel eliminado (RBAC confirmado funcionando) -->
 
 <script>
 // ═══════════════ STATE ═══════════════
@@ -1816,15 +1815,7 @@ function showPage(p){
   window.scrollTo(0,0);
 }
 
-// ── LOG VISIBLE EN PANTALLA ──
-function dbg(msg){
-  console.log('[RBAC]', msg);
-  const el = document.getElementById('rbacDebug');
-  if(!el) return;
-  el.style.display = 'block';
-  el.innerHTML += '<div>' + msg + '</div>';
-  el.scrollTop = el.scrollHeight;
-}
+function dbg(msg){ console.log('[RBAC]', msg); }
 
 // ═══════════════ ROLE ROUTER ═══════════════
 function mountRoleUI(role, profile){
@@ -5028,29 +5019,29 @@ const ROLE_MODULES = {
 onAuthStateChanged(auth, async (user)=>{
   if(user){
     currentUser = user;
-    dbg('🔑 Auth: ' + user.email);
+
 
     let data = {}, profile = null;
     const preset = PRESET_ROLES[user.email.toLowerCase()];
-    dbg('🎭 Preset: ' + (preset ? preset.role : 'NINGUNO — email no reconocido'));
+
 
     try{
       const snap = await getDoc(doc(db,'users',user.uid));
-      dbg('📦 Firestore doc existe: ' + snap.exists());
+  
 
       if(snap.exists()){
         data    = snap.data();
         profile = {...snap.data()};
-        dbg('📋 Rol en Firestore: ' + (profile.role||'undefined'));
+    
       } else {
         profile = await createUserProfile(user.uid, user.email);
         data    = {...profile};
-        dbg('🆕 Cuenta nueva creada, rol: ' + profile.role);
+    
       }
 
       // SIEMPRE forzar el rol correcto para emails pre-asignados
       if(preset && profile.role !== preset.role){
-        dbg('🔄 Actualizando rol: ' + profile.role + ' → ' + preset.role);
+    
         const update = {
           uid: user.uid, orgId: ORG_ID, email: user.email,
           role: preset.role, displayName: preset.displayName,
@@ -5062,14 +5053,14 @@ onAuthStateChanged(auth, async (user)=>{
         await setDoc(doc(db,'users',user.uid), update, {merge:true});
         profile = {...profile, ...update};
         data    = {...data, ...update};
-        dbg('✅ Rol actualizado a: ' + preset.role);
+    
       } else if(preset) {
-        dbg('✅ Rol ya correcto: ' + profile.role);
+    
       }
 
       setDoc(doc(db,'users',user.uid),{lastSeen:new Date().toISOString()},{merge:true}).catch(()=>{});
     }catch(e){
-      dbg('❌ Error Firestore: ' + e.code + ' — ' + e.message);
+  
       // Fallback: usar preset directamente si Firestore falla
       if(preset){
         profile = { uid:user.uid, email:user.email, role:preset.role,
@@ -5079,7 +5070,7 @@ onAuthStateChanged(auth, async (user)=>{
       }
     }
 
-    dbg('🚀 bootApp → role: ' + (profile&&profile.role||'SIN ROL'));
+
     overlay.style.display = 'none';
     booted = true;
     window.bootApp(data, profile);
