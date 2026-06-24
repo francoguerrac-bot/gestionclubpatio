@@ -457,6 +457,21 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .psb-approved{background:#DCFCE7;color:#16A34A;}
 .psb-rejected{background:#FEE2E2;color:#DC2626;}
 .hijo-perm-status{background:var(--bg-main);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;}
+/* ── MULTI-ROLE CHECKBOX GRID ── */
+.role-checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px;}
+@media(max-width:400px){.role-checkbox-grid{grid-template-columns:repeat(2,1fr);}}
+.role-cb-item{cursor:pointer;user-select:none;}
+.role-cb-item input[type=checkbox]{display:none;}
+.role-cb-card{border:1.5px solid var(--border);border-radius:11px;padding:9px 6px;text-align:center;transition:all .18s;background:var(--bg-main);height:100%;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.role-cb-card:hover{border-color:var(--primary-blue);background:var(--sage-dim);}
+.role-cb-item input:checked + .role-cb-card{border-color:var(--primary-blue);background:var(--sage-dim);box-shadow:0 0 0 2px rgba(91,192,190,.25);}
+.role-cb-emoji{font-size:20px;line-height:1;}
+.role-cb-label{font-size:10px;font-weight:700;color:var(--text-main);line-height:1.2;text-align:center;}
+.role-cb-mod{font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
+.role-cb-selected-tags{display:flex;flex-wrap:wrap;gap:4px;min-height:24px;margin-top:8px;}
+.role-cb-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--sage-dim);color:var(--primary-blue);display:flex;align-items:center;gap:4px;}
+/* ── VISIBLE TASKS FILTER BADGE ── */
+.filter-me-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--sage-dim);color:var(--primary-blue);margin-left:8px;}
 /* ── NEW MEMBER MODAL ── */
 .nm-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
 .nm-card{background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;font-family:'Inter',sans-serif;max-height:90vh;overflow-y:auto;}
@@ -1917,36 +1932,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <div style="font-size:10px;color:var(--mid);margin-top:3px;">Solo los 8 dígitos restantes del celular chileno</div>
     </div>
     <div class="nm-field">
-      <label class="nm-label">Módulo Principal *</label>
-      <select id="nmModule" class="nm-select" onchange="nmModuleChange()">
-        <option value="">Selecciona un módulo...</option>
-        <option value="casa">🏠 Casa</option>
-        <option value="club">🟢 Club Patio</option>
-        <option value="bazar">🛍️ Bazar</option>
-        <option value="tienda">🏪 Tienda</option>
-      </select>
-    </div>
-    <div class="nm-field">
-      <label class="nm-label">Rol Principal *</label>
-      <select id="nmRole" class="nm-select">
-        <option value="">Selecciona módulo primero...</option>
-      </select>
-    </div>
-    <!-- Segundo módulo/rol (opcional) -->
-    <div class="nm-field" style="background:var(--bg-main);border-radius:10px;padding:10px 12px;border:1px dashed var(--border);">
-      <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">
-        ➕ Rol Adicional (opcional — ej: Casa + Bazar)
+      <label class="nm-label">Roles * <span style="font-weight:400;color:var(--text-muted);">(selecciona uno o más)</span></label>
+      <div class="role-checkbox-grid" id="nmRolesGrid">
+        <!-- Generado dinámicamente por buildRolesGrid() -->
       </div>
-      <select id="nmModule2" class="nm-select" onchange="nmModuleChange2()" style="margin-bottom:8px;">
-        <option value="">Sin rol adicional</option>
-        <option value="casa">🏠 Casa</option>
-        <option value="club">🟢 Club Patio</option>
-        <option value="bazar">🛍️ Bazar</option>
-        <option value="tienda">🏪 Tienda</option>
-      </select>
-      <select id="nmRole2" class="nm-select">
-        <option value="">—</option>
-      </select>
+      <div id="nmSelectedTags" class="role-cb-selected-tags">
+        <span style="font-size:10px;color:var(--text-muted);">Ningún rol seleccionado aún</span>
+      </div>
     </div>
 
     <button id="nmSubmitBtn" class="btn btn-sage" onclick="createNewMember()"
@@ -2138,7 +2130,10 @@ const ROLES = {
   coordinadora_tienda:  {label:'Coord. Tienda',       emoji:'🏪', color:'#16A34A', bg:'#DCFCE7', modules:['tienda'],                      nav:['tareas','tienda'],                                  canReadAll:false},
   staff_montaje:        {label:'Staff Montaje',       emoji:'🔧', color:'#64748B', bg:'#F1F5F9', modules:['bazar'],                       nav:['bazar'],                                            canReadAll:false},
   vendedor:             {label:'Vendedor/a',          emoji:'💼', color:'#0F766E', bg:'#CCFBF1', modules:['tienda'],                      nav:['tienda'],                                           canReadAll:false},
-  programador:          {label:'Programador Web',     emoji:'💻', color:'#1D4ED8', bg:'#DBEAFE', modules:['tienda','club'],               nav:['tareas','club','tienda'],                           canReadAll:false},
+  programador:          {label:'Encargado Web',       emoji:'💻', color:'#1D4ED8', bg:'#DBEAFE', modules:['tienda','club'],               nav:['tareas','club','tienda'],                           canReadAll:false},
+  disenador_pub:        {label:'Diseñador/Publicista',emoji:'🎨', color:'#7C3AED', bg:'#EDE9FE', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
+  staff_eventos:        {label:'Staff Eventos',       emoji:'⚽', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas'],                                           canReadAll:false},
+  logistica:            {label:'Logística',            emoji:'🚛', color:'#0891B2', bg:'#CFFAFE', modules:['bazar','tienda'],              nav:['tareas','bazar'],                                   canReadAll:false},
   pending:              {label:'Cuenta Pendiente',    emoji:'⏳', color:'#9CA3AF', bg:'#F3F4F6', modules:[],                              nav:[],                                                   canReadAll:false},
 };
 window.ROLES = ROLES;
@@ -2580,9 +2575,37 @@ function setSort(s){
 // ═══════════════ RENDER TASKS ═══════════════
 function durLabel(m){if(!m)return'';if(m<60)return m+'min';const h=Math.floor(m/60),r=m%60;return r?`${h}h${r}m`:`${h}h`;}
 
+// ── FILTRO ANTI-SOBRECARGA: solo el Director ve todas las tareas ──
+function getVisibleTasks(){
+  if(currentRole==='director'||currentRole==='pending') return tasks;
+  const me = currentProfile.displayName||'';
+  // Mostrar tareas sin asignar (propias del contexto) O asignadas al usuario
+  return tasks.filter(t=>!t.owner||t.owner===me);
+}
+
+function updateFilterBadge(){
+  // Muestra/oculta el badge "Solo mis tareas" en la sort bar
+  let badge=document.getElementById('myTasksBadge');
+  if(currentRole==='director'||currentRole==='pending'){
+    if(badge) badge.remove(); return;
+  }
+  if(!badge){
+    const sortBar=document.querySelector('.sort-bar');
+    if(sortBar){
+      badge=document.createElement('span');
+      badge.id='myTasksBadge';
+      badge.className='filter-me-badge';
+      badge.textContent='👤 Solo mis tareas';
+      sortBar.appendChild(badge);
+    }
+  }
+}
+
 function renderTasks(){
+  updateFilterBadge();
   const today=new Date(); today.setHours(0,0,0,0);
-  let list=tasks.filter(t=>ctxFilter==='todo'||t.ctx===ctxFilter);
+  const visibleTasks = getVisibleTasks(); // filtro anti-sobrecarga por rol
+  let list=visibleTasks.filter(t=>ctxFilter==='todo'||t.ctx===ctxFilter);
   list=[...list].sort((a,b)=>{
     if(sortBy==='deadline'){
       if(a.done!==b.done)return a.done?1:-1;
@@ -2607,7 +2630,7 @@ function renderTasks(){
     return b.ts-a.ts;
   });
 
-  const pending=tasks.filter(t=>!t.done);
+  const pending=visibleTasks.filter(t=>!t.done); // stats sobre tareas del usuario
   document.getElementById('sTodo').textContent=pending.length;
   document.getElementById('sUrgente').textContent=pending.filter(t=>t.prio==='p1').length;
   document.getElementById('sHoy').textContent=pending.filter(t=>{
@@ -2615,7 +2638,7 @@ function renderTasks(){
     return new Date(t.deadline+'T00:00:00')<=today;
   }).length;
   document.getElementById('sRecurr').textContent=pending.filter(t=>t.freq&&t.freq!=='unica').length;
-  document.getElementById('sDone').textContent=tasks.filter(t=>t.done).length;
+  document.getElementById('sDone').textContent=visibleTasks.filter(t=>t.done).length;
 
   const c=document.getElementById('taskList'); c.innerHTML='';
   if(!list.length){c.innerHTML='<div class="empty-state">✨ Sin tareas aquí. Anota la primera arriba.</div>';return;}
@@ -5235,21 +5258,76 @@ const PERSONAS_MOCK = {
   ],
 };
 
-// ── Roles disponibles por módulo (cascade) ──
+// ── Roles disponibles por módulo (para cascade legacy) ──
 const MODULE_ROLES_MAP = {
   casa:   [{value:'mama',label:'👩 Mamá'},{value:'hijo1',label:'👦 Hijo 1'},{value:'hijo2',label:'👧 Hijo 2'}],
-  club:   [{value:'publicista',label:'📣 Publicista'},{value:'disenador',label:'🎨 Diseñador/a'},{value:'coordinadora_bazares',label:'🎪 Coordinadora de Bazares'}],
-  bazar:  [{value:'coordinadora_bazares',label:'🎪 Coordinadora Bazares'},{value:'staff_montaje',label:'🔧 Staff de Montaje'}],
-  tienda: [{value:'coordinadora_tienda',label:'🏪 Coordinadora Tienda'},{value:'vendedor',label:'💼 Vendedor/a'},{value:'programador',label:'💻 Programador Web (Nathaniel)'}],
+  club:   [{value:'publicista',label:'📣 Publicista'},{value:'disenador',label:'🎨 Diseñador/a'},{value:'coordinadora_bazares',label:'🎪 Coord. Bazares'},{value:'disenador_pub',label:'🎨 Diseñador/Publicista'},{value:'staff_eventos',label:'⚽ Staff Eventos'}],
+  bazar:  [{value:'coordinadora_bazares',label:'🎪 Coord. Bazares'},{value:'staff_montaje',label:'🔧 Staff Montaje'},{value:'logistica',label:'🚛 Logística'}],
+  tienda: [{value:'coordinadora_tienda',label:'🏪 Coord. Tienda'},{value:'vendedor',label:'💼 Vendedor/a'},{value:'programador',label:'💻 Encargado Web'}],
 };
+
+// ── Grid de roles con checkboxes (Multi-Rol) ──
+// Grupos de roles para mostrar en el modal
+const ROLES_GROUPS = [
+  { group:'🏠 Casa', roles:['mama','hijo1','hijo2'] },
+  { group:'🟢 Club',  roles:['publicista','disenador','disenador_pub','coordinadora_bazares','staff_eventos'] },
+  { group:'🛍️ Bazar', roles:['staff_montaje','logistica'] },
+  { group:'🏪 Tienda',roles:['coordinadora_tienda','vendedor','programador'] },
+];
+
+function buildRolesGrid(){
+  const grid=document.getElementById('nmRolesGrid'); if(!grid) return;
+  grid.innerHTML='';
+  ROLES_GROUPS.forEach(({group,roles:rks})=>{
+    // Separador de grupo
+    const sep=document.createElement('div');
+    sep.style.cssText='grid-column:1/-1;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);padding:4px 0 2px;border-bottom:1px solid var(--border);';
+    sep.textContent=group;
+    grid.appendChild(sep);
+    rks.forEach(rk=>{
+      const rc=(window.ROLES||{})[rk]||{};
+      if(!rc.label) return;
+      const mods=(rc.modules||[]).join(', ');
+      const lbl=document.createElement('label');
+      lbl.className='role-cb-item';
+      lbl.innerHTML=`
+        <input type="checkbox" value="${rk}" class="nm-role-cb" onchange="updateRolesTags()">
+        <div class="role-cb-card">
+          <span class="role-cb-emoji">${rc.emoji||'👤'}</span>
+          <span class="role-cb-label">${rc.label}</span>
+          <span class="role-cb-mod">${mods}</span>
+        </div>`;
+      grid.appendChild(lbl);
+    });
+  });
+}
+
+function updateRolesTags(){
+  const selected=getSelectedRoles();
+  const tags=document.getElementById('nmSelectedTags'); if(!tags) return;
+  if(!selected.length){
+    tags.innerHTML='<span style="font-size:10px;color:var(--text-muted);">Ningún rol seleccionado aún</span>';
+    return;
+  }
+  tags.innerHTML=selected.map(rk=>{
+    const rc=(window.ROLES||{})[rk]||{};
+    return `<span class="role-cb-tag" style="background:${rc.bg||'#EAF6F6'};color:${rc.color||'var(--primary-blue)'};">
+      ${rc.emoji||''} ${rc.label||rk}
+    </span>`;
+  }).join('');
+}
+window.updateRolesTags=updateRolesTags;
+
+function getSelectedRoles(){
+  return [...document.querySelectorAll('.nm-role-cb:checked')].map(cb=>cb.value);
+}
 
 // ── Modal Alta de Integrante ──
 function openNewMemberModal(){
   if(currentRole!=='director'){toast('⛔ Solo el Director puede agregar integrantes');return;}
   ['nmName','nmEmail','nmPass','nmPhone'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('nmModule').value='';
-  document.getElementById('nmRole').innerHTML='<option value="">Selecciona módulo primero...</option>';
-  ['nmError','nmSuccess'].forEach(id=>{const el=document.getElementById(id);el.style.display='none';el.textContent='';});
+  ['nmError','nmSuccess'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.display='none';el.textContent='';}});
+  buildRolesGrid(); // genera los checkboxes
   document.getElementById('newMemberModal').style.display='flex';
 }
 window.openNewMemberModal=openNewMemberModal;
@@ -5285,16 +5363,16 @@ async function createNewMember(){
   const email = document.getElementById('nmEmail').value.trim();
   const pass  = document.getElementById('nmPass').value;
   const phone = document.getElementById('nmPhone').value.replace(/\D/g,'');
-  const mod1  = document.getElementById('nmModule').value;
-  const role1 = document.getElementById('nmRole').value;
-  const mod2  = (document.getElementById('nmModule2')||{}).value||'';
-  const role2 = (document.getElementById('nmRole2')||{}).value||'';
+  const selectedRoles = getSelectedRoles();
   const errEl = document.getElementById('nmError');
   const sucEl = document.getElementById('nmSuccess');
   errEl.style.display='none'; sucEl.style.display='none';
 
-  if(!name||!email||!pass||!mod1||!role1){
-    errEl.style.display='block'; errEl.textContent='Completa todos los campos obligatorios (*)'; return;
+  if(!name||!email||!pass){
+    errEl.style.display='block'; errEl.textContent='Completa nombre, email y contraseña.'; return;
+  }
+  if(!selectedRoles.length){
+    errEl.style.display='block'; errEl.textContent='Selecciona al menos un rol.'; return;
   }
   if(pass.length<6){
     errEl.style.display='block'; errEl.textContent='La contraseña debe tener al menos 6 caracteres'; return;
@@ -5310,10 +5388,10 @@ async function createNewMember(){
   }, 20000);
 
   try {
-    // Construir arrays de roles y módulos (soporte multi-rol)
-    const roles   = [role1, ...(role2?[role2]:[])];
+    // Construir arrays de roles y módulos desde checkboxes (multi-rol)
+    const roles   = selectedRoles;
     const allMods = [...new Set(roles.flatMap(r=>(window.ROLES||{})[r]?.modules||[]))];
-    const rc1     = (window.ROLES||{})[role1]||{};
+    const rc1     = (window.ROLES||{})[roles[0]]||{};
 
     const profileData = {
       orgId: ORG_ID, email, displayName: name,
