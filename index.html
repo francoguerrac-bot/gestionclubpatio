@@ -457,6 +457,32 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .psb-approved{background:#DCFCE7;color:#16A34A;}
 .psb-rejected{background:#FEE2E2;color:#DC2626;}
 .hijo-perm-status{background:var(--bg-main);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;}
+/* ── PANEL ADMIN DB ── */
+.admin-table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-bottom:14px;}
+.admin-table{width:100%;border-collapse:collapse;font-size:12px;min-width:640px;}
+.admin-table th{background:var(--text-main);color:#fff;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;}
+.admin-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-table tr:hover td{background:var(--bg-main);}
+.admin-td-email{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.admin-td-name{font-weight:700;color:var(--text-main);}
+.admin-td-roles{display:flex;flex-wrap:wrap;gap:3px;}
+.admin-role-chip{font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;background:var(--sage-dim);color:var(--primary-blue);}
+.admin-td-phone{font-family:'JetBrains Mono',monospace;font-size:10px;}
+.admin-td-phone.ph-ok{color:var(--primary-green);}.admin-td-phone.ph-no{color:var(--accent-coral);}
+.admin-actions-cell{display:flex;gap:5px;}
+.admin-edit-btn{font-size:10px;font-weight:700;padding:5px 10px;border-radius:7px;border:1.5px solid var(--primary-blue);color:var(--primary-blue);background:none;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
+.admin-edit-btn:hover{background:var(--primary-blue);color:#fff;}
+.admin-del-btn{font-size:10px;font-weight:700;padding:5px 10px;border-radius:7px;border:1.5px solid var(--accent-coral);color:var(--accent-coral);background:none;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
+.admin-del-btn:hover{background:var(--accent-coral);color:#fff;}
+.admin-live-dot{width:8px;height:8px;border-radius:50%;background:var(--primary-green);animation:pulse 2s infinite;flex-shrink:0;display:inline-block;margin-right:5px;}
+.admin-modal{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;}
+.admin-modal-card{background:var(--bg-card);border-radius:18px;padding:24px;max-width:420px;width:100%;font-family:'Inter',sans-serif;box-shadow:0 24px 60px rgba(0,0,0,.3);}
+.admin-modal-field{margin-bottom:12px;}
+.admin-modal-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:5px;}
+.admin-modal-input{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;outline:none;background:var(--bg-main);box-sizing:border-box;color:var(--text-main);}
+.admin-modal-input:focus{border-color:var(--primary-blue);background:var(--bg-card);}
+.admin-modal-hint{font-size:10px;color:var(--text-muted);margin-top:3px;}
 /* ── PANEL DE AUDITORÍA ── */
 .audit-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
 .audit-filter-btn{font-size:10px;font-weight:700;padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Inter',sans-serif;}
@@ -1764,6 +1790,96 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 </div>
 
 <!-- ══════════════════════════════════════
+     MODAL: EDITAR USUARIO (Admin)
+════════════════════════════════════════ -->
+<div id="adminEditModal" class="admin-modal" onclick="if(event.target===this)closeAdminModal()">
+  <div class="admin-modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:15px;font-weight:800;">✏️ Editar Integrante</div>
+      <button onclick="closeAdminModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">×</button>
+    </div>
+    <input type="hidden" id="adminEditUid">
+    <div class="admin-modal-field">
+      <label class="admin-modal-label">Email (no editable)</label>
+      <input class="admin-modal-input" id="adminEditEmail" type="text" disabled style="opacity:.5;">
+    </div>
+    <div class="admin-modal-field">
+      <label class="admin-modal-label">Nombre *</label>
+      <input class="admin-modal-input" id="adminEditName" type="text" placeholder="Nombre completo">
+    </div>
+    <div class="admin-modal-field">
+      <label class="admin-modal-label">Teléfono (formato: +56973567652)</label>
+      <input class="admin-modal-input" id="adminEditPhone" type="tel" placeholder="+569XXXXXXXX">
+    </div>
+    <div class="admin-modal-field">
+      <label class="admin-modal-label">Roles (separados por coma) *</label>
+      <input class="admin-modal-input" id="adminEditRoles" type="text" placeholder="mama, coordinadora_bazares">
+      <div class="admin-modal-hint">Claves válidas: director · mama · hijo1 · hijo2 · publicista · disenador · coordinadora_bazares · coordinadora_tienda · staff_montaje · vendedor · programador</div>
+    </div>
+    <div class="admin-modal-field">
+      <label class="admin-modal-label">Módulos (separados por coma)</label>
+      <input class="admin-modal-input" id="adminEditModules" type="text" placeholder="casa, bazar, tienda">
+      <div class="admin-modal-hint">Se calcula automáticamente si dejas vacío</div>
+    </div>
+    <div id="adminEditError" style="color:var(--accent-coral);font-size:12px;margin-bottom:10px;display:none;"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button id="adminSaveBtn" onclick="saveAdminEdit()" class="btn btn-sage" style="flex:1;padding:12px;">💾 Guardar cambios</button>
+      <button onclick="closeAdminModal()" class="btn btn-ghost" style="padding:12px 16px;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: ADMIN DB (Master Control)
+════════════════════════════════════════ -->
+<div class="page" id="pg-admin">
+  <div style="padding:14px 14px 0;">
+
+    <div class="card" style="background:linear-gradient(135deg,#1A1A1A,#1a1a3d);border:none;margin-bottom:12px;">
+      <div style="color:#fff;">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Solo Director · Acceso restringido</div>
+        <div style="font-size:16px;font-weight:800;">🛡️ Panel de Control Maestro</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">CRUD directo sobre la base de datos de Firestore</div>
+      </div>
+    </div>
+
+    <!-- Barra de estado en tiempo real -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+        <span class="admin-live-dot"></span>
+        <span id="adminLiveStatus">Conectando a Firestore...</span>
+      </div>
+      <button onclick="loadAdminPanel()" class="btn btn-ghost btn-sm">🔄 Recargar</button>
+    </div>
+
+    <!-- Tabla de usuarios -->
+    <div class="admin-table-wrap">
+      <table class="admin-table" id="adminTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Email</th>
+            <th>Nombre</th>
+            <th>Roles</th>
+            <th>Teléfono</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="adminTableBody">
+          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="font-size:10px;color:var(--text-muted);padding:4px 0;">
+      ⚠️ Eliminar un usuario borra su documento en Firestore pero <strong>NO</strong> borra su cuenta de Firebase Auth. Para eliminar la cuenta completa, usa la consola de Firebase.
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      PAGE: AUDITORÍA (Master Data Control)
 ════════════════════════════════════════ -->
 <div class="page" id="pg-auditoria">
@@ -2207,7 +2323,7 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','auditoria'], canReadAll:true,  canApprove:true},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','auditoria','admin'], canReadAll:true,  canApprove:true},
   mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','permisos','coach'],canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
@@ -2240,6 +2356,7 @@ const NAV_META = {
   'mi-panel':{icon:'🏠', label:'Mi Panel'},
   permisos:  {icon:'🔑', label:'Permisos'},
   auditoria: {icon:'🗂️', label:'Auditoría'},
+  admin:     {icon:'🛡️', label:'Admin DB'},
 };
 
 let currentRole = 'pending';
@@ -2334,6 +2451,7 @@ function showPage(p){
   if(p==='mi-panel')  {renderMiPanel();}
   if(p==='permisos')  {renderPermissionsCenter();}
   if(p==='auditoria') {loadAuditData();}
+  if(p==='admin')     {loadAdminPanel();}
   window.scrollTo(0,0);
 }
 
@@ -4061,6 +4179,165 @@ async function saveAuditMember(uid){
   }
 }
 window.saveAuditMember = saveAuditMember;
+
+// ═══════════════ PANEL ADMIN DB (CRUD Maestro) ═══════════════
+
+let adminUnsubscribe = null; // referencia al listener onSnapshot
+
+function loadAdminPanel(){
+  // Solo Director francoguerrac@gmail.com
+  if(currentRole !== 'director'){
+    toast('⛔ Acceso restringido al Director');
+    return;
+  }
+  const status = document.getElementById('adminLiveStatus');
+  if(status) status.textContent = 'Conectando...';
+  window.startAdminSnapshot && window.startAdminSnapshot();
+}
+window.loadAdminPanel = loadAdminPanel;
+
+function renderMasterAdminPanel(users){
+  const tbody = document.getElementById('adminTableBody');
+  const status = document.getElementById('adminLiveStatus');
+  if(!tbody) return;
+
+  // Debugging: log exactly what we received
+  console.log('[Admin DB] onSnapshot recibido:', users ? users.length : 'null', 'documentos');
+  console.log('[Admin DB] Datos:', users);
+
+  if(status) status.textContent = `${users ? users.length : 0} registros · En vivo 🟢`;
+
+  if(!users || users.length === 0){
+    console.warn('[Admin DB] Snapshot vacío — la colección users puede estar vacía o las reglas de Firestore bloquean la lectura');
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">
+      <div style="font-size:24px;margin-bottom:8px;">📭</div>
+      <div style="font-weight:700;">No hay documentos en la colección users</div>
+      <div style="font-size:11px;margin-top:4px;">Verifica en Firebase Console → Firestore → users</div>
+    </td></tr>`;
+    return;
+  }
+
+  const sorted = [...users].sort((a,b)=>(a.displayName||'').localeCompare(b.displayName||''));
+  tbody.innerHTML = sorted.map((u, i)=>{
+    const roles   = Array.isArray(u.roles) ? u.roles.filter(Boolean) : (u.role?[u.role]:[]);
+    const mods    = Array.isArray(u.modules) ? u.modules : [];
+    const phoneOk = /^\+569\d{8}$/.test(u.phone||'');
+    const rolesTags = roles.map(r=>{
+      const rc=ROLES[r]||{}; return `<span class="admin-role-chip">${rc.emoji||''}${rc.label||r}</span>`;
+    }).join('') || '<span style="color:var(--accent-coral);font-size:10px;">Sin rol</span>';
+    const health = roles.length && (phoneOk||!u.phone) ? '✅' : '⚠️';
+
+    return `<tr>
+      <td style="font-size:10px;color:var(--text-muted);font-family:monospace;">${i+1}</td>
+      <td><div class="admin-td-email" title="${u.email||'—'}">${u.email||'—'}</div></td>
+      <td><div class="admin-td-name">${u.displayName||'—'}</div></td>
+      <td><div class="admin-td-roles">${rolesTags}</div><div style="font-size:9px;color:var(--text-muted);margin-top:3px;">${mods.join(' · ')||'—'}</div></td>
+      <td><div class="admin-td-phone ${phoneOk?'ph-ok':'ph-no'}">${u.phone||'Sin número'}</div></td>
+      <td style="font-size:14px;text-align:center;">${health}</td>
+      <td><div class="admin-actions-cell">
+        <button class="admin-edit-btn" onclick="openAdminEdit('${u.uid}')">✏️ Editar</button>
+        <button class="admin-del-btn"  onclick="deleteUserFirestore('${u.uid}','${(u.email||'').replace(/'/g,"\\'")}','${(u.displayName||'').replace(/'/g,"\\'")}')">🗑️ Borrar</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+window.renderMasterAdminPanel = renderMasterAdminPanel;
+
+// ── Edición inline ──
+let adminEditingUser = null;
+
+function openAdminEdit(uid){
+  const allUsers = window._adminAllUsers || [];
+  const u = allUsers.find(x=>x.uid===uid);
+  if(!u){ toast('⚠️ Usuario no encontrado'); return; }
+  adminEditingUser = u;
+
+  document.getElementById('adminEditUid').value    = u.uid   || '';
+  document.getElementById('adminEditEmail').value  = u.email || '';
+  document.getElementById('adminEditName').value   = u.displayName || '';
+  document.getElementById('adminEditPhone').value  = u.phone || '';
+  const roles = Array.isArray(u.roles)&&u.roles.length ? u.roles : (u.role?[u.role]:[]);
+  document.getElementById('adminEditRoles').value  = roles.join(', ');
+  const mods = Array.isArray(u.modules) ? u.modules : [];
+  document.getElementById('adminEditModules').value = mods.join(', ');
+
+  const errEl = document.getElementById('adminEditError');
+  if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
+  document.getElementById('adminEditModal').style.display = 'flex';
+}
+window.openAdminEdit = openAdminEdit;
+
+function closeAdminModal(){
+  document.getElementById('adminEditModal').style.display = 'none';
+  adminEditingUser = null;
+}
+window.closeAdminModal = closeAdminModal;
+
+async function saveAdminEdit(){
+  const uid     = document.getElementById('adminEditUid').value;
+  const name    = document.getElementById('adminEditName').value.trim();
+  const phone   = document.getElementById('adminEditPhone').value.trim();
+  const rolesRaw= document.getElementById('adminEditRoles').value;
+  const modsRaw = document.getElementById('adminEditModules').value;
+  const errEl   = document.getElementById('adminEditError');
+
+  // Convertir strings CSV → arrays limpios
+  const roles   = rolesRaw.split(',').map(s=>s.trim()).filter(Boolean);
+  const mods    = modsRaw.trim()
+    ? modsRaw.split(',').map(s=>s.trim()).filter(Boolean)
+    : [...new Set(roles.flatMap(r=>(ROLES[r]||{}).modules||[]))];
+
+  if(!name){ errEl.style.display='block'; errEl.textContent='El nombre es obligatorio.'; return; }
+  if(!roles.length){ errEl.style.display='block'; errEl.textContent='Agrega al menos un rol.'; return; }
+
+  const btn = document.getElementById('adminSaveBtn');
+  btn.disabled=true; btn.textContent='Guardando...';
+
+  try{
+    await window.updateUserFirestore(uid, {
+      displayName:  name,
+      phone:        phone || '',
+      role:         roles[0],
+      roles,
+      modules:      mods,
+      updatedAt:    new Date().toISOString(),
+      updatedBy:    currentProfile.uid || 'director'
+    });
+    toast('✅ '+name+' actualizado');
+    writeAuditEntry&&writeAuditEntry('admin_user_updated',{emoji:'🛡️',uid,name});
+    closeAdminModal();
+  }catch(e){
+    errEl.style.display='block'; errEl.textContent='Error: '+e.message;
+  }finally{
+    btn.disabled=false; btn.textContent='💾 Guardar cambios';
+  }
+}
+window.saveAdminEdit = saveAdminEdit;
+
+// ── Eliminar documento de Firestore ──
+async function deleteUserFirestore(uid, email, name){
+  const confirmMsg = `⚠️ CONFIRMAR ELIMINACIÓN\n\nUsuario: ${name||'—'}\nEmail: ${email||'—'}\n\n` +
+    `Esto eliminará el documento en Firestore (tareas, roles, datos).\n` +
+    `La cuenta de Firebase Auth (login) requiere eliminación manual en la consola.\n\n¿Confirmas?`;
+  if(!confirm(confirmMsg)) return;
+
+  try{
+    await window.deleteUserFirestoreDoc(uid);
+    toast('🗑️ Documento de '+( name||email)+' eliminado');
+    writeAuditEntry&&writeAuditEntry('admin_user_deleted',{emoji:'🗑️',uid,email});
+  }catch(e){
+    toast('⚠️ Error al eliminar: '+e.message);
+    console.error('[Admin Delete]', e);
+  }
+}
+window.deleteUserFirestore = deleteUserFirestore;
+
+// ── Update desde auditoría ──
+async function updateUserFirestore(uid, patch){
+  if(!uid||!patch) throw new Error('uid y patch requeridos');
+  await window.adminUpdateDoc(uid, patch);
+}
+window.updateUserFirestore = updateUserFirestore;
 
 // ═══════════════ MÓDULO BAZAR ═══════════════
 
@@ -6314,8 +6591,8 @@ import {
   createUserWithEmailAndPassword, signOut, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc,
-  collection, getDocs, addDoc, query, where, serverTimestamp
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
+  collection, getDocs, addDoc, query, where, serverTimestamp, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -6700,6 +6977,55 @@ window.loadMyProposals = async function(uid){
     const snap = await gd(q(col(db,'proposals'), w('requesterId','==',uid)));
     return snap.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);
   }catch(e){ return []; }
+};
+
+// ── PANEL ADMIN: onSnapshot en tiempo real ──
+let adminSnapUnsub = null;
+window.startAdminSnapshot = function(){
+  // Solo Director francoguerrac@gmail.com
+  if(!currentUser || currentUser.email !== 'francoguerrac@gmail.com'){
+    console.warn('[Admin] Acceso denegado — no es el Director autorizado');
+    return;
+  }
+  // Cancelar listener anterior si existe
+  if(adminSnapUnsub){ adminSnapUnsub(); adminSnapUnsub=null; }
+
+  const q = query(collection(db,'users'), where('orgId','==',ORG_ID));
+  console.log('[Admin DB] Iniciando onSnapshot en colección users, orgId=', ORG_ID);
+
+  adminSnapUnsub = onSnapshot(q, (snap)=>{
+    console.log('[Admin DB] onSnapshot triggered — docs recibidos:', snap.size);
+    console.log('[Admin DB] ¿Snapshot vacío?', snap.empty);
+
+    if(snap.empty){
+      console.warn('[Admin DB] La colección users está vacía o sin documentos con orgId='+ORG_ID);
+    }
+
+    const users = snap.docs.map(d=>{
+      const data = d.data();
+      console.log('[Admin DB] Doc:', d.id, '→', data.email, '| roles:', data.roles, '| role:', data.role);
+      return { uid: d.id, ...data };
+    });
+
+    window._adminAllUsers = users;
+    if(window.renderMasterAdminPanel) window.renderMasterAdminPanel(users);
+  }, (err)=>{
+    console.error('[Admin DB] onSnapshot error:', err.code, err.message);
+    const status = document.getElementById('adminLiveStatus');
+    if(status) status.textContent = '❌ Error: '+err.message;
+  });
+};
+
+// ── Admin: update específico via updateDoc (no sobrescribe todo) ──
+window.adminUpdateDoc = async function(uid, patch){
+  console.log('[Admin DB] updateDoc uid:', uid, 'patch:', patch);
+  await updateDoc(doc(db,'users',uid), { ...patch, updatedAt: new Date().toISOString() });
+};
+
+// ── Admin: borrar documento de Firestore ──
+window.deleteUserFirestoreDoc = async function(uid){
+  console.log('[Admin DB] deleteDoc uid:', uid);
+  await deleteDoc(doc(db,'users',uid));
 };
 
 // ── Cargar TODOS los usuarios de la org para auditoría ──
