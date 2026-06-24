@@ -4,6 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Gestión de Equipos Club Patio</title>
+
+<!-- ── PWA: Web App Manifest ── -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- ── PWA: Meta tags generales ── -->
+<meta name="description" content="Sistema de gestión operativa del equipo Club Patio Curauma">
+<meta name="theme-color" content="#5BC0BE">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- ── PWA: Meta tags iOS (iPhone/iPad) ── -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Club Patio">
+<link rel="apple-touch-icon" href="/assets/Logo2.png">
+<link rel="apple-touch-startup-image" href="/assets/Logo2.png">
+
+<!-- ── PWA: Meta tags Android ── -->
+<meta name="application-name" content="Club Patio">
+<link rel="icon" type="image/png" href="/assets/Logo2.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -7237,6 +7256,20 @@ onAuthStateChanged(auth, async (user)=>{
     overlay.style.display = 'flex';
   }
 });
+</script>
+<!-- ── PWA: Registro del Service Worker ── -->
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg=>{
+        console.log('[PWA] Service Worker registrado:', reg.scope);
+      })
+      .catch(err=>{
+        console.warn('[PWA] Error al registrar SW:', err);
+      });
+  });
+}
 </script>
 </body>
 </html>
