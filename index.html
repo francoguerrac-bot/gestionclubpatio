@@ -94,6 +94,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;}
 .tag-ctx-casa{background:var(--casa-soft);color:var(--casa-color);}
 .tag-ctx-bazar{background:var(--bazar-soft);color:var(--bazar-color);}
+.tag-ctx-tienda{background:#CCFBF1;color:#0F766E;}
+.task-card.ctx-tienda::before{background:#0F766E;}
 .tag-ctx-club{background:var(--club-soft);color:var(--club-color);}
 .tag-p1{background:#FEE2E2;color:var(--p1);}
 .tag-p2{background:#FEF3C7;color:var(--p2);}
@@ -799,7 +801,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
     <div class="meta-row">
       <select class="meta-select" id="metaCtx" onchange="updateOwnerOpts()">
         <option value="casa">🏠 Casa</option>
-        <option value="bazar">🛍️ Bazar·Tienda</option>
+        <option value="bazar">🛍️ Bazar</option>
+        <option value="tienda">🏪 Tienda</option>
         <option value="club" selected>🟢 Club Patio</option>
       </select>
       <select class="meta-select" id="metaPrio">
@@ -871,10 +874,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 
   <!-- context filter -->
   <div style="display:flex;gap:6px;padding:8px 14px;background:var(--bg);overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);" id="ctxFilterRow">
-    <div class="sort-btn active" id="cf-todo"  onclick="setCF('todo')" style="white-space:nowrap">Todo</div>
-    <div class="sort-btn"        id="cf-casa"  onclick="setCF('casa')" style="white-space:nowrap">🏠 Casa</div>
-    <div class="sort-btn"        id="cf-bazar" onclick="setCF('bazar')" style="white-space:nowrap">🛍️ Bazar</div>
-    <div class="sort-btn"        id="cf-club"  onclick="setCF('club')" style="white-space:nowrap">🟢 Club Patio</div>
+    <div class="sort-btn active" id="cf-todo"   onclick="setCF('todo')"   style="white-space:nowrap">Todo</div>
+    <div class="sort-btn"        id="cf-casa"   onclick="setCF('casa')"   style="white-space:nowrap">🏠 Casa</div>
+    <div class="sort-btn"        id="cf-bazar"  onclick="setCF('bazar')"  style="white-space:nowrap">🛍️ Bazar</div>
+    <div class="sort-btn"        id="cf-tienda" onclick="setCF('tienda')" style="white-space:nowrap">🏪 Tienda</div>
+    <div class="sort-btn"        id="cf-club"   onclick="setCF('club')"   style="white-space:nowrap">🟢 Club Patio</div>
   </div>
 
   <!-- Panel Hijo: header + Estudio Inverso (oculto por defecto) -->
@@ -1509,6 +1513,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 </div>
 
 <!-- ══════════════════════════════════════
+     PAGE 8 · PANEL DE ROLES (Director)
+════════════════════════════════════════ -->
+<div class="page" id="pg-roles">
+  <div style="padding:14px 14px 0;">
+    <div class="card" style="background:linear-gradient(135deg,#1A1A1A,#1a2a4a);border:none;margin-bottom:12px;">
+      <div style="color:#fff;">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Director · Solo visible aquí</div>
+        <div style="font-size:16px;font-weight:800;">🔑 Panel de Gestión de Roles</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">Mapa completo de accesos y permisos del sistema</div>
+      </div>
+    </div>
+    <div id="rolesGrid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      PAGE 6 · CONTROL TOWER (Director)
 ════════════════════════════════════════ -->
 <div class="page" id="pg-control">
@@ -1594,9 +1614,10 @@ let tasks=[], sprintTasks=[], checkins=[];
 let ctxFilter='todo', sortBy='deadline', freq='unica';
 
 const CTX_MAP={
-  casa: {label:'🏠 Casa',         tagClass:'tag-ctx-casa',  cardClass:'ctx-casa'},
-  bazar:{label:'🛍️ Bazar·Tienda', tagClass:'tag-ctx-bazar', cardClass:'ctx-bazar'},
-  club: {label:'🟢 Club Patio',   tagClass:'tag-ctx-club',  cardClass:'ctx-club'},
+  casa:  {label:'🏠 Casa',      tagClass:'tag-ctx-casa',   cardClass:'ctx-casa'},
+  bazar: {label:'🛍️ Bazar',    tagClass:'tag-ctx-bazar',  cardClass:'ctx-bazar'},
+  tienda:{label:'🏪 Tienda',    tagClass:'tag-ctx-tienda', cardClass:'ctx-tienda'},
+  club:  {label:'🟢 Club Patio',tagClass:'tag-ctx-club',   cardClass:'ctx-club'},
 };
 const PRIO_MAP={
   p1:{label:'🔴 Urgente',     tagClass:'tag-p1',order:1},
@@ -1614,7 +1635,7 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','sprint','club','equipo','coach','control'], canReadAll:true,  canApprove:true},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','sprint','club','equipo','coach','control','roles'], canReadAll:true,  canApprove:true},
   mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','bazar','tienda','equipo','coach'],          canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['tareas','coach'],                                   canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['tareas','coach'],                                   canReadAll:false},
@@ -1638,6 +1659,7 @@ const NAV_META = {
   equipo:  {icon:'👥', label:'Equipo'},
   coach:   {icon:'🧠', label:'Coach'},
   control: {icon:'🎛️', label:'Control'},
+  roles:   {icon:'🔑', label:'Roles'},
 };
 
 let currentRole = 'pending';
@@ -1726,6 +1748,7 @@ function showPage(p){
   if(p==='club')  {renderClubPage();}
   if(p==='bazar') {renderBazarPage();}
   if(p==='tienda'){renderTiendaPage();}
+  if(p==='roles') {renderRolesPanel();}
   window.scrollTo(0,0);
 }
 
@@ -1775,6 +1798,7 @@ function mountRoleUI(role, profile){
   if(rc2.modules&&rc2.modules.includes('casa'))  setTimeout(initCasaModule,  200);
   if(rc2.modules&&rc2.modules.includes('club'))  setTimeout(initClubModule,  250);
   if(rc2.modules&&rc2.modules.includes('bazar')) setTimeout(initBazarModule, 300);
+  if(currentRole==='director') setTimeout(seedDirectorCoreTasks, 800);
   if(rc2.modules&&rc2.modules.includes('tienda'))setTimeout(initTiendaModule,350);
 
   // Stealth audit entry
@@ -2020,9 +2044,9 @@ function deleteTask(id){
 // ═══════════════ FILTER / SORT ═══════════════
 function setCF(f){
   ctxFilter=f;
-  ['todo','casa','bazar','club'].forEach(k=>{
+  ['todo','casa','bazar','tienda','club'].forEach(k=>{
     const el=document.getElementById('cf-'+k);
-    el.classList.toggle('active',k===f);
+    if(el) el.classList.toggle('active',k===f);
   });
   renderTasks();
 }
@@ -2084,7 +2108,7 @@ function renderTasks(){
     if(wo.length){c.appendChild(mkSec('⚪ Sin horario',wo.length)); wo.forEach(t=>c.appendChild(mkCard(t,today)));}
     if(dn.length){c.appendChild(mkSec('✓ Completadas',dn.length)); dn.forEach(t=>c.appendChild(mkCard(t,today)));}
   } else if(sortBy==='contexto'&&ctxFilter==='todo'){
-    ['casa','bazar','club'].forEach(ctx=>{
+    ['casa','bazar','tienda','club'].forEach(ctx=>{
       const g=list.filter(t=>t.ctx===ctx); if(!g.length)return;
       c.appendChild(mkSec(CTX_MAP[ctx].label,g.filter(t=>!t.done).length));
       g.forEach(t=>c.appendChild(mkCard(t,today)));
@@ -4357,6 +4381,91 @@ function initDirectorCasaTasks(){
     saveTasks(); renderTasks();
   }
 }
+
+// ═══════════════ PANEL DE ROLES (Admin Dashboard) ═══════════════
+const ROLE_PERMS = {
+  director:             ['👁️ Ver TODO el sistema','✅ Aprobar tareas de cualquier rol','🔑 Asignar/cambiar roles','📊 Auditoría stealth (geoloc, logs)','🎛️ Control Tower completo','💰 Cierre de mes Tienda','🗺️ Selección de Staff Bazar'],
+  mama:                 ['📋 Gestionar tareas Casa/Bazar/Tienda','🗂️ Subir nómina Bazar (bloqueante)','🗺️ Publicar layout Bazar','🏪 Gestionar emprendedores Tienda','⏰ Timebox L-V 09:00-18:00'],
+  hijo1:                ['📋 Ver y completar tareas Casa','📚 Estudio Inverso (auto-plan 7 días)','🌙 Rutina nocturna automática','📅 Check-in emocional semanal obligatorio'],
+  hijo2:                ['📋 Ver y completar tareas Casa','📚 Estudio Inverso (auto-plan 7 días)','🌙 Rutina nocturna automática','📅 Check-in emocional semanal obligatorio'],
+  publicista:           ['📌 Kanban pipeline suscripciones','📋 Crear tareas Club Patio','⏳ Requiere aprobación Director para cerrar','📊 Reportes segmentación mensual'],
+  disenador:            ['🎨 Kanban creativo (meta 3 piezas/semana)','📋 Crear tareas Club Patio','⏳ Requiere aprobación Director','✅ Mover diseños a Revisión → Director aprueba'],
+  coordinadora_bazares: ['📋 Subir nómina inscritos Bazar','🗺️ Publicar layout distribución','🎪 Gestionar Evento Trimestral (90 días)','🏪 Onboarding nuevo comercio'],
+  coordinadora_tienda:  ['🏪 CRUD emprendedores vigentes','📤 Enviar novedades al Publicista','📋 Gestionar tareas Tienda'],
+  staff_montaje:        ['✅ Confirmar disponibilidad jueves','🗺️ Ver layout (jueves 17:00+)','🚛 Checklist carga de camión'],
+  vendedor:             ['🏪 Abrir/Cerrar Tienda (GPS stealth)','💰 Cuadre de caja diario','📦 Reporte movimientos inventario'],
+  programador:          ['💻 Kanban digitalización','✅ Validar precios/fotos con Director','📋 Tareas Club + Tienda'],
+};
+
+function renderRolesPanel(){
+  const el = document.getElementById('rolesGrid'); if(!el) return;
+  el.innerHTML = '';
+  Object.entries(ROLES).filter(([k])=>k!=='pending').forEach(([key, r])=>{
+    const perms = ROLE_PERMS[key]||[];
+    const moduleChips = (r.modules||[]).map(m=>`<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;background:${r.bg};color:${r.color};margin:2px;display:inline-block;">${m.toUpperCase()}</span>`).join('');
+    const permsList = perms.map(p=>`<li style="padding:3px 0;font-size:11px;color:#444;border-bottom:1px solid #f0f0f0;display:flex;gap:6px;align-items:flex-start;"><span>${p.split(' ')[0]}</span><span>${p.slice(p.indexOf(' ')+1)}</span></li>`).join('');
+    const card = document.createElement('div');
+    card.style.cssText='background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;border-left:4px solid '+r.color;
+    card.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:26px;">${r.emoji}</span>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:${r.color};">${r.label}</div>
+          <div style="font-size:10px;color:var(--mid);font-family:monospace;">${key}</div>
+        </div>
+        <div style="margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;max-width:140px;">${moduleChips}</div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--mid);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;">Accesos y funciones</div>
+      <ul style="list-style:none;margin:0;padding:0;">${permsList}</ul>`;
+    el.appendChild(card);
+  });
+}
+
+// ═══════════════ TAREAS CORE DEL DIRECTOR (por módulo) ═══════════════
+const DIRECTOR_CORE_TASKS = [
+  // CASA
+  {text:'📅 Revisar hitos escolares de la semana',       ctx:'casa',  prio:'p2', freq:'semanal', dur:30,  time:'17:00', src:'core_casa_hitos'},
+  {text:'💰 Pagar cuentas del hogar',                     ctx:'casa',  prio:'p1', freq:'unica',   dur:45,  time:'10:00', src:'core_casa_cuentas'},
+  {text:'❤️ Reunión de pareja',                          ctx:'casa',  prio:'p2', freq:'semanal', dur:60,  time:'20:30', src:'core_casa_pareja'},
+  // CLUB PATIO
+  {text:'📊 Auditar KPIs semanales Club Patio',           ctx:'club',  prio:'p2', freq:'semanal', dur:30,  time:'08:30', src:'core_club_kpis'},
+  {text:'📲 Aprobar campaña WhatsApp (293 usuarios)',      ctx:'club',  prio:'p1', freq:'unica',   dur:45,  time:'09:00', src:'core_club_wa'},
+  {text:'🏪 Revisar avance nuevos comercios Quilpué',     ctx:'club',  prio:'p2', freq:'semanal', dur:60,  time:'14:00', src:'core_club_comercios'},
+  {text:'🏛️ Seguimiento Corfo Consolida 2026',           ctx:'club',  prio:'p3', freq:'semanal', dur:45,  time:'15:00', src:'core_club_corfo'},
+  // BAZAR
+  {text:'🛍️ Supervisar ciclo semanal Bazar',             ctx:'bazar', prio:'p2', freq:'semanal', dur:30,  time:'10:00', src:'core_bazar_ciclo'},
+  {text:'📋 Verificar nómina de inscritos',               ctx:'bazar', prio:'p1', freq:'semanal', dur:20,  time:'09:00', src:'core_bazar_nomina'},
+  {text:'✅ Aprobar layout distribución Bazar',           ctx:'bazar', prio:'p2', freq:'unica',   dur:15,  time:'17:00', src:'core_bazar_layout'},
+  // TIENDA
+  {text:'💼 Auditar finanzas tienda · cierre de mes',     ctx:'tienda',prio:'p1', freq:'unica',   dur:90,  time:'10:00', src:'core_tienda_finanzas'},
+  {text:'📦 Validar stock y emprendedores vigentes',      ctx:'tienda',prio:'p2', freq:'semanal', dur:30,  time:'11:00', src:'core_tienda_stock'},
+  {text:'📍 Revisar geolocalización apertura tienda',     ctx:'tienda',prio:'p3', freq:'diaria',  dur:5,   time:'09:05', src:'core_tienda_geo'},
+];
+
+function seedDirectorCoreTasks(){
+  if(currentRole !== 'director') return;
+  const me=(currentProfile&&currentProfile.displayName)||'Director';
+  const today=new Date();
+  const d=o=>{const x=new Date(today);x.setDate(x.getDate()+o);return x.toISOString().split('T')[0];};
+  const nextFri=d((5-today.getDay()+7)%7||7);
+  const nextTue=d((2-today.getDay()+7)%7||7);
+  const day10=new Date(today.getFullYear(),today.getMonth(),10).toISOString().split('T')[0];
+  const dlMap={'semanal':nextFri,'unica':d(1),'diaria':d(0)};
+
+  let added=0;
+  DIRECTOR_CORE_TASKS.forEach(t=>{
+    if(tasks.some(x=>x.autoGenSource===t.src&&!x.done)) return; // ya existe pendiente
+    tasks.push({
+      id:uid(), text:t.text, ctx:t.ctx, prio:t.prio, freq:t.freq,
+      deadline: t.src.includes('cuentas')?day10 : t.src.includes('pareja')?nextTue : dlMap[t.freq]||d(3),
+      time:t.time, dur:t.dur, done:false, ts:Date.now()-Math.random()*10000,
+      owner:me, autoGenerated:true, autoGenSource:t.src
+    });
+    added++;
+  });
+  if(added>0){ saveTasks(); renderTasks(); }
+}
+window.seedDirectorCoreTasks=seedDirectorCoreTasks;
 
 // ═══════════════ RESET TAREAS DIRECTOR ═══════════════
 function resetAndReloadTasks(){
