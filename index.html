@@ -329,6 +329,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 .dp-progress-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--sage-light));border-radius:99px;transition:width .5s cubic-bezier(.34,1.56,.64,1);}
 
 /* ── WEEK PLANNER · TIME-BLOCKING GRID ── */
+/* Week nav controls */
+.week-nav{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);}
+.week-nav-btn{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--charcoal);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.week-nav-btn:hover:not(:disabled){background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
+.week-nav-btn:disabled{opacity:.3;cursor:not-allowed;}
+.week-nav-btn.wnb-today{background:var(--sage-dim);color:var(--sage);border-color:var(--sage);}
+.week-nav-btn.wnb-today:hover{background:var(--sage);color:#fff;}
+.week-nav-label{flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--charcoal);}
+.week-nav-offset{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:2px 7px;border-radius:99px;margin-left:4px;}
+.offset-past{background:#FEE2E2;color:#DC2626;}
+.offset-future{background:#DBEAFE;color:#2563EB;}
+.offset-now{background:#DCFCE7;color:#16A34A;}
+/* Week grid */
 .week-grid-scroll{overflow-x:auto;padding:10px 12px 16px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .week-grid{display:grid;grid-template-columns:repeat(7,minmax(148px,1fr));gap:8px;min-width:920px;}
 .week-col{background:var(--bg);border-radius:11px;overflow:hidden;border:1.5px solid var(--border);}
@@ -1647,6 +1660,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
     <div class="week-progress-bar">
       <div class="week-progress-fill" id="weekProgressFill" style="width:0%"></div>
     </div>
+  </div>
+
+  <!-- Navegación temporal (-1 / 0 / +3 semanas) -->
+  <div class="week-nav">
+    <button class="week-nav-btn" id="weekPrevBtn" onclick="weekNav(-1)">← Anterior</button>
+    <div class="week-nav-label">
+      <span id="weekNavLabel">—</span>
+      <span class="week-nav-offset" id="weekOffsetBadge"></span>
+    </div>
+    <button class="week-nav-btn wnb-today" id="weekTodayBtn" onclick="weekNav(0)" style="display:none;">Hoy</button>
+    <button class="week-nav-btn" id="weekNextBtn" onclick="weekNav(1)">Siguiente →</button>
   </div>
 
   <!-- Cuadrícula 7 columnas simultáneas (scroll horizontal en móvil) -->
@@ -4730,20 +4754,66 @@ window.saveSelfMood=saveSelfMood;
 
 // ═══════════════ WEEK PLANNER · TIME-BLOCKING GRID ═══════════════
 
-function getWeekDays(){
+// Estado de navegación: 0=semana actual, -1=anterior, 1/2/3=futuras
+let currentWeekOffset = 0;
+const MIN_OFFSET = -1;
+const MAX_OFFSET =  3;
+
+// Calcula los 7 días (Lun-Dom) de la semana según el offset
+function getWeekDays(offset){
+  offset = offset || 0;
   const today=new Date(); today.setHours(0,0,0,0);
   const dow=today.getDay();
   const monday=new Date(today);
-  monday.setDate(today.getDate()-(dow===0?6:dow-1));
+  monday.setDate(today.getDate()-(dow===0?6:dow-1) + offset*7);
   return Array.from({length:7},(_,i)=>{ const d=new Date(monday); d.setDate(monday.getDate()+i); return d; });
+}
+
+// Botones de navegación
+function weekNav(delta){
+  if(delta===0){
+    currentWeekOffset=0;
+  } else {
+    const next=currentWeekOffset+delta;
+    if(next<MIN_OFFSET||next>MAX_OFFSET) return;
+    currentWeekOffset=next;
+  }
+  renderWeekPlanner();
+}
+window.weekNav=weekNav;
+
+function updateWeekNavControls(days){
+  const prevBtn=document.getElementById('weekPrevBtn');
+  const nextBtn=document.getElementById('weekNextBtn');
+  const todayBtn=document.getElementById('weekTodayBtn');
+  const label=document.getElementById('weekNavLabel');
+  const badge=document.getElementById('weekOffsetBadge');
+
+  if(prevBtn) prevBtn.disabled=(currentWeekOffset<=MIN_OFFSET);
+  if(nextBtn) nextBtn.disabled=(currentWeekOffset>=MAX_OFFSET);
+  if(todayBtn) todayBtn.style.display=(currentWeekOffset===0?'none':'block');
+
+  // Etiqueta dinámica de la semana
+  const fmt=d=>d.toLocaleDateString('es-CL',{day:'numeric',month:'long'});
+  if(label) label.textContent=`Semana del ${fmt(days[0])} al ${fmt(days[6])}`;
+
+  // Badge de offset
+  if(badge){
+    if(currentWeekOffset===0){ badge.textContent='Esta semana'; badge.className='week-nav-offset offset-now'; }
+    else if(currentWeekOffset===-1){ badge.textContent='Semana pasada'; badge.className='week-nav-offset offset-past'; }
+    else { badge.textContent='+'+currentWeekOffset+' semana'+(currentWeekOffset>1?'s':''); badge.className='week-nav-offset offset-future'; }
+  }
 }
 
 function renderWeekPlanner(){
   const today=new Date(); today.setHours(0,0,0,0);
   const todayStr=today.toISOString().split('T')[0];
-  const days=getWeekDays();
+  const days=getWeekDays(currentWeekOffset);
 
-  // Barra de progreso semanal
+  // Actualizar controles de navegación
+  updateWeekNavControls(days);
+
+  // Rango en el header de progreso
   const fmt=d=>d.toLocaleDateString('es-CL',{day:'numeric',month:'short'});
   const rl=document.getElementById('weekRangeLabel');
   if(rl) rl.textContent=fmt(days[0])+' – '+fmt(days[6]);
