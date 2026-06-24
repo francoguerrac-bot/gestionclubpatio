@@ -5689,26 +5689,7 @@ function closeNewMemberModal(){
 }
 window.closeNewMemberModal=closeNewMemberModal;
 
-function nmModuleChange(){
-  const mod=document.getElementById('nmModule').value;
-  const sel=document.getElementById('nmRole');
-  const opts=MODULE_ROLES_MAP[mod]||[];
-  sel.innerHTML=opts.length
-    ?'<option value="">Selecciona un rol...</option>'+opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')
-    :'<option value="">Selecciona módulo primero...</option>';
-}
-window.nmModuleChange=nmModuleChange;
-
-function nmModuleChange2(){
-  const mod=document.getElementById('nmModule2').value;
-  const sel=document.getElementById('nmRole2');
-  if(!mod){ sel.innerHTML='<option value="">—</option>'; return; }
-  const opts=MODULE_ROLES_MAP[mod]||[];
-  sel.innerHTML=opts.length
-    ?'<option value="">Selecciona un rol...</option>'+opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')
-    :'<option value="">—</option>';
-}
-window.nmModuleChange2=nmModuleChange2;
+// nmModuleChange y nmModuleChange2 eliminadas — reemplazadas por buildRolesGrid() + checkboxes
 
 async function createNewMember(){
   const name  = document.getElementById('nmName').value.trim();
@@ -5747,7 +5728,7 @@ async function createNewMember(){
 
     const profileData = {
       orgId: ORG_ID, email, displayName: name,
-      role: role1,            // rol primario (backwards compat)
+      role: roles[0]||'pending', // rol primario (primer rol seleccionado)
       roles,                  // array de todos los roles
       modules: allMods,       // union de módulos de todos los roles
       phone: phone ? '+569'+phone : '',
