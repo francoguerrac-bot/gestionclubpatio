@@ -1572,6 +1572,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--charcoal);m
 
 <div class="toast" id="toast"></div>
 
+<!-- ── PANEL DE DIAGNÓSTICO VISIBLE ── -->
+<div id="rbacDebug" style="display:none;position:fixed;bottom:90px;left:10px;right:10px;z-index:9999;background:#1A1A1A;color:#fff;border-radius:12px;padding:14px;font-family:monospace;font-size:11px;line-height:1.8;border:2px solid #E84040;max-height:200px;overflow-y:auto;"></div>
+
 <script>
 // ═══════════════ STATE ═══════════════
 const SK  = 'carolina_v4_tasks';
@@ -1714,11 +1717,20 @@ function showPage(p){
   window.scrollTo(0,0);
 }
 
+// ── LOG VISIBLE EN PANTALLA ──
+function dbg(msg){
+  console.log('[RBAC]', msg);
+  const el = document.getElementById('rbacDebug');
+  if(!el) return;
+  el.style.display = 'block';
+  el.innerHTML += '<div>' + msg + '</div>';
+  el.scrollTop = el.scrollHeight;
+}
+
 // ═══════════════ ROLE ROUTER ═══════════════
 function mountRoleUI(role, profile){
-  // ── DIAGNÓSTICO ── (quitar después de confirmar que funciona)
   document.title = '🎭 Rol: ' + (role||'?');
-  console.log('[RBAC] mountRoleUI llamado:', role, profile);
+  dbg('✅ mountRoleUI: rol=' + role + ' | email=' + (profile&&profile.email||'?'));
 
   currentRole = role || 'pending';
   window.currentRole = currentRole;
@@ -4349,7 +4361,7 @@ function init(){
 }
 // Llamado por la capa de autenticación tras cargar los datos del usuario.
 function bootApp(cloudData, profile){
-  console.log('[RBAC] bootApp llamado con role:', profile&&profile.role, '| email:', profile&&profile.email);
+  dbg('⚙️ bootApp ejecutado, role: ' + (profile&&profile.role||'?'));
   applyCloudData(cloudData);
   init();
   checkDeadlines();
@@ -4695,29 +4707,29 @@ const ROLE_MODULES = {
 onAuthStateChanged(auth, async (user)=>{
   if(user){
     currentUser = user;
-    console.log('[RBAC] onAuthStateChanged — usuario:', user.email, '| uid:', user.uid);
+    dbg('🔑 Auth: ' + user.email);
 
     let data = {}, profile = null;
     const preset = PRESET_ROLES[user.email.toLowerCase()];
-    console.log('[RBAC] preset encontrado:', preset ? preset.role : 'ninguno');
+    dbg('🎭 Preset: ' + (preset ? preset.role : 'NINGUNO — email no reconocido'));
 
     try{
       const snap = await getDoc(doc(db,'users',user.uid));
-      console.log('[RBAC] Firestore snap.exists:', snap.exists());
+      dbg('📦 Firestore doc existe: ' + snap.exists());
 
       if(snap.exists()){
         data    = snap.data();
         profile = {...snap.data()};
-        console.log('[RBAC] rol en Firestore:', profile.role);
+        dbg('📋 Rol en Firestore: ' + (profile.role||'undefined'));
       } else {
         profile = await createUserProfile(user.uid, user.email);
         data    = {...profile};
-        console.log('[RBAC] Cuenta nueva creada con rol:', profile.role);
+        dbg('🆕 Cuenta nueva creada, rol: ' + profile.role);
       }
 
       // SIEMPRE forzar el rol correcto para emails pre-asignados
       if(preset && profile.role !== preset.role){
-        console.log('[RBAC] Actualizando rol:', profile.role, '→', preset.role);
+        dbg('🔄 Actualizando rol: ' + profile.role + ' → ' + preset.role);
         const update = {
           uid: user.uid, orgId: ORG_ID, email: user.email,
           role: preset.role, displayName: preset.displayName,
@@ -4729,14 +4741,14 @@ onAuthStateChanged(auth, async (user)=>{
         await setDoc(doc(db,'users',user.uid), update, {merge:true});
         profile = {...profile, ...update};
         data    = {...data, ...update};
-        console.log('[RBAC] ✅ Rol actualizado a:', preset.role);
+        dbg('✅ Rol actualizado a: ' + preset.role);
       } else if(preset) {
-        console.log('[RBAC] ✅ Rol ya correcto:', profile.role);
+        dbg('✅ Rol ya correcto: ' + profile.role);
       }
 
       setDoc(doc(db,'users',user.uid),{lastSeen:new Date().toISOString()},{merge:true}).catch(()=>{});
     }catch(e){
-      console.error('[RBAC] ❌ Error Firestore:', e.code, e.message);
+      dbg('❌ Error Firestore: ' + e.code + ' — ' + e.message);
       // Fallback: usar preset directamente si Firestore falla
       if(preset){
         profile = { uid:user.uid, email:user.email, role:preset.role,
@@ -4746,7 +4758,7 @@ onAuthStateChanged(auth, async (user)=>{
       }
     }
 
-    console.log('[RBAC] Llamando bootApp con role:', profile&&profile.role);
+    dbg('🚀 bootApp → role: ' + (profile&&profile.role||'SIN ROL'));
     overlay.style.display = 'none';
     booted = true;
     window.bootApp(data, profile);
