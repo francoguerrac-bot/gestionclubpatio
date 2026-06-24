@@ -476,6 +476,29 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .psb-approved{background:#DCFCE7;color:#16A34A;}
 .psb-rejected{background:#FEE2E2;color:#DC2626;}
 .hijo-perm-status{background:var(--bg-main);border-radius:10px;padding:10px;margin-top:6px;font-size:12px;}
+/* ── ORGANIGRAMA ── */
+.org-section{margin-bottom:20px;}
+.org-section-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px 12px 0 0;margin-bottom:0;}
+.org-section-title{font-size:13px;font-weight:800;color:#fff;flex:1;}
+.org-section-count{font-size:11px;color:rgba(255,255,255,.7);font-weight:600;}
+.org-roles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;padding:12px;background:var(--bg-main);border:1.5px solid var(--border);border-top:none;border-radius:0 0 12px 12px;margin-bottom:0;}
+/* Tarjeta de rol OCUPADA */
+.org-card-filled{background:var(--bg-card);border:1.5px solid var(--border);border-radius:12px;padding:12px;position:relative;transition:box-shadow .2s;}
+.org-card-filled:hover{box-shadow:0 4px 14px rgba(45,49,66,.1);}
+/* Tarjeta de rol VACÍA */
+.org-card-empty{background:transparent;border:2px dashed #D1D5DB;border-radius:12px;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;opacity:.65;transition:all .2s;min-height:140px;cursor:pointer;}
+.org-card-empty:hover{opacity:1;border-color:var(--primary-blue);background:var(--sage-dim);}
+.org-card-empty-icon{font-size:28px;opacity:.4;}
+.org-card-empty-role{font-size:11px;font-weight:700;color:var(--text-muted);}
+.org-card-empty-sub{font-size:9px;color:#C4C4C4;}
+.org-assign-btn{margin-top:6px;font-size:10px;font-weight:700;padding:5px 12px;border-radius:7px;border:1.5px solid var(--primary-blue);color:var(--primary-blue);background:none;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
+.org-assign-btn:hover{background:var(--primary-blue);color:#fff;}
+/* Rol label en tarjeta ocupada */
+.org-filled-role{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;display:inline-block;margin-bottom:6px;}
+/* Toggle de vista */
+.view-toggle{display:flex;gap:4px;background:var(--bg-main);border:1.5px solid var(--border);border-radius:10px;padding:3px;margin-bottom:12px;}
+.view-toggle-btn{flex:1;font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;border:none;background:none;color:var(--text-muted);cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
+.view-toggle-btn.active{background:var(--text-main);color:#fff;}
 /* ── PANEL ADMIN DB ── */
 .admin-table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-bottom:14px;}
 .admin-table{width:100%;border-collapse:collapse;font-size:12px;min-width:640px;}
@@ -1971,7 +1994,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <span style="font-size:11px;display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block;"></span>🔴 Bloqueado / Urgente</span>
     </div>
 
-    <!-- Grid dinámico por módulo -->
+    <!-- Toggle de vista -->
+    <div class="view-toggle">
+      <button class="view-toggle-btn" id="vt-org"    onclick="setPersonasView('organigrama')">📊 Organigrama</button>
+      <button class="view-toggle-btn active" id="vt-equipo" onclick="setPersonasView('equipo')">👥 Estado Equipo</button>
+    </div>
+
+    <!-- Contenedor principal (se rellena por JS) -->
     <div id="personasContainer"></div>
 
   </div>
@@ -6190,9 +6219,147 @@ const MOOD_META = {
   red:    {dot:'mood-red',    label:'🔴 Bloqueado',      bar:'sm-red'},
 };
 
+// ── Estructura maestra del organigrama ──
+const ORGANIGRAMA_STRUCTURE = [
+  {
+    key:'casa', label:'🏠 Casa · Familia', color:'#B5651D', bg:'linear-gradient(135deg,#B5651D,#C47A35)',
+    roles:['mama','hijo1','hijo2']
+  },
+  {
+    key:'club', label:'🟢 Club Patio', color:'#1F7A52', bg:'linear-gradient(135deg,#1F7A52,#2A9966)',
+    roles:['publicista','disenador','disenador_pub','coordinadora_bazares','staff_eventos','soporte_app']
+  },
+  {
+    key:'bazar', label:'🛍️ Bazar', color:'#2A5FCC', bg:'linear-gradient(135deg,#2A5FCC,#3A70E0)',
+    roles:['staff_montaje','logistica']
+  },
+  {
+    key:'tienda', label:'🏪 Tienda', color:'#0F766E', bg:'linear-gradient(135deg,#0F766E,#16A394)',
+    roles:['coordinadora_tienda','vendedor','programador']
+  },
+];
+
+let personasViewMode = 'equipo'; // 'organigrama' | 'equipo'
+
+function setPersonasView(mode){
+  personasViewMode = mode;
+  ['org','equipo'].forEach(k=>{
+    const btn=document.getElementById('vt-'+k);
+    if(btn) btn.classList.toggle('active', k===mode.replace('organigrama','org').replace('equipo','equipo'));
+  });
+  document.getElementById('vt-org').classList.toggle('active',   mode==='organigrama');
+  document.getElementById('vt-equipo').classList.toggle('active', mode==='equipo');
+  renderPersonasPanel();
+}
+window.setPersonasView=setPersonasView;
+
+function renderOrganigrama(container){
+  const members = (window.orgMembers||[]).filter(m=>m&&m.role!=='director'&&m.role!=='pending');
+  const useMock  = members.length === 0;
+
+  container.innerHTML='';
+
+  ORGANIGRAMA_STRUCTURE.forEach(section=>{
+    // Cuántos roles tienen persona asignada
+    const filled = section.roles.filter(r=>
+      members.some(m=>(Array.isArray(m.roles)?m.roles:[m.role]).includes(r))
+    ).length;
+
+    const sec = document.createElement('div');
+    sec.className = 'org-section';
+    sec.innerHTML = `
+      <div class="org-section-hdr" style="background:${section.bg};">
+        <span class="org-section-title">${section.label}</span>
+        <span class="org-section-count">${filled}/${section.roles.length} asignados</span>
+      </div>
+      <div class="org-roles-grid" id="org-grid-${section.key}"></div>`;
+    container.appendChild(sec);
+
+    const grid = sec.querySelector('#org-grid-'+section.key);
+
+    section.roles.forEach(roleKey=>{
+      const rc = ROLES[roleKey]||{};
+      // Buscar persona(s) con este rol
+      const assigned = useMock
+        ? (PERSONAS_MOCK[section.key]||[]).filter(p=>(Array.isArray(p.roles)?p.roles:[p.role]).includes(roleKey))
+        : members.filter(m=>(Array.isArray(m.roles)?m.roles:[m.role]).includes(roleKey));
+
+      if(assigned.length === 0){
+        // ── Tarjeta VACÍA ──
+        const empty = document.createElement('div');
+        empty.className = 'org-card-empty';
+        empty.onclick = ()=>openNewMemberModalWithRole(roleKey);
+        empty.innerHTML = `
+          <div class="org-card-empty-icon">${rc.emoji||'👤'}</div>
+          <div class="org-card-empty-role">${rc.label||roleKey}</div>
+          <div class="org-card-empty-sub">Módulo: ${(rc.modules||[section.key]).join(', ')}</div>
+          <button class="org-assign-btn" onclick="event.stopPropagation();openNewMemberModalWithRole('${roleKey}')">+ Asignar</button>`;
+        grid.appendChild(empty);
+      } else {
+        // ── Tarjeta(s) OCUPADA(s) ──
+        assigned.forEach(p=>{
+          const mood = MOOD_META[p.currentMood||'green']||MOOD_META.green;
+          const phone = p.phone||'';
+          const phoneOk = phone.replace(/\D/g,'').length >= 8;
+          const personTasks = tasks.filter(t=>t.owner===p.displayName);
+          const pending = personTasks.filter(t=>!t.done).length;
+          const overdue = personTasks.filter(t=>!t.done&&t.deadline&&new Date(t.deadline+'T00:00:00')<new Date(new Date().setHours(0,0,0,0))).length;
+
+          const card = document.createElement('div');
+          card.className = 'org-card-filled';
+          card.style.borderTop = `3px solid ${rc.color||section.color}`;
+          card.innerHTML = `
+            <span class="org-filled-role" style="background:${rc.bg||'#f0f0f0'};color:${rc.color||'#666'}">${rc.emoji||''} ${rc.label||roleKey}</span>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <div style="width:32px;height:32px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;background:${rc.color||'#888'}18;color:${rc.color||'#888'};flex-shrink:0;">${rc.emoji||'👤'}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:800;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.displayName||'—'}</div>
+                <div style="font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                  <span class="persona-mood-dot ${mood.dot}" style="width:7px;height:7px;"></span>${mood.label}
+                </div>
+              </div>
+            </div>
+            ${pending||overdue?`<div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;">
+              ${overdue>0?`<span class="load-chip load-overdue" style="font-size:8px;">🚨${overdue}</span>`:''}
+              ${pending>0?`<span class="load-chip load-pending" style="font-size:8px;">📋${pending}</span>`:''}
+            </div>`:''}
+            <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.statusMessage||'Sin nota de estado.'}</div>
+            <div style="display:flex;gap:4px;">
+              ${phoneOk
+                ?`<button class="btn-whatsapp-active" style="flex:1;font-size:9px;padding:5px;" onclick="personaMsg('${p.uid||''}')">💬 WA</button>`
+                :`<button class="btn-whatsapp-disabled" style="flex:1;font-size:9px;padding:5px;" onclick="toast('Sin teléfono registrado')">💬 —</button>`}
+              <button class="pact-btn" style="font-size:9px;padding:5px;" onclick="personaMeeting('${p.displayName||''}')">📅</button>
+              <button class="pact-btn" style="font-size:9px;padding:5px;" onclick="personaTasks('${p.displayName||''}')">🔄</button>
+            </div>`;
+          grid.appendChild(card);
+        });
+      }
+    });
+  });
+}
+
+// Abrir modal con rol pre-seleccionado
+function openNewMemberModalWithRole(roleKey){
+  openNewMemberModal();
+  setTimeout(()=>{
+    document.querySelectorAll('.nm-role-cb').forEach(cb=>{
+      cb.checked = cb.value === roleKey;
+    });
+    updateRolesTags();
+    toast(`Rol "${(ROLES[roleKey]||{}).label||roleKey}" pre-seleccionado`);
+  }, 150);
+}
+window.openNewMemberModalWithRole=openNewMemberModalWithRole;
+
 function renderPersonasPanel(){
   if(currentRole!=='director') return;
   const container=document.getElementById('personasContainer'); if(!container) return;
+
+  // Despachar al modo de vista correcto
+  if(personasViewMode === 'organigrama'){
+    renderOrganigrama(container);
+    return;
+  }
 
   // ── Deduplicación por UID: cada persona aparece UNA SOLA VEZ ──
   const rawMembers = (window.orgMembers||[]).filter(m=>m&&m.role&&m.role!=='director'&&m.role!=='pending');
