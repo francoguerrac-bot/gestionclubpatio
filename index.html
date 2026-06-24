@@ -2609,7 +2609,9 @@ function moveToPlanTop(id){
 function updateNavBadge(count){
   let b=document.getElementById('navAlertBadge');
   if(!count){if(b)b.remove();return;}
-  if(!b){b=document.createElement('div');b.id='navAlertBadge';b.className='nav-badge';document.getElementById('nav-tareas').appendChild(b);}
+  const navBtn=document.getElementById('nav-tareas');
+  if(!navBtn) return; // nav aún no renderizado — skip silencioso
+  if(!b){b=document.createElement('div');b.id='navAlertBadge';b.className='nav-badge';navBtn.appendChild(b);}
   b.textContent=count>9?'9+':count;
 }
 setInterval(checkDeadlines,5*60*1000);
@@ -4364,9 +4366,8 @@ function bootApp(cloudData, profile){
   dbg('⚙️ bootApp ejecutado, role: ' + (profile&&profile.role||'?'));
   applyCloudData(cloudData);
   init();
-  checkDeadlines();
+  try{ checkDeadlines(); }catch(e){ dbg('⚠️ checkDeadlines error: '+e.message); }
   const role = (profile&&profile.role)||'pending';
-  // Llamada directa sin setTimeout para evitar problemas de timing
   mountRoleUI(role, profile||{});
   if(role !== 'pending'){
     setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 500);
