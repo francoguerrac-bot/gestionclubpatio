@@ -2709,7 +2709,11 @@ window._localAuditLog = [];
 // Los datos del usuario se cargan desde Firestore en applyCloudData() antes
 // de llamar a load(); aquí solo sembramos datos de inicio si está vacío.
 function load(){
-  if(!tasks.length) seedTasks();
+  // Solo sembrar datos demo para Director/Ejecutivos
+  // Los roles tácticos reciben sus tareas desde fetchTasksFromFirestore()
+  if(!tasks.length && (currentRole==='director'||EXECUTIVE_ROLES.includes(currentRole)||currentRole==='pending')){
+    seedTasks();
+  }
   if(!sprintTasks.length) seedSprint();
   if(!checkins.length) seedCheckins();
 }
@@ -2728,7 +2732,12 @@ function applyCloudData(d){
   tiendaAbierta  = d.tienda_abierta || false;
   if(d.kpis) window.clubKPIs = {...DEFAULT_KPIS, ...d.kpis};
 }
-function saveTasks(){    window.cloudSet && window.cloudSet('tasks', tasks); }
+function saveTasks(){
+  // Escribe en /users/{uid}.tasks[] (backward compat) Y en /tasks collection
+  window.cloudSet && window.cloudSet('tasks', tasks);
+  // Sync a la colección /tasks (sin bloquear UI)
+  if(window.migrateTasksToCollection) window.migrateTasksToCollection(tasks).catch(()=>{});
+}
 function saveSprint(){   window.cloudSet && window.cloudSet('sprint', sprintTasks); }
 function saveCheckins(){ window.cloudSet && window.cloudSet('checkins', checkins); }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -3133,11 +3142,19 @@ function addTask(){
 }
 function toggleDone(id){
   const t=tasks.find(t=>t.id===id);
-  if(!t)return; t.done=!t.done; saveTasks(); renderTasks();
+  if(!t)return;
+  t.done=!t.done;
+  if(t.done){ t.doneAt=new Date().toISOString(); t.completedAt=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}); }
+  else { delete t.doneAt; delete t.completedAt; }
+  // Actualizar en colección /tasks (campo específico)
+  if(window.updateTaskInCollection) window.updateTaskInCollection(id,{done:t.done,doneAt:t.doneAt||null,completedAt:t.completedAt||null}).catch(()=>{});
+  saveTasks(); renderTasks();
   if(t.done) toast('✓ '+t.text.slice(0,28)+(t.text.length>28?'…':''));
 }
 function deleteTask(id){
-  tasks=tasks.filter(t=>t.id!==id); saveTasks(); renderTasks(); toast('🗑️ Eliminada');
+  tasks=tasks.filter(t=>t.id!==id);
+  if(window.deleteTaskFromCollection) window.deleteTaskFromCollection(id).catch(()=>{});
+  saveTasks(); renderTasks(); toast('🗑️ Eliminada');
 }
 
 // ═══════════════ FILTER / SORT ═══════════════
@@ -3190,13 +3207,11 @@ function getVisibleTasks(){
     ? currentProfile.roles.filter(Boolean) : [currentRole];
 
   return tasks.filter(t => {
-    // Regla 1 (PRINCIPAL): assignedToRole coincide con alguno de sus roles
+    // REGLA PRINCIPAL: assignedToRole coincide exactamente con alguno de sus roles
     if(t.assignedToRole && myRoles.some(r => r === t.assignedToRole)) return true;
-    // Regla 2 (COMPATIBILIDAD): tarea asignada por nombre (owner) sin assignedToRole
+    // COMPATIBILIDAD: tarea asignada a esta persona (owner) y sin assignedToRole
     if(!t.assignedToRole && t.owner === me) return true;
-    // Regla 3 (COMPATIBILIDAD): tarea sin ninguna asignación (legacy)
-    if(!t.assignedToRole && !t.owner) return true;
-    // Todo lo demás: BLOQUEADO
+    // TODO LO DEMÁS: BLOQUEADO — isolación táctica completa
     return false;
   });
 }
@@ -7886,6 +7901,24 @@ function bootApp(cloudData, profile){
   applyCloudData(cloudData);
   init();
   try{ checkDeadlines(); }catch(e){ dbg('⚠️ checkDeadlines error: '+e.message); }
+  // Tras montar la UI, reemplazar tareas con las de Firestore (filtradas por rol)
+  setTimeout(async()=>{
+    const fetched = await window.fetchTasksFromFirestore();
+    if(fetched !== null && fetched.length >= 0){
+      tasks = fetched;
+      console.log(`[bootApp] Tareas desde Firestore /tasks: ${tasks.length}`);
+      renderTasks();
+      checkDeadlines();
+    }
+    // Si la colección está vacía y hay tareas locales, migrarlas
+    if(fetched !== null && fetched.length === 0 && cloudData.tasks && cloudData.tasks.length > 0){
+      console.log('[bootApp] Migrando tareas locales a /tasks collection...');
+      await window.migrateTasksToCollection(cloudData.tasks);
+      // Volver a cargar
+      const refetched = await window.fetchTasksFromFirestore();
+      if(refetched) { tasks=refetched; renderTasks(); }
+    }
+  }, 800);
   const role = (profile&&profile.role)||'pending';
   mountRoleUI(role, profile||{});
   if(role !== 'pending'){
@@ -8436,6 +8469,76 @@ window.adminUpdateDoc = async function(uid, patch){
 window.deleteUserFirestoreDoc = async function(uid){
   console.log('[Admin DB] deleteDoc uid:', uid);
   await deleteDoc(doc(db,'users',uid));
+};
+
+// ══════════════════════════════════════════════════════════
+// COLECCIÓN /tasks — Aislamiento real a nivel Firestore
+// ══════════════════════════════════════════════════════════
+
+// fetchTasks: query con filtro estricto por rol en Firestore
+window.fetchTasksFromFirestore = async function(){
+  if(!currentUser) return null;
+  try{
+    const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+    const role      = window.currentRole || 'pending';
+    const isExec    = role === 'director' || ['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
+    const myRoles   = window.currentProfile?.roles?.filter(Boolean) || [role];
+
+    let tasksQuery;
+    if(isExec){
+      // COMITÉ EJECUTIVO: todas las tareas de la organización
+      tasksQuery = q2(col2(db,'tasks'), w2('orgId','==',ORG_ID));
+    } else {
+      // EJECUCIÓN TÁCTICA: solo las tareas de su rol específico
+      // Si tiene multi-rol, usamos el rol primario (más restrictivo = más seguro)
+      tasksQuery = q2(col2(db,'tasks'), w2('orgId','==',ORG_ID), w2('assignedToRole','==',role));
+    }
+
+    const snap = await gd2(tasksQuery);
+    const fetched = snap.docs.map(d=>({...d.data(), id:d.id}));
+
+    console.log(`[fetchTasks] Rol: ${role} | Ejecutivo: ${isExec} | Tareas recibidas: ${fetched.length}`);
+    return fetched;
+  }catch(e){
+    console.warn('[fetchTasks] Error (usando cache local):', e.code||e.message);
+    return null; // null = fallback a tareas locales
+  }
+};
+
+// Escribir una tarea individual en la colección /tasks
+window.saveTaskToCollection = async function(task){
+  if(!task||!task.id) return;
+  try{
+    await setDoc(doc(db,'tasks',task.id),{...task, orgId:ORG_ID},{merge:true});
+  }catch(e){ console.warn('[saveTask]',e.message); }
+};
+
+// Actualizar campos específicos de una tarea
+window.updateTaskInCollection = async function(taskId, patch){
+  try{
+    await setDoc(doc(db,'tasks',taskId),{...patch, updatedAt:new Date().toISOString()},{merge:true});
+  }catch(e){ console.warn('[updateTask]',e.message); }
+};
+
+// Eliminar una tarea de la colección
+window.deleteTaskFromCollection = async function(taskId){
+  try{
+    const { deleteDoc:dd } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    await dd(doc(db,'tasks',taskId));
+  }catch(e){ console.warn('[deleteTask]',e.message); }
+};
+
+// Migrar todas las tareas locales a la colección (una sola vez)
+window.migrateTasksToCollection = async function(localTasks){
+  if(!localTasks||!localTasks.length) return;
+  const { writeBatch } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js").catch(()=>({writeBatch:null}));
+  if(!writeBatch){ for(const t of localTasks) await window.saveTaskToCollection(t); return; }
+  const batch = writeBatch(db);
+  localTasks.forEach(t=>{ if(t.id) batch.set(doc(db,'tasks',t.id),{...t,orgId:ORG_ID},{merge:true}); });
+  await batch.commit();
+  console.log('[migrateTasksToCollection] Migradas:', localTasks.length, 'tareas');
 };
 
 // ── Cargar TODOS los usuarios de la org para auditoría ──
