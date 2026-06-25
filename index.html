@@ -3165,9 +3165,16 @@ function getVisibleTasks(){
 }
 
 function updateFilterBadge(){
-  // Muestra/oculta el badge "Solo mis tareas" en la sort bar
+  // Roles con acceso al filtro de módulos
+  const canUseModuleFilter = EXECUTIVE_ROLES_VIS.includes(currentRole) || currentRole==='director' || currentRole==='pending';
+
+  // Mostrar u ocultar la barra de filtro de módulos (Casa/Bazar/Tienda/Club)
+  const filterRow = document.getElementById('ctxFilterRow');
+  if(filterRow) filterRow.style.display = canUseModuleFilter ? '' : 'none';
+
+  // Badge "Solo mis tareas" para roles tácticos
   let badge=document.getElementById('myTasksBadge');
-  if(currentRole==='director'||currentRole==='pending'){
+  if(canUseModuleFilter){
     if(badge) badge.remove(); return;
   }
   if(!badge){
