@@ -3,13 +3,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ════════════════════════════════════════════════════════
-    // NOTA TÉCNICA:
-    // request.auth.token.role NO existe en Firebase por defecto.
-    // Requiere custom claims via Admin SDK.
-    // Solución: usamos assignedToUid (UID real del usuario) que
-    // SÍ es verificable en reglas sin llamadas adicionales.
-    // El frontend query filtra por assignedToRole para eficiencia.
-    // Las reglas validan por assignedToUid para seguridad de documentos.
+    // ARQUITECTURA DE VISIBILIDAD (dos capas):
+    //
+    // COMITÉ EJECUTIVO (visión total):
+    //   Director · Mamá · Coordinadora Bazar · Coordinadora Tienda
+    //
+    // EJECUCIÓN TÁCTICA (vista aislada — solo sus tareas):
+    //   Publicista · Diseñador/a · Diseñador/Publicista
+    //   Staff Eventos · Staff Montaje · Soporte Aplicaciones
+    //   Logística · Vendedor/a · Encargado Web · Hijo 1 · Hijo 2
+    //
+    // CAPA 1 (Frontend/Query): where('assignedToRole','==',rol)
+    //   → Solo descarga documentos del rol del usuario
+    // CAPA 2 (Firestore Rules): assignedToUid == auth.uid
+    //   → Bloquea acceso directo a documentos ajenos
+    //
+    // NOTA: request.auth.token.role NO existe sin Admin SDK.
+    //   Usamos assignedToUid que sí está disponible en reglas.
     // ════════════════════════════════════════════════════════
 
     function isAuth()     { return request.auth != null; }

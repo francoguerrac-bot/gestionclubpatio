@@ -3186,12 +3186,29 @@ function durLabel(m){if(!m)return'';if(m<60)return m+'min';const h=Math.floor(m/
 // GOBERNANZA DE DATOS — Niveles de Visibilidad de Tareas
 // ══════════════════════════════════════════════════════════
 
-// NIVEL TOTAL: visión completa de todos los módulos
-const EXECUTIVE_ROLES = ['director','mama','coordinadora_bazares','coordinadora_tienda'];
+// ── NIVEL TOTAL — Visión completa de todos los módulos ──
+const EXECUTIVE_ROLES = [
+  'director',
+  'mama',
+  'coordinadora_bazares',
+  'coordinadora_tienda',
+];
 
-// NIVEL TÁCTICO: solo ven sus propias tareas y las de su rol
-const TACTICAL_ROLES  = ['hijo1','hijo2','publicista','disenador','disenador_pub',
-                         'soporte_app','staff_montaje','logistica','vendedor','programador'];
+// ── NIVEL TÁCTICO — Solo ven sus propias tareas asignadas ──
+// Estos roles aplican el filtro estricto: assignedToRole === suRol
+const TACTICAL_ROLES = [
+  'hijo1',              // Hijo 1
+  'hijo2',              // Hijo 2
+  'publicista',         // Publicista
+  'disenador',          // Diseñador/a
+  'disenador_pub',      // Diseñador/Publicista
+  'staff_eventos',      // Staff Eventos Deportivos  ← NUEVO
+  'staff_montaje',      // Staff de Montaje
+  'soporte_app',        // Soporte de Aplicaciones
+  'logistica',          // Logística
+  'vendedor',           // Vendedor/a
+  'programador',        // Encargado Web
+];
 
 // Bloques de visibilidad por tipo de tarea
 const VISIBILITY_LEVELS = {
@@ -3204,7 +3221,14 @@ const VISIBILITY_LEVELS = {
 function getVisibleTasks(){
   // ── COMITÉ EJECUTIVO: visibilidad TOTAL ──
   if(currentRole === 'director' || EXECUTIVE_ROLES.includes(currentRole)) return tasks;
+
+  // ── PENDING: no filtrar (no han recibido rol aún) ──
   if(currentRole === 'pending') return tasks;
+
+  // ── EJECUCIÓN TÁCTICA (todos estos roles tienen vista aislada) ──
+  // publicista · disenador · disenador_pub · staff_eventos · staff_montaje
+  // soporte_app · logistica · vendedor · programador · hijo1 · hijo2
+  if(!TACTICAL_ROLES.includes(currentRole)) return tasks; // rol desconocido = sin filtro
 
   // ── EJECUCIÓN TÁCTICA: filtro ESTRICTO ──
   // Solo ven tareas donde assignedToRole coincide con SU rol
