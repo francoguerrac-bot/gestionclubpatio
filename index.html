@@ -2666,6 +2666,34 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 
 <div class="toast" id="toast"></div>
 
+<!-- ── PANEL DE EMERGENCIA (aparece si bootApp falla) ── -->
+<div id="emergencyPanel" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(135deg,#1A1A1A,#1a3025);padding:30px 20px;font-family:'Inter',sans-serif;overflow-y:auto;">
+  <div style="max-width:380px;margin:0 auto;">
+    <div style="font-size:36px;text-align:center;margin-bottom:10px;">🔧</div>
+    <div style="font-size:18px;font-weight:800;color:#fff;text-align:center;margin-bottom:6px;">Recuperación de sesión</div>
+    <div style="font-size:12px;color:#9CA3AF;text-align:center;margin-bottom:20px;">El sistema detectó un problema al cargar tu perfil</div>
+
+    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:#5BC0BE;margin-bottom:6px;">DIAGNÓSTICO</div>
+      <div id="emergencyDiag" style="font-size:11px;color:#d1d5db;line-height:1.7;font-family:monospace;"></div>
+    </div>
+
+    <button onclick="emergencyRecoverProfile()" class="btn btn-sage" style="width:100%;padding:14px;font-size:14px;margin-bottom:8px;">
+      🔄 Recuperar perfil automáticamente
+    </button>
+    <button onclick="emergencyForceLoadTasks()" class="btn btn-ghost" style="width:100%;padding:12px;font-size:13px;margin-bottom:8px;color:#fff;border-color:#444;">
+      📋 Cargar todas las tareas (sin filtro)
+    </button>
+    <button onclick="emergencyClearCache()" style="width:100%;padding:12px;font-size:13px;border:1.5px solid #EF4444;background:none;color:#EF4444;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:8px;">
+      🗑️ Limpiar caché del Service Worker
+    </button>
+    <button onclick="document.getElementById('emergencyPanel').style.display='none'" style="width:100%;padding:10px;font-size:12px;background:none;border:none;color:#6B7280;cursor:pointer;font-family:'Inter',sans-serif;">
+      Cerrar
+    </button>
+    <div id="emergencyResult" style="margin-top:10px;font-size:12px;color:#9CA3AF;text-align:center;min-height:20px;"></div>
+  </div>
+</div>
+
 <!-- ── PWA GHOST TOAST (discreto, esquina inferior derecha) ── -->
 <div id="pwaInstallBanner" style="
   display:none;
@@ -9126,6 +9154,98 @@ onAuthStateChanged(auth, async (user)=>{
 </script>
 <!-- ── PWA: Registro del Service Worker ── -->
 <script>
+// ══════════════════════════════════════════════
+// PANEL DE EMERGENCIA — Recuperación de sesión
+// ══════════════════════════════════════════════
+
+// Detectar si bootApp no se ejecutó en los primeros 10 segundos
+setTimeout(()=>{
+  const profileOk = window.currentRole && window.currentRole !== 'pending' && window.currentRole !== undefined;
+  const hasUser   = window.currentProfile && window.currentProfile.uid;
+  const hasAuth   = typeof window.bootApp === 'function';
+  if(!hasAuth || (!profileOk && document.getElementById('authOverlay')?.style.display === 'none')){
+    const diag = document.getElementById('emergencyDiag');
+    const panel = document.getElementById('emergencyPanel');
+    if(diag && panel){
+      diag.innerHTML =
+        `bootApp definido: ${hasAuth?'✅':'❌ (versión cacheada)'}<br>`+
+        `Rol cargado: ${window.currentRole||'undefined'}<br>`+
+        `UID: ${window.currentProfile?.uid||'undefined'}<br>`+
+        `Tareas en memoria: ${window.tasks?.length??0}`;
+      // Solo mostrar si hay un problema real (no solo si es 'pending')
+      if(!hasAuth) panel.style.display='block';
+    }
+  }
+}, 10000);
+
+// 1. Recuperar perfil desde Firestore manualmente
+async function emergencyRecoverProfile(){
+  const res = document.getElementById('emergencyResult');
+  res.textContent = '⏳ Buscando perfil en Firestore...';
+  try{
+    // Usar la función expuesta por el módulo Firebase
+    if(window.loadOrgData){ await window.loadOrgData(); }
+    const uid = window.currentProfile?.uid || (window.auth?.currentUser?.uid);
+    if(!uid){ res.textContent = '❌ Sin sesión activa. Recarga y vuelve a iniciar sesión.'; return; }
+    res.textContent = `✅ Perfil encontrado. Rol: ${window.currentRole}. Recargando...`;
+    setTimeout(()=>location.reload(), 1500);
+  }catch(e){
+    res.textContent = '❌ Error: '+e.message+'. Intenta recargar la página.';
+  }
+}
+window.emergencyRecoverProfile=emergencyRecoverProfile;
+
+// 2. Cargar TODAS las tareas de la org sin filtro de rol
+async function emergencyForceLoadTasks(){
+  const res = document.getElementById('emergencyResult');
+  res.textContent = '⏳ Cargando todas las tareas sin filtro...';
+  try{
+    const result = await window.fetchTasksFromFirestore?.();
+    if(result===null) throw new Error('Sin acceso a Firestore');
+    // Forzar carga sin filtro usando cloudSet de usuario
+    const allTasks = window.tasks||[];
+    res.textContent = `📋 Firestore /tasks: ${result?.length??0} docs | Local: ${allTasks.length} tareas`;
+    if(result&&result.length>0){
+      window.tasks = result;
+      if(window.renderTasks) window.renderTasks();
+      document.getElementById('emergencyPanel').style.display='none';
+    } else {
+      res.textContent += '\n⚠️ /tasks vacía. Ejecuta migración desde el rol Director.';
+    }
+  }catch(e){ res.textContent='❌ '+e.message; }
+}
+window.emergencyForceLoadTasks=emergencyForceLoadTasks;
+
+// 3. Limpiar caché del Service Worker
+async function emergencyClearCache(){
+  const res = document.getElementById('emergencyResult');
+  try{
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for(const r of regs) await r.unregister();
+    }
+    const keys = await caches.keys();
+    for(const k of keys) await caches.delete(k);
+    res.textContent = `✅ Caché limpiado (${keys.length} entradas). Recargando...`;
+    setTimeout(()=>location.reload(true), 1500);
+  }catch(e){ res.textContent='❌ '+e.message; }
+}
+window.emergencyClearCache=emergencyClearCache;
+
+// Botón flotante de emergencia (esquina superior izquierda, solo si hay problemas)
+function showEmergencyBtn(){
+  if(document.getElementById('emergencyFloatBtn')) return;
+  const btn=document.createElement('button');
+  btn.id='emergencyFloatBtn';
+  btn.innerHTML='🔧';
+  btn.title='Panel de recuperación';
+  btn.style.cssText='position:fixed;top:8px;left:8px;z-index:9997;width:32px;height:32px;border-radius:50%;background:#EF4444;color:#fff;border:none;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(239,68,68,.4);';
+  btn.onclick=()=>document.getElementById('emergencyPanel').style.display='block';
+  document.body.appendChild(btn);
+}
+// Mostrar botón de emergencia si bootApp no está definido al cargar
+if(typeof bootApp === 'undefined') setTimeout(showEmergencyBtn, 3000);
+
 // ── PWA: Service Worker ──
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
