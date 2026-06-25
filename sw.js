@@ -1,6 +1,6 @@
 // Service Worker — Club Patio Curauma PWA
 // Incrementar versión FUERZA a todos los clientes a descargar la nueva versión
-const CACHE_NAME = 'clubpatio-v4';
+const CACHE_NAME = 'clubpatio-v5';
 const CACHE_URLS = [
   '/',
   '/index.html',
