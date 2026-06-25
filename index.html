@@ -9006,16 +9006,12 @@ window.fetchTasksFromFirestore = async function(){
     const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2 }
       = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
 
-    const role   = window.currentRole || 'pending';
-    const isExec = role==='director'||['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
-    const filtro = isExec
-      ? { orgId:'curauma_001' }
-      : { orgId:'curauma_001', assignedToRole: role };
+    const role    = window.currentRole || 'pending';
+    const isExec  = role==='director'||['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
+    const myRoles = window.currentProfile?.roles?.filter(Boolean) || [role];
+    const filtro  = isExec ? { orgId:'curauma_001' } : { orgId:'curauma_001', assignedToRole: role };
 
-    console.log('[fetchTasks] ▶ Filtro aplicado:', JSON.stringify(filtro));
-    console.log('[fetchTasks] Usuario:', currentUser.email, '| uid:', currentUser.uid, '| ejecutivo:', isExec);
-    const isExec    = role === 'director' || ['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
-    const myRoles   = window.currentProfile?.roles?.filter(Boolean) || [role];
+    console.log('[fetchTasks] Filtro:', JSON.stringify(filtro), '| ejecutivo:', isExec);
 
     let tasksQuery;
     if(isExec){
