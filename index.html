@@ -524,6 +524,26 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 /* Mis permisos status en hijo */
 .hijo-perm-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;border-left:4px solid var(--primary-blue);}
 .hijo-perm-status-row{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;}
+/* ── MODAL DE RESOLUCIÓN (nota obligatoria) ── */
+.resolve-overlay{position:fixed;inset:0;z-index:980;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:20px;}
+.resolve-card{background:var(--bg-card);border-radius:18px;padding:22px;max-width:380px;width:100%;font-family:'Inter',sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.3);}
+.resolve-action-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;margin-bottom:12px;}
+.rab-approve{background:#DCFCE7;color:#16A34A;}
+.rab-eval{background:#DBEAFE;color:#1E40AF;}
+.rab-reject{background:#FEE2E2;color:#DC2626;}
+.resolve-textarea{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:11px;padding:11px 13px;outline:none;resize:none;background:var(--bg-main);box-sizing:border-box;min-height:90px;transition:border-color .2s;}
+.resolve-textarea:focus{border-color:var(--primary-blue);}
+.resolve-char-hint{font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right;}
+.resolve-confirm-btn{width:100%;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;margin-top:10px;transition:all .2s;}
+.resolve-confirm-btn:disabled{opacity:.35;cursor:not-allowed;}
+.resolve-confirm-btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.15);}
+/* Burbuja nota padres en perfil hijo */
+.parent-note-bubble{background:linear-gradient(135deg,#EEF2FF,#E0E7FF);border:1.5px solid #C7D2FE;border-radius:4px 14px 14px 14px;padding:10px 13px;margin-top:8px;font-size:12px;color:#3730A3;line-height:1.5;position:relative;}
+.parent-note-bubble::before{content:'';position:absolute;top:-8px;left:10px;border:4px solid transparent;border-bottom-color:#C7D2FE;}
+.parent-note-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6366F1;margin-bottom:4px;}
+.read-btn{font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;margin-top:6px;transition:all .15s;font-family:'Inter',sans-serif;}
+.read-btn:hover{background:var(--primary-green);color:#fff;border-color:var(--primary-green);}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-coral);display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
 /* ── PANEL FAMILIA (Permisos + Propuestas) ── */
 .fam-filter-bar{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
 .fam-filter-btn{flex-shrink:0;font-size:10px;font-weight:700;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
@@ -2338,6 +2358,49 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
     <button id="nmSubmitBtn" class="btn btn-sage" onclick="createNewMember()"
       style="width:100%;padding:13px;font-size:14px;margin-top:4px;">
       ✅ Crear Integrante
+    </button>
+  </div>
+</div>
+
+<!-- ── MODAL DE RESOLUCIÓN (nota obligatoria para padres) ── -->
+<div id="resolveModal" class="resolve-overlay" onclick="if(event.target===this)closeResolveModal()">
+  <div class="resolve-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:800;">💬 Tu respuesta</div>
+      <button onclick="closeResolveModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">×</button>
+    </div>
+
+    <!-- Acción seleccionada -->
+    <div id="resolveActionBadge" class="resolve-action-badge rab-approve">✅ Aprobar</div>
+    <div id="resolveItemTitle" style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;"></div>
+
+    <!-- Nota obligatoria -->
+    <label style="font-size:11px;font-weight:700;color:var(--text-main);display:block;margin-bottom:6px;">
+      📝 Nota para tu hijo/a <span style="color:var(--accent-coral);font-size:9px;margin-left:4px;">OBLIGATORIO</span>
+    </label>
+    <textarea id="resolveNote"
+      class="resolve-textarea"
+      required
+      placeholder="Escribe tu mensaje... ¿Por qué esta decisión? ¿Qué condiciones tienen que cumplirse?"
+      oninput="onResolveNoteInput(this)"></textarea>
+    <div class="resolve-char-hint">
+      <span id="resolveCharCount">0</span> / 300 caracteres mínimo recomendado
+    </div>
+
+    <div id="resolveNoteError" style="color:var(--accent-coral);font-size:11px;margin-top:4px;display:none;">
+      ⚠️ La nota es obligatoria antes de confirmar.
+    </div>
+
+    <!-- Botón confirmar (disabled hasta que haya nota) -->
+    <button id="resolveConfirmBtn"
+      class="resolve-confirm-btn"
+      disabled
+      onclick="confirmResolveAction()">
+      Confirmar respuesta
+    </button>
+    <button onclick="closeResolveModal()"
+      style="width:100%;padding:10px;background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;margin-top:4px;font-family:'Inter',sans-serif;">
+      Cancelar
     </button>
   </div>
 </div>
@@ -4647,12 +4710,12 @@ function makeFamPermCard(p){
     ${p.responseNote?`<div class="fam-response-note">💬 ${p.responseNote}</div>`:''}
     ${canAct?`
     <div class="fam-actions">
-      ${!myApproval?`<button class="fam-action-btn fab-approve" onclick="famAction('${p.id}','perm','approve')">✅ Aprobar</button>`
+      ${!myApproval?`<button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','perm','approve')">✅ Aprobar</button>`
         :`<button class="fam-action-btn fab-done">✅ Aprobaste</button>`}
-      <button class="fam-action-btn fab-eval" onclick="famAction('${p.id}','perm','eval')">🔄 Evaluando</button>
-      <button class="fam-action-btn fab-reject" onclick="famShowNote('${p.id}','perm')">❌ Rechazar</button>
+      <button class="fam-action-btn fab-eval"   onclick="openResolveModal('${p.id}','perm','eval')">🔄 Evaluando</button>
+      <button class="fam-action-btn fab-reject" onclick="openResolveModal('${p.id}','perm','reject')">❌ Rechazar</button>
     </div>
-    <div class="fam-note-wrap" id="famnote-${p.id}">
+    <div class="fam-note-wrap" id="famnote-${p.id}" style="display:none;">
       <textarea class="fam-note-input" id="famnoteinput-${p.id}" rows="2" placeholder="Escribe el motivo del rechazo o tu comentario..."></textarea>
       <button class="fam-note-send" onclick="famAction('${p.id}','perm','reject')">Enviar respuesta</button>
     </div>`:''}`;
@@ -4685,9 +4748,9 @@ function makeFamPropCard(p){
     ${p.responseNote?`<div class="fam-response-note">💬 ${p.responseNote}</div>`:''}
     ${canAct?`
     <div class="fam-actions">
-      <button class="fam-action-btn fab-approve" onclick="famAction('${p.id}','prop','approve')">✅ Aceptar idea</button>
-      <button class="fam-action-btn fab-eval"    onclick="famAction('${p.id}','prop','eval')">🔄 Lo pensamos</button>
-      <button class="fam-action-btn fab-reject"  onclick="famShowNote('${p.id}','prop')">❌ Rechazar</button>
+      <button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','prop','approve')">✅ Aceptar idea</button>
+      <button class="fam-action-btn fab-eval"    onclick="openResolveModal('${p.id}','prop','eval')">🔄 Lo pensamos</button>
+      <button class="fam-action-btn fab-reject"  onclick="openResolveModal('${p.id}','prop','reject')">❌ Rechazar</button>
     </div>
     <div class="fam-note-wrap" id="famnote-${p.id}">
       <textarea class="fam-note-input" id="famnoteinput-${p.id}" rows="2" placeholder="Deja un comentario o motivo..."></textarea>
@@ -4696,53 +4759,143 @@ function makeFamPropCard(p){
   return card;
 }
 
-function famShowNote(id, type){
-  const wrap=document.getElementById('famnote-'+id);
-  if(wrap) wrap.style.display=wrap.style.display==='block'?'none':'block';
-}
+// ── Estado del modal de resolución ──
+let _resolveCtx = {}; // {id, type, action}
+
+const RESOLVE_LABELS = {
+  approve: {badge:'✅ Aprobar',     cls:'rab-approve', btn:'✅ Confirmar aprobación',    bg:'linear-gradient(135deg,var(--primary-green),#7DAD2E)'},
+  eval:    {badge:'🔄 En evaluación',cls:'rab-eval',    btn:'🔄 Confirmar evaluación',    bg:'linear-gradient(135deg,#3B82F6,#2563EB)'},
+  reject:  {badge:'❌ Rechazar',    cls:'rab-reject',  btn:'❌ Confirmar rechazo',       bg:'linear-gradient(135deg,var(--accent-coral),#D94540)'},
+};
+
+function famShowNote(id, type){ openResolveModal(id, type, 'reject'); }
 window.famShowNote=famShowNote;
 
-async function famAction(id, type, action){
-  const note=(document.getElementById('famnoteinput-'+id)||{}).value?.trim()||'';
-  if(action==='reject'&&!note){ toast('⚠️ Escribe un motivo antes de rechazar'); return; }
+// Reemplaza el click directo — ahora todo pasa por el modal
+function famAction(id, type, action){ openResolveModal(id, type, action); }
+window.famAction=famAction;
 
+function openResolveModal(id, type, action){
+  _resolveCtx = {id, type, action};
+  const item = famAllItems.find(i=>i.id===id);
+  const lbl  = RESOLVE_LABELS[action]||RESOLVE_LABELS.approve;
+
+  // Configurar badge
+  const badge = document.getElementById('resolveActionBadge');
+  badge.textContent = lbl.badge;
+  badge.className   = 'resolve-action-badge '+lbl.cls;
+
+  // Título de la solicitud
+  const titleEl = document.getElementById('resolveItemTitle');
+  if(titleEl && item){
+    titleEl.textContent = `${item.requesterName||'—'}: "${item.motivo||item.titulo||'—'}"`;
+  }
+
+  // Botón confirmar
+  const btn = document.getElementById('resolveConfirmBtn');
+  btn.style.background = lbl.btn ? lbl.bg : '';
+  btn.textContent = lbl.btn;
+  btn.disabled    = true; // siempre empieza deshabilitado
+
+  // Limpiar
+  document.getElementById('resolveNote').value='';
+  document.getElementById('resolveCharCount').textContent='0';
+  const errEl=document.getElementById('resolveNoteError');
+  if(errEl) errEl.style.display='none';
+
+  document.getElementById('resolveModal').style.display='flex';
+  setTimeout(()=>document.getElementById('resolveNote').focus(),200);
+}
+
+function closeResolveModal(){
+  document.getElementById('resolveModal').style.display='none';
+  _resolveCtx={};
+}
+window.closeResolveModal=closeResolveModal;
+
+// Habilitar botón solo cuando hay nota
+function onResolveNoteInput(el){
+  const len = el.value.trim().length;
+  document.getElementById('resolveCharCount').textContent = len;
+  const btn = document.getElementById('resolveConfirmBtn');
+  btn.disabled = len < 5; // mínimo 5 caracteres
+  const errEl=document.getElementById('resolveNoteError');
+  if(errEl) errEl.style.display = len > 0 && len < 5 ? 'block' : 'none';
+}
+window.onResolveNoteInput=onResolveNoteInput;
+
+// Confirmar acción con nota obligatoria
+async function confirmResolveAction(){
+  const {id, type, action} = _resolveCtx;
+  const note = document.getElementById('resolveNote').value.trim();
+  if(!note || note.length < 5){
+    const errEl=document.getElementById('resolveNoteError');
+    if(errEl){errEl.style.display='block'; errEl.textContent='⚠️ Escribe una nota de al menos 5 caracteres.';}
+    return;
+  }
+  closeResolveModal();
+  await handleResponse(id, type, action, note);
+}
+window.confirmResolveAction=confirmResolveAction;
+
+// handleResponse: función central con nota y isReadByChild
+async function handleResponse(id, type, action, note){
   const isMama=currentRole==='mama';
-  let patch={updatedAt:new Date().toISOString(), responseNote:note||undefined};
+  const isDir =currentRole==='director';
+  const resolverName = currentProfile.displayName||(isMama?'Mamá':'Papá');
+  let patch = {
+    responseNote:   note,
+    responseBy:     resolverName,
+    responseAt:     new Date().toISOString(),
+    isReadByChild:  false,      // ← hijo aún no ha leído
+    updatedAt:      new Date().toISOString()
+  };
+
+// handleResponse: lógica central con nota obligatoria e isReadByChild
+async function handleResponse(id, type, action, note){
+  const isMama        = currentRole==='mama';
+  const resolverName  = currentProfile.displayName||(isMama?'Mamá':'Papá');
+  const item          = famAllItems.find(i=>i.id===id);
+
+  // Patch base — nota siempre requerida, nunca null
+  let patch = {
+    responseNote:   note,           // obligatorio
+    responseBy:     resolverName,   // quién respondió
+    responseAt:     new Date().toISOString(),
+    isReadByChild:  false,          // hijo aún no ha visto
+    hijoNotified:   false,          // para el push al hijo
+    updatedAt:      new Date().toISOString()
+  };
 
   if(type==='perm'){
     if(action==='approve'){
       if(isMama) patch.approvedByMom=true; else patch.approvedByDad=true;
-      // Si ambos aprueban → approved
-      const item=famAllItems.find(i=>i.id===id);
       if(item){
-        const momOk = isMama ? true : item.approvedByMom;
-        const dadOk = !isMama? true : item.approvedByDad;
-        if(momOk&&dadOk) patch.status='approved';
+        const momOk = isMama ? true  : item.approvedByMom;
+        const dadOk = !isMama? true  : item.approvedByDad;
+        if(momOk && dadOk) patch.status='approved';
       }
-    } else if(action==='eval') patch.status='evaluating';
-    else if(action==='reject') patch.status='rejected';
+    } else if(action==='eval')   patch.status='evaluating';
+    else if(action==='reject')   patch.status='rejected';
 
     try{
-      // Marcar hijoNotified:false para que hijo reciba la notificación al próximo login
-      patch.hijoNotified = false;
-      await window.updatePermissionRequest(id,patch);
-      const actionLabel = action==='approve'?'✅ Firma registrada':action==='eval'?'🔄 Marcado en evaluación':'❌ Permiso rechazado';
-      toast(actionLabel);
-      writeAuditEntry&&writeAuditEntry('familia_perm_'+action,{emoji:action==='approve'?'✅':action==='eval'?'🔄':'❌',id});
+      await window.updatePermissionRequest(id, patch);
+      toast(action==='approve'?'✅ Firma registrada con nota':action==='eval'?'🔄 En evaluación':' ❌ Rechazado con nota');
+      writeAuditEntry&&writeAuditEntry('familia_perm_'+action,{emoji:action==='approve'?'✅':action==='eval'?'🔄':'❌',id,note:note.slice(0,40)});
     }catch(e){toast('⚠️ Error: '+e.message); return;}
+
   } else {
-    // propuesta
     patch.status = action==='approve'?'approved':action==='eval'?'evaluating':'rejected';
     try{
-      await window.updateProposalStatus(id,patch);
-      toast(action==='approve'?'✅ Propuesta aceptada':action==='eval'?'🔄 En evaluación':'❌ Propuesta rechazada');
-      writeAuditEntry&&writeAuditEntry('familia_prop_'+action,{emoji:'💡',id});
+      await window.updateProposalStatus(id, patch);
+      toast(action==='approve'?'✅ Propuesta aceptada':action==='eval'?'🔄 En evaluación':'❌ Rechazada con nota');
+      writeAuditEntry&&writeAuditEntry('familia_prop_'+action,{emoji:'💡',id,note:note.slice(0,40)});
     }catch(e){toast('⚠️ Error: '+e.message); return;}
   }
 
   await loadFamiliaPanel();
 }
-window.famAction=famAction;
+window.handleResponse=handleResponse;
 
 // ═══════════════ PANEL DE AUDITORÍA (Master Data Control) ═══════════════
 
@@ -6633,20 +6786,48 @@ window.submitPermissionRequest=submitPermissionRequest;
 function renderMyPermissions(){
   const el=document.getElementById('misPermisosList'); if(!el) return;
   if(!myPermissions.length){el.innerHTML='<div class="workplan-empty">Sin solicitudes de permiso.</div>';return;}
+
+  const statusMap={pending:'⏳ En revisión',evaluating:'🔄 Evaluando',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
+  const clsMap   ={pending:'psb-pending',evaluating:'psb-pending',approved:'psb-approved',rejected:'psb-rejected'};
+
   el.innerHTML=myPermissions.map(p=>{
-    const statusMap={pending:'⏳ En revisión',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
-    const clsMap={pending:'psb-pending',approved:'psb-approved',rejected:'psb-rejected'};
-    return `<div class="hijo-perm-status">
-      <div class="perm-status-badge ${clsMap[p.status]||'psb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</div>
-      <div style="font-weight:700;font-size:12px;">${p.motivo}</div>
-      <div style="font-size:10px;color:var(--text-muted);">${p.fecha} · ${p.horaFin} · ${p.lugar}</div>
-      ${p.status==='pending'?`<div style="font-size:10px;margin-top:5px;">
-        ${!p.approvedByMom?'⏳ Falta firma de Mamá':'✅ Mamá aprobó'} ·
-        ${!p.approvedByDad?'⏳ Falta firma de Papá':'✅ Papá aprobó'}
-      </div>`:''}
+    const isUnread = p.responseNote && p.isReadByChild===false;
+    const resolverLabel = p.responseBy || 'Tus padres';
+    return `<div class="hijo-perm-status" style="${isUnread?'border-color:var(--accent-coral);':''}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        ${isUnread?'<span class="unread-dot"></span>':''}
+        <span class="perm-status-badge ${clsMap[p.status]||'psb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
+      </div>
+      <div style="font-weight:700;font-size:12px;">${p.motivo||'—'}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${p.fecha||''} · ${p.horaFin||''} · ${p.lugar||''}</div>
+
+      ${p.status==='pending'||p.status==='evaluating'?`
+        <div style="font-size:10px;margin-top:6px;color:var(--text-muted);">
+          ${!p.approvedByMom?'⏳ Falta firma de Mamá':'✅ Mamá aprobó'} ·
+          ${!p.approvedByDad?'⏳ Falta firma de Papá':'✅ Papá aprobó'}
+        </div>`:''
+      }
+
+      ${p.responseNote?`
+        <div class="parent-note-bubble">
+          <div class="parent-note-label">💬 Nota de ${resolverLabel}</div>
+          ${p.responseNote}
+        </div>
+        ${isUnread?`<button class="read-btn" onclick="markPermissionRead('${p.id}')">✅ Marcar como leído</button>`:'<div style="font-size:9px;color:var(--text-muted);margin-top:4px;">✅ Leído</div>'}
+      `:''}
     </div>`;
   }).join('');
 }
+
+async function markPermissionRead(id){
+  const p=myPermissions.find(x=>x.id===id);
+  if(!p) return;
+  p.isReadByChild=true;
+  await window.updatePermissionRequest(id,{isReadByChild:true}).catch(()=>{});
+  renderMyPermissions();
+  toast('✅ Marcado como leído');
+}
+window.markPermissionRead=markPermissionRead;
 
 // ── CENTRO DE APROBACIONES (Padres / Director) ──
 let allPermissions = [];
