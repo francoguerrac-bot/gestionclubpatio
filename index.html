@@ -2388,7 +2388,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
     </div>
 
     <div id="resolveNoteError" style="color:var(--accent-coral);font-size:11px;margin-top:4px;display:none;">
-      ⚠️ La nota es obligatoria antes de confirmar.
+      ⚠️ Debes ingresar una razón para tu decisión (mínimo 5 caracteres).
+    </div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:5px;">
+      <span>📱</span> Al confirmar, se abrirá WhatsApp automáticamente para notificar a tu hijo/a.
     </div>
 
     <!-- Botón confirmar (disabled hasta que haya nota) -->
@@ -4838,11 +4841,43 @@ async function confirmResolveAction(){
 }
 window.confirmResolveAction=confirmResolveAction;
 
-// handleResponse: función central con nota y isReadByChild
+// ── Notificación WhatsApp al hijo tras resolución ──
+function enviarNotificacionWhatsApp(item, action, note, resolverName){
+  const hijoMember = (window.orgMembers||[]).find(m=>
+    m.uid===item.requesterId || m.displayName===item.requesterName
+  );
+  const phone  = (hijoMember?.phone||'').replace(/\D/g,'');
+  if(!phone || phone.length < 8){
+    toast('ℹ️ WA no enviado: '+item.requesterName+' no tiene teléfono registrado');
+    return null;
+  }
+  let num = phone.startsWith('56') ? phone.slice(2) : phone;
+  if(!num.startsWith('9')) num='9'+num;
+
+  const sl = {approve:{icon:'✅',label:'APROBADA'},evaluating:{icon:'🔄',label:'EN EVALUACIÓN'},reject:{icon:'❌',label:'NO APROBADA'}}[action]||{icon:'📋',label:'ACTUALIZADA'};
+  const titulo = item.motivo||item.titulo||'tu solicitud';
+  const msg = `Hola ${item.requesterName||''}! 👋\n\n`+
+    `Tenemos una respuesta sobre tu solicitud:\n📋 *"${titulo}"*\n\n`+
+    `${sl.icon} Estado: *${sl.label}*\n\n`+
+    `💬 Mensaje de ${resolverName}:\n"${note}"\n\n`+
+    `Revisa tu panel en la app para más detalles.\n— Gestión Familiar 🏠`;
+
+  const url = `https://wa.me/56${num}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+  return url;
+}
+
+// ── handleResponse: nota obligatoria + WA + audit log ──
 async function handleResponse(id, type, action, note){
+  // Validación extra de seguridad
+  if(!note||note.trim().length<5){
+    toast('⚠️ Debes ingresar una razón para tu decisión');
+    return;
+  }
   const isMama=currentRole==='mama';
   const isDir =currentRole==='director';
   const resolverName = currentProfile.displayName||(isMama?'Mamá':'Papá');
+  const item = famAllItems.find(i=>i.id===id);
   let patch = {
     responseNote:   note,
     responseBy:     resolverName,
@@ -4891,6 +4926,23 @@ async function handleResponse(id, type, action, note){
       toast(action==='approve'?'✅ Propuesta aceptada':action==='eval'?'🔄 En evaluación':'❌ Rechazada con nota');
       writeAuditEntry&&writeAuditEntry('familia_prop_'+action,{emoji:'💡',id,note:note.slice(0,40)});
     }catch(e){toast('⚠️ Error: '+e.message); return;}
+  }
+
+  // ── Disparar WhatsApp + Log de auditoría ──
+  if(item){
+    // Abrir WhatsApp automáticamente con mensaje contextual
+    const waUrl = enviarNotificacionWhatsApp(item, action, note, resolverName);
+
+    // Log de auditoría en el documento (para el Director)
+    const auditPatch = {
+      notifiedByWhatsApp: !!waUrl,
+      notifiedAt:         new Date().toISOString(),
+      notifiedBy:         resolverName,
+    };
+    try{
+      if(type==='perm') await window.updatePermissionRequest(id, auditPatch).catch(()=>{});
+      else              await window.updateProposalStatus(id, auditPatch).catch(()=>{});
+    }catch(_){}
   }
 
   await loadFamiliaPanel();
