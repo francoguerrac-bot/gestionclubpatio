@@ -501,6 +501,45 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .mh-alert-badge{font-size:9px;font-weight:800;background:#FEE2E2;color:#DC2626;padding:2px 7px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
 .mh-day-label{display:flex;gap:5px;flex:1;padding-left:94px;margin-bottom:4px;}
 .mh-day-lbl{flex:1;max-width:32px;text-align:center;font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;}
+/* ── PANEL FAMILIA (Permisos + Propuestas) ── */
+.fam-filter-bar{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
+.fam-filter-btn{flex-shrink:0;font-size:10px;font-weight:700;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
+.fam-filter-btn.active{background:var(--text-main);color:#fff;border-color:var(--text-main);}
+.fam-stats{display:flex;gap:8px;margin-bottom:14px;}
+.fam-stat{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;}
+.fam-stat-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;line-height:1;}
+.fam-stat-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+.fam-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(45,49,66,.05);transition:all .2s;}
+.fam-card:hover{box-shadow:0 4px 16px rgba(45,49,66,.09);}
+.fam-card-hdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.fam-type-badge{font-size:9px;font-weight:800;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;margin-top:2px;}
+.fam-tb-perm{background:#EDE9FE;color:#7C3AED;}
+.fam-tb-prop{background:#DBEAFE;color:#2563EB;}
+.fam-requester{width:34px;height:34px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.fam-title{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:2px;}
+.fam-detail{font-size:11px;color:var(--text-muted);line-height:1.4;}
+.fam-status-row{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap;}
+.fam-status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;}
+.fsb-pending{background:#FEF3C7;color:#92400E;}
+.fsb-eval{background:#DBEAFE;color:#1E40AF;}
+.fsb-approved{background:#DCFCE7;color:#16A34A;}
+.fsb-rejected{background:#FEE2E2;color:#DC2626;}
+.fam-sig-dot{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:99px;}
+.fsd-ok{background:#DCFCE7;color:#16A34A;}
+.fsd-pend{background:#F3F4F6;color:#9CA3AF;}
+.fam-compromiso{background:var(--sage-dim);border-left:3px solid var(--primary-blue);border-radius:0 8px 8px 0;padding:7px 10px;font-size:11px;color:var(--text-main);margin:8px 0;line-height:1.5;}
+.fam-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.fam-action-btn{flex:1;min-width:80px;font-size:11px;font-weight:700;padding:8px 10px;border-radius:9px;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;text-align:center;}
+.fab-approve{background:linear-gradient(135deg,var(--primary-green),#7DAD2E);color:#fff;box-shadow:0 2px 6px rgba(155,197,61,.3);}
+.fab-eval{background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;box-shadow:0 2px 6px rgba(59,130,246,.3);}
+.fab-reject{background:linear-gradient(135deg,var(--accent-coral),#D94540);color:#fff;box-shadow:0 2px 6px rgba(242,92,84,.3);}
+.fab-done{background:#F3F4F6;color:#9CA3AF;cursor:default;}
+.fam-note-wrap{margin-top:8px;display:none;}
+.fam-note-input{width:100%;font-family:'Inter',sans-serif;font-size:12px;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;outline:none;resize:none;background:var(--bg-main);box-sizing:border-box;}
+.fam-note-input:focus{border-color:var(--primary-blue);}
+.fam-note-send{margin-top:5px;font-size:11px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:var(--text-main);color:#fff;cursor:pointer;font-family:'Inter',sans-serif;}
+.fam-response-note{margin-top:8px;padding:7px 10px;background:#F9FAFB;border-radius:8px;border-left:3px solid var(--text-muted);font-size:11px;color:var(--text-muted);font-style:italic;}
+.fam-empty{text-align:center;padding:32px 16px;color:var(--text-muted);}
 /* ── ORGANIGRAMA ── */
 .org-section{margin-bottom:20px;}
 .org-section-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px 12px 0 0;margin-bottom:0;}
@@ -2172,6 +2211,41 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 </div>
 
 <!-- ══════════════════════════════════════
+     PAGE: FAMILIA — Permisos + Propuestas
+════════════════════════════════════════ -->
+<div class="page" id="pg-familia">
+  <div style="padding:14px 14px 0;">
+
+    <!-- Header -->
+    <div class="card" style="background:linear-gradient(135deg,#2D3142,#1a2040);border:none;margin-bottom:12px;">
+      <div style="color:#fff;">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Panel Familiar · Papá &amp; Mamá</div>
+        <div style="font-size:16px;font-weight:800;">🏠 Solicitudes &amp; Propuestas</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">Revisa, evalúa y responde a tus hijos</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="fam-stats" id="famStats"></div>
+
+    <!-- Filtros -->
+    <div class="fam-filter-bar">
+      <button class="fam-filter-btn active" id="famf-all"      onclick="setFamFilter('all')">📋 Todos</button>
+      <button class="fam-filter-btn"        id="famf-perm"     onclick="setFamFilter('perm')">🔑 Permisos</button>
+      <button class="fam-filter-btn"        id="famf-prop"     onclick="setFamFilter('prop')">💡 Propuestas</button>
+      <button class="fam-filter-btn"        id="famf-pending"  onclick="setFamFilter('pending')">⏳ Pendientes</button>
+      <button class="fam-filter-btn"        id="famf-resolved" onclick="setFamFilter('resolved')">✅ Resueltos</button>
+    </div>
+
+    <!-- Lista unificada -->
+    <div id="famContainer">
+      <div class="fam-empty">⏳ Cargando solicitudes...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      PAGE: PERMISOS (Papá / Mamá / Director)
 ════════════════════════════════════════ -->
 <div class="page" id="pg-permisos">
@@ -2459,8 +2533,8 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','auditoria','admin'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','permisos','coach'],canReadAll:false},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','familia','coach','control','auditoria'], canReadAll:true,  canApprove:true},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','familia','coach'],canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
@@ -2494,6 +2568,7 @@ const NAV_META = {
   permisos:  {icon:'🔑', label:'Permisos'},
   auditoria: {icon:'🗂️', label:'Auditoría'},
   admin:     {icon:'🛡️', label:'Admin DB'},
+  familia:   {icon:'🏠', label:'Familia'},
 };
 
 let currentRole = 'pending';
@@ -2589,6 +2664,7 @@ function showPage(p){
   if(p==='permisos')  {renderPermissionsCenter();}
   if(p==='auditoria') {loadAuditData();}
   if(p==='admin')     {loadAdminPanel();}
+  if(p==='familia')   {loadFamiliaPanel();}
   window.scrollTo(0,0);
 }
 
@@ -4058,6 +4134,208 @@ function toast(msg){
   el.textContent=msg; el.classList.add('show');
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2300);
 }
+
+// ═══════════════ PANEL FAMILIA — Permisos + Propuestas ═══════════════
+
+let famFilter = 'all';
+let famAllItems = []; // {type:'perm'|'prop', ...data}
+
+async function loadFamiliaPanel(){
+  const container = document.getElementById('famContainer');
+  if(container) container.innerHTML = '<div class="fam-empty">⏳ Cargando...</div>';
+  try{
+    const perms  = await window.loadPermissionRequests()||[];
+    const props  = await window.loadAllProposals()||[];
+    famAllItems = [
+      ...perms.map(p=>({...p,_type:'perm'})),
+      ...props.map(p=>({...p,_type:'prop'}))
+    ].sort((a,b)=>b.ts-a.ts);
+  }catch(e){
+    famAllItems=[];
+    console.error('[Familia]',e.message);
+  }
+  renderFamiliaPanel();
+}
+window.loadFamiliaPanel=loadFamiliaPanel;
+
+function setFamFilter(f){
+  famFilter=f;
+  ['all','perm','prop','pending','resolved'].forEach(k=>{
+    const btn=document.getElementById('famf-'+k);
+    if(btn) btn.classList.toggle('active',k===f);
+  });
+  renderFamiliaPanel();
+}
+window.setFamFilter=setFamFilter;
+
+function renderFamiliaPanel(){
+  const container=document.getElementById('famContainer'); if(!container) return;
+  const statsEl=document.getElementById('famStats');
+
+  // Stats
+  const total    = famAllItems.length;
+  const pending  = famAllItems.filter(i=>i.status==='pending').length;
+  const evaluat  = famAllItems.filter(i=>i.status==='evaluating').length;
+  const approved = famAllItems.filter(i=>i.status==='approved').length;
+  const rejected = famAllItems.filter(i=>i.status==='rejected').length;
+
+  if(statsEl) statsEl.innerHTML = `
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--text-muted)">${total}</div><div class="fam-stat-lbl">Total</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--accent-gold)">${pending}</div><div class="fam-stat-lbl">Pendientes</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:#2563EB">${evaluat}</div><div class="fam-stat-lbl">Evaluando</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--primary-green)">${approved}</div><div class="fam-stat-lbl">Aprobados</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--accent-coral)">${rejected}</div><div class="fam-stat-lbl">Rechazados</div></div>`;
+
+  // Filtrar
+  let list = [...famAllItems];
+  if(famFilter==='perm')     list=list.filter(i=>i._type==='perm');
+  if(famFilter==='prop')     list=list.filter(i=>i._type==='prop');
+  if(famFilter==='pending')  list=list.filter(i=>i.status==='pending'||i.status==='evaluating');
+  if(famFilter==='resolved') list=list.filter(i=>i.status==='approved'||i.status==='rejected');
+
+  if(!list.length){
+    container.innerHTML=`<div class="fam-empty">
+      <div style="font-size:32px;margin-bottom:10px;opacity:.3;">${famFilter==='perm'?'🔑':famFilter==='prop'?'💡':'📭'}</div>
+      <div style="font-weight:700;">Sin solicitudes aquí</div>
+      <div style="font-size:11px;margin-top:4px;">Los hijos envían permisos y propuestas desde su panel 🏠 Mi Panel</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML='';
+  list.forEach(item=>{
+    container.appendChild(item._type==='perm' ? makeFamPermCard(item) : makeFamPropCard(item));
+  });
+}
+
+// ── Tarjeta de PERMISO ──
+function makeFamPermCard(p){
+  const rc = ROLES[p.requesterRole]||{};
+  const statusMap = {pending:'⏳ Pendiente',evaluating:'🔄 En evaluación',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
+  const statusCls = {pending:'fsb-pending',evaluating:'fam-status-badge fsb-eval',approved:'fsb-approved',rejected:'fsb-rejected'};
+  const isMama    = currentRole==='mama';
+  const isDir     = currentRole==='director';
+  const myApproval= isMama?p.approvedByMom:isDir?p.approvedByDad:false;
+  const canAct    = (isMama||isDir) && p.status!=='rejected';
+
+  const card=document.createElement('div');
+  card.className='fam-card';
+  card.id='famcard-'+p.id;
+
+  card.innerHTML=`
+    <div class="fam-card-hdr">
+      <span class="fam-type-badge fam-tb-perm">🔑 Permiso</span>
+      <div class="fam-requester" style="background:${rc.color||'#888'}18;color:${rc.color||'#888'};">${rc.emoji||'👦'}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="fam-title">${p.requesterName||'—'} solicita: ${p.motivo||'—'}</div>
+        <div class="fam-detail">
+          📍 ${p.lugar||'—'} · 📅 ${p.fecha||'—'} · ⏰ Hasta las ${p.horaFin||'—'}
+          ${p.acompañantes?'<br>👥 '+p.acompañantes:''}
+        </div>
+      </div>
+    </div>
+    ${p.compromiso?`<div class="fam-compromiso">🤝 <strong>Compromiso:</strong> ${p.compromiso}</div>`:''}
+    <div class="fam-status-row">
+      <span class="fam-status-badge ${statusCls[p.status]||'fsb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
+      <span class="fam-sig-dot ${p.approvedByMom?'fsd-ok':'fsd-pend'}">👩 ${p.approvedByMom?'Aprobó':'Pendiente'}</span>
+      <span class="fam-sig-dot ${p.approvedByDad?'fsd-ok':'fsd-pend'}">👨 ${p.approvedByDad?'Aprobó':'Pendiente'}</span>
+    </div>
+    ${p.responseNote?`<div class="fam-response-note">💬 ${p.responseNote}</div>`:''}
+    ${canAct?`
+    <div class="fam-actions">
+      ${!myApproval?`<button class="fam-action-btn fab-approve" onclick="famAction('${p.id}','perm','approve')">✅ Aprobar</button>`
+        :`<button class="fam-action-btn fab-done">✅ Aprobaste</button>`}
+      <button class="fam-action-btn fab-eval" onclick="famAction('${p.id}','perm','eval')">🔄 Evaluando</button>
+      <button class="fam-action-btn fab-reject" onclick="famShowNote('${p.id}','perm')">❌ Rechazar</button>
+    </div>
+    <div class="fam-note-wrap" id="famnote-${p.id}">
+      <textarea class="fam-note-input" id="famnoteinput-${p.id}" rows="2" placeholder="Escribe el motivo del rechazo o tu comentario..."></textarea>
+      <button class="fam-note-send" onclick="famAction('${p.id}','perm','reject')">Enviar respuesta</button>
+    </div>`:''}`;
+  return card;
+}
+
+// ── Tarjeta de PROPUESTA ──
+function makeFamPropCard(p){
+  const rc = ROLES[p.requesterRole]||{};
+  const statusMap = {pending:'⏳ Pendiente',evaluating:'🔄 En evaluación',approved:'✅ Aprobada',rejected:'❌ Rechazada'};
+  const statusCls = {pending:'fsb-pending',evaluating:'fsb-eval',approved:'fsb-approved',rejected:'fsb-rejected'};
+  const canAct    = (currentRole==='mama'||currentRole==='director') && p.status!=='rejected'&&p.status!=='approved';
+
+  const card=document.createElement('div');
+  card.className='fam-card';
+  card.id='famcard-'+p.id;
+
+  card.innerHTML=`
+    <div class="fam-card-hdr">
+      <span class="fam-type-badge fam-tb-prop">💡 Propuesta</span>
+      <div class="fam-requester" style="background:${rc.color||'#888'}18;color:${rc.color||'#888'};">${rc.emoji||'👦'}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="fam-title">${p.requesterName||'—'}: ${p.titulo||'—'}</div>
+        <div class="fam-detail">${p.modulo?'📦 '+p.modulo+' · ':''} ${p.descripcion||''}</div>
+      </div>
+    </div>
+    <div class="fam-status-row">
+      <span class="fam-status-badge ${statusCls[p.status]||'fsb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
+    </div>
+    ${p.responseNote?`<div class="fam-response-note">💬 ${p.responseNote}</div>`:''}
+    ${canAct?`
+    <div class="fam-actions">
+      <button class="fam-action-btn fab-approve" onclick="famAction('${p.id}','prop','approve')">✅ Aceptar idea</button>
+      <button class="fam-action-btn fab-eval"    onclick="famAction('${p.id}','prop','eval')">🔄 Lo pensamos</button>
+      <button class="fam-action-btn fab-reject"  onclick="famShowNote('${p.id}','prop')">❌ Rechazar</button>
+    </div>
+    <div class="fam-note-wrap" id="famnote-${p.id}">
+      <textarea class="fam-note-input" id="famnoteinput-${p.id}" rows="2" placeholder="Deja un comentario o motivo..."></textarea>
+      <button class="fam-note-send" onclick="famAction('${p.id}','prop','reject')">Enviar respuesta</button>
+    </div>`:''}`;
+  return card;
+}
+
+function famShowNote(id, type){
+  const wrap=document.getElementById('famnote-'+id);
+  if(wrap) wrap.style.display=wrap.style.display==='block'?'none':'block';
+}
+window.famShowNote=famShowNote;
+
+async function famAction(id, type, action){
+  const note=(document.getElementById('famnoteinput-'+id)||{}).value?.trim()||'';
+  if(action==='reject'&&!note){ toast('⚠️ Escribe un motivo antes de rechazar'); return; }
+
+  const isMama=currentRole==='mama';
+  let patch={updatedAt:new Date().toISOString(), responseNote:note||undefined};
+
+  if(type==='perm'){
+    if(action==='approve'){
+      if(isMama) patch.approvedByMom=true; else patch.approvedByDad=true;
+      // Si ambos aprueban → approved
+      const item=famAllItems.find(i=>i.id===id);
+      if(item){
+        const momOk = isMama ? true : item.approvedByMom;
+        const dadOk = !isMama? true : item.approvedByDad;
+        if(momOk&&dadOk) patch.status='approved';
+      }
+    } else if(action==='eval') patch.status='evaluating';
+    else if(action==='reject') patch.status='rejected';
+
+    try{
+      await window.updatePermissionRequest(id,patch);
+      toast(action==='approve'?'✅ Firma registrada':action==='eval'?'🔄 Marcado en evaluación':'❌ Permiso rechazado');
+      writeAuditEntry&&writeAuditEntry('familia_perm_'+action,{emoji:action==='approve'?'✅':action==='eval'?'🔄':'❌',id});
+    }catch(e){toast('⚠️ Error: '+e.message); return;}
+  } else {
+    // propuesta
+    patch.status = action==='approve'?'approved':action==='eval'?'evaluating':'rejected';
+    try{
+      await window.updateProposalStatus(id,patch);
+      toast(action==='approve'?'✅ Propuesta aceptada':action==='eval'?'🔄 En evaluación':'❌ Propuesta rechazada');
+      writeAuditEntry&&writeAuditEntry('familia_prop_'+action,{emoji:'💡',id});
+    }catch(e){toast('⚠️ Error: '+e.message); return;}
+  }
+
+  await loadFamiliaPanel();
+}
+window.famAction=famAction;
 
 // ═══════════════ PANEL DE AUDITORÍA (Master Data Control) ═══════════════
 
@@ -7603,6 +7881,19 @@ window.loadMyProposals = async function(uid){
     const snap = await gd(q(col(db,'proposals'), w('requesterId','==',uid)));
     return snap.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);
   }catch(e){ return []; }
+};
+// Cargar TODAS las propuestas de la org (para padres)
+window.loadAllProposals = async function(){
+  try{
+    const { collection:col2, getDocs:gd2, query:q2, where:w2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await gd2(q2(col2(db,'proposals'), w2('orgId','==',ORG_ID)));
+    return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);
+  }catch(e){ console.error('loadAllProposals:',e.message); return []; }
+};
+// Actualizar estado de propuesta
+window.updateProposalStatus = async function(id, patch){
+  await setDoc(doc(db,'proposals',id), patch, {merge:true});
 };
 
 // ── PANEL ADMIN: onSnapshot en tiempo real ──
