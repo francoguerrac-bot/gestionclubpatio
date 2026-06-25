@@ -129,6 +129,16 @@ service cloud.firestore {
     }
 
     // ════════════════════════════════════════════════════════
+    // /activity_logs — Historial de intervenciones familiares
+    // Escribe cualquier auth; lee solo ejecutivos
+    // ════════════════════════════════════════════════════════
+    match /activity_logs/{logId} {
+      allow create: if isAuth();
+      allow read:   if isExecutive();
+      allow update, delete: if false;
+    }
+
+    // ════════════════════════════════════════════════════════
     // /geolocations — Stealth
     // ════════════════════════════════════════════════════════
     match /geolocations/{geoId} {

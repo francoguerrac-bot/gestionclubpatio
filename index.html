@@ -582,6 +582,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .fam-note-input:focus{border-color:var(--primary-blue);}
 .fam-note-send{margin-top:5px;font-size:11px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:var(--text-main);color:#fff;cursor:pointer;font-family:'Inter',sans-serif;}
 .fam-response-note{margin-top:8px;padding:7px 10px;background:#F9FAFB;border-radius:8px;border-left:3px solid var(--text-muted);font-size:11px;color:var(--text-muted);font-style:italic;}
+/* Estado de notificación WA */
+.wa-notif-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;cursor:default;}
+.wa-notif-ok{background:#DCFCE7;color:#16A34A;}
+.wa-notif-no{background:#FEF3C7;color:#D97706;cursor:pointer;}
+.wa-notif-no:hover{background:#D97706;color:#fff;}
+/* Activity log */
+.activity-log-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.activity-log-item:last-child{border-bottom:none;}
+.activity-log-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--bg-main);}
+.activity-log-body{flex:1;min-width:0;}
+.activity-log-who{font-weight:700;color:var(--text-main);}
+.activity-log-what{color:var(--text-muted);margin-top:1px;line-height:1.4;}
+.activity-log-time{font-size:9px;color:#C4C4C4;margin-top:2px;font-family:'JetBrains Mono',monospace;}
 .fam-empty{text-align:center;padding:32px 16px;color:var(--text-muted);}
 /* ── ORGANIGRAMA ── */
 .org-section{margin-bottom:20px;}
@@ -4710,7 +4723,14 @@ function makeFamPermCard(p){
       <span class="fam-sig-dot ${p.approvedByMom?'fsd-ok':'fsd-pend'}">👩 ${p.approvedByMom?'Aprobó':'Pendiente'}</span>
       <span class="fam-sig-dot ${p.approvedByDad?'fsd-ok':'fsd-pend'}">👨 ${p.approvedByDad?'Aprobó':'Pendiente'}</span>
     </div>
-    ${p.responseNote?`<div class="fam-response-note">💬 ${p.responseNote}</div>`:''}
+    ${p.responseNote?`<div class="fam-response-note">💬 <strong>${p.responseBy||'Respuesta'}:</strong> ${p.responseNote}</div>`:''}
+    <!-- Estado de notificación WhatsApp -->
+    ${p.responseNote?`<div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      ${p.notifiedByWhatsApp
+        ?`<span class="wa-notif-badge wa-notif-ok" title="Notificado por WhatsApp el ${p.notifiedAt?new Date(p.notifiedAt).toLocaleString('es-CL'):'—'}">📱 WA enviado ✅</span>`
+        :`<button class="wa-notif-badge wa-notif-no" onclick="reenviarWaPermiso('${p.id}')" title="WA no enviado — clic para reenviar">📱 Reenviar WA ⚠️</button>`}
+      ${p.notifiedAt?`<span style="font-size:9px;color:var(--text-muted);">${new Date(p.notifiedAt).toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>`:''}
+    </div>`:''}
     ${canAct?`
     <div class="fam-actions">
       ${!myApproval?`<button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','perm','approve')">✅ Aprobar</button>`
@@ -4748,7 +4768,12 @@ function makeFamPropCard(p){
     <div class="fam-status-row">
       <span class="fam-status-badge ${statusCls[p.status]||'fsb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
     </div>
-    ${p.responseNote?`<div class="fam-response-note">💬 ${p.responseNote}</div>`:''}
+    ${p.responseNote?`<div class="fam-response-note">💬 <strong>${p.responseBy||'Respuesta'}:</strong> ${p.responseNote}</div>`:''}
+    ${p.responseNote?`<div style="margin-top:6px;">
+      ${p.notifiedByWhatsApp
+        ?`<span class="wa-notif-badge wa-notif-ok" title="Notificado el ${p.notifiedAt?new Date(p.notifiedAt).toLocaleString('es-CL'):'—'}">📱 WA enviado ✅</span>`
+        :`<button class="wa-notif-badge wa-notif-no" onclick="reenviarWaPermiso('${p.id}')" title="WA no enviado">📱 Reenviar WA ⚠️</button>`}
+    </div>`:''}
     ${canAct?`
     <div class="fam-actions">
       <button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','prop','approve')">✅ Aceptar idea</button>
@@ -4930,10 +4955,8 @@ async function handleResponse(id, type, action, note){
 
   // ── Disparar WhatsApp + Log de auditoría ──
   if(item){
-    // Abrir WhatsApp automáticamente con mensaje contextual
     const waUrl = enviarNotificacionWhatsApp(item, action, note, resolverName);
 
-    // Log de auditoría en el documento (para el Director)
     const auditPatch = {
       notifiedByWhatsApp: !!waUrl,
       notifiedAt:         new Date().toISOString(),
@@ -4943,11 +4966,43 @@ async function handleResponse(id, type, action, note){
       if(type==='perm') await window.updatePermissionRequest(id, auditPatch).catch(()=>{});
       else              await window.updateProposalStatus(id, auditPatch).catch(()=>{});
     }catch(_){}
+
+    // ── Insertar en activity_logs (historial de intervenciones) ──
+    const actionLabels={approve:'Aprobó',evaluating:'Marcó en evaluación',reject:'Rechazó'};
+    window.saveActivityLog&&window.saveActivityLog({
+      orgId:         ORG_ID,
+      type:          type==='perm'?'permission':'proposal',
+      refId:         id,
+      action,
+      actionLabel:   actionLabels[action]||action,
+      actor:         resolverName,
+      actorRole:     currentRole,
+      targetName:    item.requesterName||'—',
+      title:         item.motivo||item.titulo||'—',
+      note:          note,
+      notifiedByWa:  !!waUrl,
+      ts:            Date.now(),
+      createdAt:     new Date().toISOString(),
+    });
   }
 
   await loadFamiliaPanel();
 }
 window.handleResponse=handleResponse;
+
+// Reenviar WA desde el botón ⚠️ de la tarjeta
+function reenviarWaPermiso(id){
+  const item=famAllItems.find(i=>i.id===id); if(!item) return;
+  const resolverName=currentProfile.displayName||(currentRole==='mama'?'Mamá':'Papá');
+  const note=item.responseNote||'Tu solicitud ha sido revisada.';
+  const action=item.status==='approved'?'approve':item.status==='evaluating'?'evaluating':'reject';
+  const waUrl=enviarNotificacionWhatsApp(item,action,note,resolverName);
+  if(waUrl){
+    window.updatePermissionRequest&&window.updatePermissionRequest(id,{notifiedByWhatsApp:true,notifiedAt:new Date().toISOString()}).catch(()=>{});
+    loadFamiliaPanel();
+  }
+}
+window.reenviarWaPermiso=reenviarWaPermiso;
 
 // ═══════════════ PANEL DE AUDITORÍA (Master Data Control) ═══════════════
 
@@ -8611,6 +8666,29 @@ window.checkPendingPermissions = async function(){
       if(badge) badge.remove();
     }
   }catch(e){ console.warn('[checkPendingPermissions]', e.message); }
+};
+
+// ── activity_logs: historial de intervenciones familiares ──
+// Schema: {orgId, type, refId, action, actionLabel, actor, actorRole,
+//          targetName, title, note, notifiedByWa, ts, createdAt}
+window.saveActivityLog = async function(entry){
+  try{
+    const docId = `${entry.actorRole}_${entry.type}_${entry.refId}_${Date.now()}`;
+    await setDoc(doc(db,'activity_logs',docId), entry);
+    console.log('[activity_logs] Log guardado:', entry.actionLabel, '→', entry.targetName);
+  }catch(e){ console.warn('[activity_logs] Error:', e.message); }
+};
+
+// Cargar historial de actividad (para el Director)
+window.loadActivityLogs = async function(limit=20){
+  try{
+    const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2, limit:lim2 }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const snap = await gd2(q2(col2(db,'activity_logs'),
+      w2('orgId','==',ORG_ID), ob2('ts','desc'), lim2(limit)
+    ));
+    return snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){ console.warn('[activity_logs] Load error:', e.message); return []; }
 };
 
 // ── mood_history: registro cross-user para consultas del Director ──
