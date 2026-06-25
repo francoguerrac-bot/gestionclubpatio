@@ -9,7 +9,7 @@
 <!-- ── CACHE BUSTER: detecta versión vieja y fuerza recarga ── -->
 <script>
 (function(){
-  var BUILD = '2026-06-25-v2'; // incrementar con cada deploy importante
+  var BUILD = '2026-06-25-v5-clean'; // v5: rewrite completo del flujo de inicio
   var stored = localStorage.getItem('app-build');
   if(stored && stored !== BUILD){
     // Versión diferente → limpiar SW y recargar
@@ -961,21 +961,24 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 </head>
 <body>
 
-<!-- ── ESTADO 1: PANTALLA DE CARGA ── -->
-<div id="loadingScreen" style="
-  position:fixed;inset:0;z-index:999;
-  background:linear-gradient(160deg,#1E2D3D 0%,#2D4A3E 100%);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-family:'Inter',sans-serif;transition:opacity .4s;
-">
-  <img src="/assets/Logo2.png" style="width:72px;height:72px;border-radius:16px;object-fit:cover;margin-bottom:18px;opacity:.9;" onerror="this.style.display='none'">
-  <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">Club Patio Curauma</div>
-  <div id="loadingMsg" style="font-size:12px;color:#9CA3AF;margin-bottom:20px;">Iniciando sesión...</div>
-  <div style="width:40px;height:3px;background:rgba(255,255,255,.15);border-radius:99px;overflow:hidden;">
-    <div style="height:100%;background:#5BC0BE;border-radius:99px;animation:ld-bar 1.4s ease-in-out infinite;"></div>
+<!-- ── PANTALLA DE CARGA (se oculta sola en max 5s) ── -->
+<div id="loadingScreen" style="position:fixed;inset:0;z-index:999;background:linear-gradient(160deg,#1E2D3D,#2D4A3E);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Inter',sans-serif;transition:opacity .3s;">
+  <img src="/assets/Logo2.png" style="width:64px;height:64px;border-radius:14px;object-fit:cover;margin-bottom:14px;" onerror="this.style.display='none'">
+  <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;">Club Patio Curauma</div>
+  <div id="loadingMsg" style="font-size:11px;color:#9CA3AF;">Cargando...</div>
+  <style>@keyframes ld{0%{width:0%}100%{width:100%}}</style>
+  <div style="width:48px;height:2px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;margin-top:14px;">
+    <div style="height:100%;background:#5BC0BE;animation:ld 3s ease forwards;"></div>
   </div>
-  <style>@keyframes ld-bar{0%{width:0%;margin-left:0}50%{width:70%;margin-left:0}100%{width:0%;margin-left:100%}}</style>
 </div>
+<script>
+// Ocultar loading screen máximo en 5 segundos (pase lo que pase)
+window._hideLoading = function(){
+  var ls=document.getElementById('loadingScreen');
+  if(ls&&ls.style.display!=='none'){ls.style.opacity='0';setTimeout(function(){ls.style.display='none';},300);}
+};
+setTimeout(window._hideLoading, 5000);
+</script>
 
 <!-- ── LOGIN / AUTH OVERLAY ── -->
 <div id="authOverlay" style="position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1E2D3D 0%,#2D4A3E 60%,#1E3D2E 100%);display:flex;align-items:center;justify-content:center;padding:24px;">
@@ -8324,51 +8327,23 @@ function init(){
 // Estado 4: Renderizado seguro (rol confirmado → UI)
 // ══════════════════════════════════════════════════════════════
 
-const APP_STATES = {LOADING:'loading', AUTH:'auth', PROFILE:'profile', READY:'ready', ERROR:'error'};
-let _appState = APP_STATES.LOADING;
-
-// WATCHDOG: si en 8s no avanzamos, ocultar loading y mostrar login
-const _loadingWatchdog = setTimeout(()=>{
-  if(_appState === APP_STATES.LOADING || _appState === APP_STATES.AUTH){
-    console.warn('[Watchdog] Timeout — Firebase tardó demasiado. Mostrando login.');
-    const ls=document.getElementById('loadingScreen');
-    const auth=document.getElementById('authOverlay');
-    if(ls){ ls.style.opacity='0'; setTimeout(()=>{ if(ls) ls.style.display='none'; },400); }
-    if(auth) auth.style.display='flex';
-  }
-}, 8000);
-
+// setAppState simplificado — solo actualiza el mensaje y oculta si está listo
 function setAppState(state, msg){
-  if(state===APP_STATES.READY||state===APP_STATES.AUTH) clearTimeout(_loadingWatchdog);
-  _appState = state;
-  const msgEl = document.getElementById('loadingMsg');
-  const screen = document.getElementById('loadingScreen');
-  const msgs = {
-    loading: 'Iniciando sesión...',
-    auth:    'Verificando identidad...',
-    profile: 'Cargando tu perfil...',
-    ready:   'Listo ✓',
-    error:   '⚠️ Error de conexión',
-  };
-  if(msgEl) msgEl.textContent = msg || msgs[state] || state;
-  if(state === APP_STATES.READY && screen){
-    screen.style.opacity='0';
-    setTimeout(()=>{ if(screen) screen.style.display='none'; }, 400);
-  }
-  console.log(`[AppState] → ${state}${msg?' ('+msg+')':''}`);
+  const el=document.getElementById('loadingMsg');
+  if(el&&msg) el.textContent=msg;
+  if(state==='ready'||state==='auth') window._hideLoading&&window._hideLoading();
+  console.log('[App]',state, msg||'');
 }
-window.setAppState = setAppState;
+window.setAppState=setAppState;
 
-// ══════════════════════════════════════════════════════
-// initApp() — Flujo de inicio reconstruido y secuencial
-// Orden garantizado: Auth → Perfil → Rol → Tasks → UI
-// ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// initApp v5 — Flujo limpio sin dependencia de /tasks collection
+// Orden: cloudData → perfil → rol → render → (bg) /tasks enrich
+// ══════════════════════════════════════════════════════════════
 window.initApp = function(cloudData, profile){
-  // Estado 3: Carga de perfil (ya tenemos user, ahora construimos el perfil)
-  setAppState(APP_STATES.PROFILE, 'Cargando tu perfil...');
+  setAppState('profile', 'Cargando perfil...');
 
-  const ep=document.getElementById('emergencyPanel');
-  if(ep) ep.style.display='none';
+  document.getElementById('emergencyPanel')?.setAttribute('style','display:none');
 
   // Normalizar perfil — NUNCA rechazar
   const safeProfile = {
@@ -8387,10 +8362,10 @@ window.initApp = function(cloudData, profile){
   window.currentProfile = safeProfile;
   window.currentRole    = safeProfile.role;
 
-  console.log(`[initApp] ✅ Perfil inyectado | email=${safeProfile.email} | rol=${safeProfile.role} | uid=${safeProfile.uid||'?'}`);
+  console.log(`[initApp] ✅ email=${safeProfile.email} | rol=${safeProfile.role}`);
 
-  // Estado 4: Renderizado seguro — rol confirmado
-  setAppState(APP_STATES.READY);
+  // Ocultar loading — perfil confirmado
+  setAppState('ready');
 
   // Cargar datos del doc del usuario (fuente primaria confiable)
   const userData = cloudData||{};
