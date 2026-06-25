@@ -9,7 +9,7 @@
 <!-- ── CACHE BUSTER: detecta versión vieja y fuerza recarga ── -->
 <script>
 (function(){
-  var BUILD = '2026-06-25-v6'; // v6: bootApp definido en head
+  var BUILD = '2026-06-25-v7'; // v7: auto-repair pending role
   var stored = localStorage.getItem('app-build');
   if(stored && stored !== BUILD){
     // Versión diferente → limpiar SW y recargar
@@ -8380,6 +8380,26 @@ window.initApp = function(cloudData, profile){
   // 3. Inyectar en window ANTES de cualquier render
   window.currentProfile = safeProfile;
   window.currentRole    = safeProfile.role;
+
+  // ── Auto-reparación: si el rol es 'pending' pero el email tiene PRESET ──
+  // Esto cubre el caso donde el doc de Firestore no tiene rol asignado
+  const _preset = (window.PRESET_ROLES||{})[safeProfile.email.toLowerCase()];
+  if(_preset && (safeProfile.role === 'pending' || !safeProfile.role)){
+    safeProfile.role    = _preset.role;
+    safeProfile.roles   = safeProfile.roles.length ? safeProfile.roles : [_preset.role];
+    safeProfile.modules = (window.ROLE_MODULES||{})[_preset.role] || [];
+    safeProfile.displayName = safeProfile.displayName==='Usuario' ? _preset.displayName : safeProfile.displayName;
+    console.warn('[initApp] ⚠️ Rol en Firestore era pending → auto-reparado a:', _preset.role);
+    // Actualizar Firestore en background
+    window.cloudSet&&window.cloudSet('role', _preset.role);
+    window.cloudSet&&window.cloudSet('roles', safeProfile.roles);
+    window.cloudSet&&window.cloudSet('modules', safeProfile.modules);
+    window.cloudSet&&window.cloudSet('orgId', 'curauma_001');
+    window.cloudSet&&window.cloudSet('onboardingComplete', true);
+    // Re-sincronizar en window
+    window.currentProfile = safeProfile;
+    window.currentRole    = safeProfile.role;
+  }
 
   console.log(`[initApp] ✅ email=${safeProfile.email} | rol=${safeProfile.role}`);
 
