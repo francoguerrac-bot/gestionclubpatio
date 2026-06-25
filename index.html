@@ -8279,7 +8279,20 @@ function init(){
   renderTasks();
 }
 // Llamado por la capa de autenticación tras cargar los datos del usuario.
+// Versión a prueba de fallos: si no hay datos, va al login.
 function bootApp(cloudData, profile){
+  // Ocultar panel de emergencia si estaba visible
+  const ep=document.getElementById('emergencyPanel');
+  if(ep) ep.style.display='none';
+
+  // Seguridad: si no hay perfil válido, redirigir al login
+  if(!profile || (!profile.uid && !profile.email)){
+    console.warn('[bootApp] Sin perfil válido — mostrando login');
+    const overlay=document.getElementById('authOverlay');
+    if(overlay) overlay.style.display='flex';
+    return;
+  }
+
   dbg('⚙️ bootApp ejecutado, role: ' + (profile&&profile.role||'?'));
   applyCloudData(cloudData);
   init();
@@ -9146,9 +9159,16 @@ onAuthStateChanged(auth, async (user)=>{
     // Garantía final: profile nunca llega null a bootApp
     window.bootApp(data || {}, profile || {uid:user.uid,email:user.email,role:'pending',roles:[],modules:[]});
   }else{
+    // Sin sesión → siempre mostrar login, ocultar todo lo demás
     currentUser = null;
-    booted = false;
+    booted      = false;
     overlay.style.display = 'flex';
+    // Ocultar panel de emergencia si estaba visible (evita bucles)
+    const ep=document.getElementById('emergencyPanel');
+    if(ep) ep.style.display='none';
+    // Resetear estado para el próximo login
+    if(window.currentRole)  window.currentRole  = 'pending';
+    if(window.tasks)        window.tasks        = [];
   }
 });
 </script>
@@ -9158,25 +9178,8 @@ onAuthStateChanged(auth, async (user)=>{
 // PANEL DE EMERGENCIA — Recuperación de sesión
 // ══════════════════════════════════════════════
 
-// Detectar si bootApp no se ejecutó en los primeros 10 segundos
-setTimeout(()=>{
-  const profileOk = window.currentRole && window.currentRole !== 'pending' && window.currentRole !== undefined;
-  const hasUser   = window.currentProfile && window.currentProfile.uid;
-  const hasAuth   = typeof window.bootApp === 'function';
-  if(!hasAuth || (!profileOk && document.getElementById('authOverlay')?.style.display === 'none')){
-    const diag = document.getElementById('emergencyDiag');
-    const panel = document.getElementById('emergencyPanel');
-    if(diag && panel){
-      diag.innerHTML =
-        `bootApp definido: ${hasAuth?'✅':'❌ (versión cacheada)'}<br>`+
-        `Rol cargado: ${window.currentRole||'undefined'}<br>`+
-        `UID: ${window.currentProfile?.uid||'undefined'}<br>`+
-        `Tareas en memoria: ${window.tasks?.length??0}`;
-      // Solo mostrar si hay un problema real (no solo si es 'pending')
-      if(!hasAuth) panel.style.display='block';
-    }
-  }
-}, 10000);
+// Panel de emergencia: SOLO se activa manualmente (botón 🔧)
+// NO se activa automáticamente para evitar bucles con auth flow
 
 // 1. Recuperar perfil desde Firestore manualmente
 async function emergencyRecoverProfile(){
@@ -9243,8 +9246,15 @@ function showEmergencyBtn(){
   btn.onclick=()=>document.getElementById('emergencyPanel').style.display='block';
   document.body.appendChild(btn);
 }
-// Mostrar botón de emergencia si bootApp no está definido al cargar
-if(typeof bootApp === 'undefined') setTimeout(showEmergencyBtn, 3000);
+// El botón 🔧 se activa manualmente tocando 5 veces el logo del header
+let _logoTaps=0;
+document.addEventListener('DOMContentLoaded',()=>{
+  const logo=document.querySelector('.top-logo');
+  if(logo) logo.addEventListener('click',()=>{
+    _logoTaps++;
+    if(_logoTaps>=5){ _logoTaps=0; showEmergencyBtn(); }
+  });
+});
 
 // ── PWA: Service Worker ──
 if('serviceWorker' in navigator){
