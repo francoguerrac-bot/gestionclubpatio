@@ -2534,7 +2534,9 @@ window._localAuditLog = [];
 // Los datos del usuario se cargan desde Firestore en applyCloudData() antes
 // de llamar a load(); aquí solo sembramos datos de inicio si está vacío.
 function load(){
-  if(!tasks.length) seedTasks();
+  // seedTasks solo para Director/Ejecutivos — roles tácticos reciben sus tareas por rol
+  const isExec = EXECUTIVE_ROLES_VIS.includes(currentRole)||currentRole==='director'||currentRole==='pending';
+  if(!tasks.length && isExec) seedTasks();
   if(!sprintTasks.length) seedSprint();
   if(!checkins.length) seedCheckins();
 }
@@ -2559,6 +2561,8 @@ function saveCheckins(){ window.cloudSet && window.cloudSet('checkins', checkins
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 function seedTasks(){
+  // Solo debe correr para el Director — no para roles tácticos
+  if(!EXECUTIVE_ROLES_VIS.includes(currentRole)&&currentRole!=='director'&&currentRole!=='pending') return;
   const me=(currentProfile&&currentProfile.displayName)||'Director';
   const n=new Date();
   const d=o=>{const x=new Date(n);x.setDate(x.getDate()+o);return x.toISOString().split('T')[0];};
@@ -2981,11 +2985,29 @@ function setSort(s){
 function durLabel(m){if(!m)return'';if(m<60)return m+'min';const h=Math.floor(m/60),r=m%60;return r?`${h}h${r}m`:`${h}h`;}
 
 // ── FILTRO ANTI-SOBRECARGA: solo el Director ve todas las tareas ──
+// Roles con visibilidad TOTAL (ven todas las tareas)
+const EXECUTIVE_ROLES_VIS = ['director','mama','coordinadora_bazares','coordinadora_tienda'];
+
 function getVisibleTasks(){
-  if(currentRole==='director'||currentRole==='pending') return tasks;
-  const me = currentProfile.displayName||'';
-  // Mostrar tareas sin asignar (propias del contexto) O asignadas al usuario
-  return tasks.filter(t=>!t.owner||t.owner===me);
+  // Ejecutivos: visión total
+  if(EXECUTIVE_ROLES_VIS.includes(currentRole)||currentRole==='director') return tasks;
+  if(currentRole==='pending') return tasks;
+
+  // Roles tácticos: filtro ESTRICTO
+  const me      = (currentProfile&&currentProfile.displayName)||'';
+  const myRoles = (currentProfile&&Array.isArray(currentProfile.roles)&&currentProfile.roles.length)
+    ? currentProfile.roles.filter(Boolean) : [currentRole];
+
+  return tasks.filter(t=>{
+    // 1. Tarea asignada explícitamente a mi rol
+    if(t.assignedToRole && myRoles.includes(t.assignedToRole)) return true;
+    // 2. Tarea asignada a mí por nombre (y sin assignedToRole genérico)
+    if(t.owner && t.owner===me && !t.assignedToRole) return true;
+    // 3. Tarea asignada a mí por nombre aunque tenga assignedToRole coincidente
+    if(t.owner && t.owner===me && t.assignedToRole && myRoles.includes(t.assignedToRole)) return true;
+    // Todo lo demás: BLOQUEADO
+    return false;
+  });
 }
 
 function updateFilterBadge(){
