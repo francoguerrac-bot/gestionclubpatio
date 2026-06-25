@@ -8282,66 +8282,92 @@ function init(){
   updateOwnerOpts();
   renderTasks();
 }
-// Llamado por la capa de autenticación tras cargar los datos del usuario.
-// Versión a prueba de fallos: si no hay datos, va al login.
-function bootApp(cloudData, profile){
-  // Ocultar panel de emergencia si estaba visible
+// ══════════════════════════════════════════════════════
+// initApp() — Flujo de inicio reconstruido y secuencial
+// Orden garantizado: Auth → Perfil → Rol → Tasks → UI
+// ══════════════════════════════════════════════════════
+window.initApp = function(cloudData, profile){
+  // 1. Ocultar overlays de bloqueo
   const ep=document.getElementById('emergencyPanel');
   if(ep) ep.style.display='none';
 
-  // Seguridad: si no hay perfil válido, redirigir al login
-  if(!profile || (!profile.uid && !profile.email)){
-    console.warn('[bootApp] Sin perfil válido — mostrando login');
-    const overlay=document.getElementById('authOverlay');
-    if(overlay) overlay.style.display='flex';
-    return;
-  }
+  // 2. Normalizar perfil — NUNCA rechazar por uid/email faltantes
+  const safeProfile = {
+    uid:                (profile&&profile.uid)            || '',
+    email:              (profile&&profile.email)          || '',
+    role:               (profile&&profile.role)           || 'pending',
+    roles:              (profile&&Array.isArray(profile.roles)?profile.roles:[]),
+    modules:            (profile&&Array.isArray(profile.modules)?profile.modules:[]),
+    displayName:        (profile&&profile.displayName)    || 'Usuario',
+    phone:              (profile&&profile.phone)          || '',
+    onboardingComplete: (profile&&profile.onboardingComplete) || false,
+    ...(profile||{})
+  };
 
-  dbg('⚙️ bootApp ejecutado, role: ' + (profile&&profile.role||'?'));
-  applyCloudData(cloudData);
+  // 3. Inyectar en window ANTES de cualquier render
+  window.currentProfile = safeProfile;
+  window.currentRole    = safeProfile.role;
+
+  console.log(`[initApp] ✅ Perfil inyectado | email=${safeProfile.email} | rol=${safeProfile.role} | uid=${safeProfile.uid||'?'}`);
+
+  // 4. Cargar datos y renderizar
+  applyCloudData(cloudData||{});
   init();
-  try{ checkDeadlines(); }catch(e){ dbg('⚠️ checkDeadlines error: '+e.message); }
-  // Sincronizar con /tasks collection (con protección contra vaciado)
-  setTimeout(async()=>{
-    const localBackup = [...tasks]; // guardar backup antes de cualquier operación
-    const fetched = await window.fetchTasksFromFirestore();
-    console.log(`[bootApp] /tasks Firestore: ${fetched===null?'ERROR':fetched.length+' docs'} | Local: ${localBackup.length}`);
+  try{ checkDeadlines(); }catch(e){ console.warn('[initApp] checkDeadlines:', e.message); }
 
-    if(fetched !== null && fetched.length > 0){
-      // Colección tiene datos → usar (ya filtrados por rol en Firestore)
+  // 5. Montar UI de roles (nav, módulos, etc.)
+  const role = safeProfile.role || 'pending';
+  mountRoleUI(role, safeProfile);
+
+  // 6. Cargar tareas desde Firestore (800ms después para dar tiempo al nav)
+  setTimeout(async()=>{
+    const localBackup = [...tasks];
+    let fetched = null;
+    try{ fetched = await window.fetchTasksFromFirestore(); }catch(e){ console.warn('[initApp] fetchTasks error:', e.message); }
+
+    console.log(`[initApp] /tasks: ${fetched===null?'ERROR':fetched.length+' docs'} | local: ${localBackup.length}`);
+
+    if(fetched && fetched.length > 0){
       tasks = fetched;
-      console.log('[bootApp] ✅ Tareas desde /tasks collection');
-      renderTasks(); checkDeadlines();
+      renderTasks();
     } else if(fetched !== null && fetched.length === 0){
-      // Colección vacía → NO vaciar la pantalla. Migrar locales.
-      const toMigrate = localBackup.length > 0 ? localBackup : (cloudData.tasks||[]);
-      if(toMigrate.length > 0){
-        console.log('[bootApp] ⚠️ /tasks vacía — migrando',toMigrate.length,'tareas locales...');
-        tasks = toMigrate; // restaurar locales mientras migra
+      // Colección vacía → migrar locales o sembrar
+      const toSeed = localBackup.length>0 ? localBackup : (cloudData&&cloudData.tasks)||[];
+      if(toSeed.length > 0){
+        tasks = toSeed;
         renderTasks();
-        await window.migrateTasksToCollection(toMigrate);
-        const refetched = await window.fetchTasksFromFirestore();
-        if(refetched && refetched.length > 0){ tasks=refetched; renderTasks(); }
+        window.migrateTasksToCollection&&window.migrateTasksToCollection(toSeed);
       } else {
-        // Estado cero total: sembrar demo + tareas del rol
-        console.log('[bootApp] ℹ️ Estado cero → seedTasks + applyMasterTasks');
         seedTasks(); renderTasks();
         setTimeout(applyMasterTasks, 300);
       }
     } else {
-      console.warn('[bootApp] ❌ Error Firestore /tasks → usando locales');
-      if(tasks.length === 0){ seedTasks(); renderTasks(); }
+      // Error Firestore → usar locales o sembrar
+      if(tasks.length===0){ seedTasks(); renderTasks(); }
     }
+    // Tareas maestras del rol (siempre, no bloquea)
+    setTimeout(applyMasterTasks, 1200);
   }, 800);
-  // Tareas maestras del rol SIEMPRE (corre en paralelo, no bloquea)
-  setTimeout(applyMasterTasks, 1200);
-  const role = (profile&&profile.role)||'pending';
-  mountRoleUI(role, profile||{});
-  if(role !== 'pending'){
-    setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 500);
+
+  // 7. Notificaciones pendientes (Director)
+  if(role==='director'){
+    setTimeout(()=>window.loadOrgData&&window.loadOrgData(), 600);
+    setTimeout(()=>window.checkPendingPermissions&&window.checkPendingPermissions(), 1500);
+  } else {
+    setTimeout(initMoodSelfBar, 400);
+    if(role==='hijo1'||role==='hijo2') setTimeout(checkHijoNotifications, 1200);
   }
-}
-// NOTA: init() ya no se llama aquí; lo dispara el login (ver módulo Firebase abajo).
+  // Tareas maestras al login
+  setTimeout(applyMasterTasks, 900);
+};
+
+// Alias para compatibilidad con código existente
+function bootApp(cloudData, profile){ return window.initApp(cloudData, profile); }
+// Exponer ambos
+window.bootApp = bootApp;
+
+// NOTA: initApp() reemplaza bootApp. El alias bootApp llama a initApp().
+// Ambos expuestos en window. El módulo Firebase llama window.bootApp(data, profile).
 </script>
 
 <!-- ═══════════════ FIREBASE · AUTH + FIRESTORE ═══════════════ -->
