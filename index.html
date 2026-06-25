@@ -6,6 +6,24 @@
 <title>Gestión de Equipos Club Patio</title>
 
 <!-- ── PWA: Web App Manifest ── -->
+<!-- ── CACHE BUSTER: detecta versión vieja y fuerza recarga ── -->
+<script>
+(function(){
+  var BUILD = '2026-06-25-v2'; // incrementar con cada deploy importante
+  var stored = localStorage.getItem('app-build');
+  if(stored && stored !== BUILD){
+    // Versión diferente → limpiar SW y recargar
+    localStorage.setItem('app-build', BUILD);
+    if('caches' in window){
+      caches.keys().then(function(keys){
+        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      }).then(function(){ location.reload(true); });
+    } else { location.reload(true); }
+    return;
+  }
+  localStorage.setItem('app-build', BUILD);
+})();
+</script>
 <link rel="manifest" href="/manifest.json">
 
 <!-- ── PWA: Meta tags generales ── -->
@@ -942,6 +960,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 </style>
 </head>
 <body>
+
+<!-- ── ESTADO 1: PANTALLA DE CARGA ── -->
+<div id="loadingScreen" style="
+  position:fixed;inset:0;z-index:999;
+  background:linear-gradient(160deg,#1E2D3D 0%,#2D4A3E 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Inter',sans-serif;transition:opacity .4s;
+">
+  <img src="/assets/Logo2.png" style="width:72px;height:72px;border-radius:16px;object-fit:cover;margin-bottom:18px;opacity:.9;" onerror="this.style.display='none'">
+  <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">Club Patio Curauma</div>
+  <div id="loadingMsg" style="font-size:12px;color:#9CA3AF;margin-bottom:20px;">Iniciando sesión...</div>
+  <div style="width:40px;height:3px;background:rgba(255,255,255,.15);border-radius:99px;overflow:hidden;">
+    <div style="height:100%;background:#5BC0BE;border-radius:99px;animation:ld-bar 1.4s ease-in-out infinite;"></div>
+  </div>
+  <style>@keyframes ld-bar{0%{width:0%;margin-left:0}50%{width:70%;margin-left:0}100%{width:0%;margin-left:100%}}</style>
+</div>
 
 <!-- ── LOGIN / AUTH OVERLAY ── -->
 <div id="authOverlay" style="position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1E2D3D 0%,#2D4A3E 60%,#1E3D2E 100%);display:flex;align-items:center;justify-content:center;padding:24px;">
@@ -8282,16 +8316,49 @@ function init(){
   updateOwnerOpts();
   renderTasks();
 }
+// ══════════════════════════════════════════════════════════════
+// MÁQUINA DE ESTADOS DE CARGA
+// Estado 1: Cargando (loadingScreen visible)
+// Estado 2: Auth check (Firebase onAuthStateChanged)
+// Estado 3: Carga de perfil (Firestore /users/{uid})
+// Estado 4: Renderizado seguro (rol confirmado → UI)
+// ══════════════════════════════════════════════════════════════
+
+const APP_STATES = {LOADING:'loading', AUTH:'auth', PROFILE:'profile', READY:'ready', ERROR:'error'};
+let _appState = APP_STATES.LOADING;
+
+function setAppState(state, msg){
+  _appState = state;
+  const msgEl = document.getElementById('loadingMsg');
+  const screen = document.getElementById('loadingScreen');
+  const msgs = {
+    loading: 'Iniciando sesión...',
+    auth:    'Verificando identidad...',
+    profile: 'Cargando tu perfil...',
+    ready:   'Listo ✓',
+    error:   '⚠️ Error de conexión',
+  };
+  if(msgEl) msgEl.textContent = msg || msgs[state] || state;
+  if(state === APP_STATES.READY && screen){
+    screen.style.opacity='0';
+    setTimeout(()=>{ if(screen) screen.style.display='none'; }, 400);
+  }
+  console.log(`[AppState] → ${state}${msg?' ('+msg+')':''}`);
+}
+window.setAppState = setAppState;
+
 // ══════════════════════════════════════════════════════
 // initApp() — Flujo de inicio reconstruido y secuencial
 // Orden garantizado: Auth → Perfil → Rol → Tasks → UI
 // ══════════════════════════════════════════════════════
 window.initApp = function(cloudData, profile){
-  // 1. Ocultar overlays de bloqueo
+  // Estado 3: Carga de perfil (ya tenemos user, ahora construimos el perfil)
+  setAppState(APP_STATES.PROFILE, 'Cargando tu perfil...');
+
   const ep=document.getElementById('emergencyPanel');
   if(ep) ep.style.display='none';
 
-  // 2. Normalizar perfil — NUNCA rechazar por uid/email faltantes
+  // Normalizar perfil — NUNCA rechazar
   const safeProfile = {
     uid:                (profile&&profile.uid)            || '',
     email:              (profile&&profile.email)          || '',
@@ -8310,7 +8377,10 @@ window.initApp = function(cloudData, profile){
 
   console.log(`[initApp] ✅ Perfil inyectado | email=${safeProfile.email} | rol=${safeProfile.role} | uid=${safeProfile.uid||'?'}`);
 
-  // 4. Cargar datos y renderizar
+  // Estado 4: Renderizado seguro — rol confirmado
+  setAppState(APP_STATES.READY);
+
+  // Cargar datos y renderizar
   applyCloudData(cloudData||{});
   init();
   try{ checkDeadlines(); }catch(e){ console.warn('[initApp] checkDeadlines:', e.message); }
@@ -8948,10 +9018,14 @@ window.fetchTasksFromFirestore = async function(){
     const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2 }
       = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
 
-    const role      = window.currentRole || 'pending';
-    const uid       = currentUser.uid;
-    const email     = currentUser.email;
-    console.log(`[fetchTasks] Iniciando | rol="${role}" | uid="${uid}" | email="${email}" | orgId="curauma_001"`);
+    const role   = window.currentRole || 'pending';
+    const isExec = role==='director'||['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
+    const filtro = isExec
+      ? { orgId:'curauma_001' }
+      : { orgId:'curauma_001', assignedToRole: role };
+
+    console.log('[fetchTasks] ▶ Filtro aplicado:', JSON.stringify(filtro));
+    console.log('[fetchTasks] Usuario:', currentUser.email, '| uid:', currentUser.uid, '| ejecutivo:', isExec);
     const isExec    = role === 'director' || ['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
     const myRoles   = window.currentProfile?.roles?.filter(Boolean) || [role];
 
@@ -8968,7 +9042,12 @@ window.fetchTasksFromFirestore = async function(){
     const snap = await gd2(tasksQuery);
     const fetched = snap.docs.map(d=>({...d.data(), id:d.id}));
 
-    console.log(`[fetchTasks] Rol: ${role} | Ejecutivo: ${isExec} | Tareas recibidas: ${fetched.length}`);
+    console.log(`[fetchTasks] ✅ Tareas recibidas: ${fetched.length}`);
+    if(fetched.length === 0){
+      console.warn('[fetchTasks] ⚠️ 0 docs. Filtro aplicado:', JSON.stringify(filtro));
+      console.warn('[fetchTasks] → Verifica que /tasks tenga documentos con orgId="curauma_001"');
+      console.warn('[fetchTasks] → Ejecuta: await window.reconnectSystem()');
+    }
     return fetched;
   }catch(e){
     console.error('[fetchTasks] ❌ ERROR:', e.code||'sin código', '|', e.message);
@@ -9101,7 +9180,10 @@ const ROLE_MODULES = {
 
 // ── Estado de sesión: punto de entrada real de la app ──
 onAuthStateChanged(auth, async (user)=>{
+  // Estado 2: Auth check
+  window.setAppState&&window.setAppState('auth', 'Verificando identidad...');
   if(user){
+    window.setAppState&&window.setAppState('profile', 'Cargando tu perfil...');
     currentUser = user;
     // profile NUNCA puede ser null al llegar a bootApp — siempre es al menos {}
     let data = {}, profile = { uid:user.uid, email:user.email, role:'pending', roles:[], modules:[] };
@@ -9200,7 +9282,11 @@ onAuthStateChanged(auth, async (user)=>{
     // Garantía final: profile nunca llega null a bootApp
     window.bootApp(data || {}, profile || {uid:user.uid,email:user.email,role:'pending',roles:[],modules:[]});
   }else{
-    // Sin sesión → siempre mostrar login, ocultar todo lo demás
+    // Sin sesión → Estado 2 fallido → mostrar login
+    window.setAppState&&window.setAppState('auth', 'Por favor inicia sesión');
+    // Ocultar loading screen
+    const ls=document.getElementById('loadingScreen');
+    if(ls){ ls.style.opacity='0'; setTimeout(()=>{ if(ls) ls.style.display='none'; },400); }
     currentUser = null;
     booted      = false;
     overlay.style.display = 'flex';
