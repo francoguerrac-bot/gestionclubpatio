@@ -645,6 +645,69 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .role-cb-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--sage-dim);color:var(--primary-blue);display:flex;align-items:center;gap:4px;}
 /* ── VISIBLE TASKS FILTER BADGE ── */
 .filter-me-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--sage-dim);color:var(--primary-blue);margin-left:8px;}
+/* ── PANEL FAMILIA (permisos + propuestas) ── */
+.fam-filter-bar{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
+.fam-filter-btn{flex-shrink:0;font-size:10px;font-weight:700;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
+.fam-filter-btn.active{background:var(--text-main);color:#fff;border-color:var(--text-main);}
+.fam-stats{display:flex;gap:8px;margin-bottom:14px;}
+.fam-stat{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;}
+.fam-stat-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;line-height:1;}
+.fam-stat-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+.fam-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(45,49,66,.05);}
+.fam-type-badge{font-size:9px;font-weight:800;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;margin-top:2px;}
+.fam-tb-perm{background:#EDE9FE;color:#7C3AED;}
+.fam-tb-prop{background:#DBEAFE;color:#2563EB;}
+.fam-title{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:2px;}
+.fam-detail{font-size:11px;color:var(--text-muted);line-height:1.4;}
+.fam-status-row{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap;}
+.fam-status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;}
+.fsb-pending{background:#FEF3C7;color:#92400E;}
+.fsb-eval{background:#DBEAFE;color:#1E40AF;}
+.fsb-approved{background:#DCFCE7;color:#16A34A;}
+.fsb-rejected{background:#FEE2E2;color:#DC2626;}
+.fam-sig-dot{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:99px;}
+.fsd-ok{background:#DCFCE7;color:#16A34A;}
+.fsd-pend{background:#F3F4F6;color:#9CA3AF;}
+.fam-compromiso{background:var(--sage-dim);border-left:3px solid var(--primary-blue);border-radius:0 8px 8px 0;padding:7px 10px;font-size:11px;margin:8px 0;line-height:1.5;}
+.fam-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.fam-action-btn{flex:1;min-width:80px;font-size:11px;font-weight:700;padding:8px 10px;border-radius:9px;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
+.fab-approve{background:linear-gradient(135deg,var(--primary-green),#7DAD2E);color:#fff;}
+.fab-eval{background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;}
+.fab-reject{background:linear-gradient(135deg,var(--accent-coral),#D94540);color:#fff;}
+.fab-done{background:#F3F4F6;color:#9CA3AF;cursor:default;}
+.fam-response-note{margin-top:8px;padding:7px 10px;background:#F9FAFB;border-radius:8px;border-left:3px solid var(--text-muted);font-size:11px;color:var(--text-muted);font-style:italic;}
+.wa-notif-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;}
+.wa-notif-ok{background:#DCFCE7;color:#16A34A;}
+.wa-notif-no{background:#FEF3C7;color:#D97706;cursor:pointer;}
+/* Notificación push hijo */
+.hijo-notif-overlay{position:fixed;inset:0;z-index:995;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:20px;}
+.hijo-notif-card{background:var(--bg-card);border-radius:22px;padding:28px 22px;max-width:340px;width:100%;text-align:center;font-family:'Inter',sans-serif;animation:cel-pop .45s cubic-bezier(.34,1.56,.64,1);}
+.hijo-notif-icon{font-size:64px;margin-bottom:10px;display:block;animation:cel-bounce .55s ease-in-out infinite alternate;}
+.hijo-notif-title{font-size:20px;font-weight:800;margin-bottom:8px;}
+.hijo-notif-msg{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;}
+.hijo-notif-note{font-size:12px;font-style:italic;color:var(--primary-blue);background:var(--sage-dim);border-radius:9px;padding:9px 12px;margin-bottom:18px;line-height:1.5;}
+/* Modal resolución */
+.resolve-overlay{position:fixed;inset:0;z-index:980;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:20px;}
+.resolve-card{background:var(--bg-card);border-radius:18px;padding:22px;max-width:380px;width:100%;font-family:'Inter',sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.3);}
+.resolve-action-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;margin-bottom:12px;}
+.rab-approve{background:#DCFCE7;color:#16A34A;}
+.rab-eval{background:#DBEAFE;color:#1E40AF;}
+.rab-reject{background:#FEE2E2;color:#DC2626;}
+.resolve-textarea{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:11px;padding:11px 13px;outline:none;resize:none;background:var(--bg-main);box-sizing:border-box;min-height:90px;transition:border-color .2s;}
+.resolve-textarea:focus{border-color:var(--primary-blue);}
+.resolve-confirm-btn{width:100%;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;margin-top:10px;transition:all .2s;}
+.resolve-confirm-btn:disabled{opacity:.35;cursor:not-allowed;}
+/* Panel mis permisos (hijo) */
+.hijo-perm-status{background:var(--bg-main);border-radius:10px;padding:10px;margin-bottom:8px;border:1.5px solid var(--border);}
+.perm-status-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;margin-bottom:6px;}
+.psb-pending{background:#FEF3C7;color:#92400E;}
+.psb-approved{background:#DCFCE7;color:#16A34A;}
+.psb-rejected{background:#FEE2E2;color:#DC2626;}
+.parent-note-bubble{background:linear-gradient(135deg,#EEF2FF,#E0E7FF);border:1.5px solid #C7D2FE;border-radius:4px 14px 14px 14px;padding:10px 13px;margin-top:8px;font-size:12px;color:#3730A3;line-height:1.5;}
+.parent-note-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6366F1;margin-bottom:4px;}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-coral);display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
+.read-btn{font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;margin-top:6px;transition:all .15s;font-family:'Inter',sans-serif;}
+.read-btn:hover{background:var(--primary-green);color:#fff;border-color:var(--primary-green);}
 /* ── NEW MEMBER MODAL ── */
 .nm-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
 .nm-card{background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;font-family:'Inter',sans-serif;max-height:90vh;overflow-y:auto;}
@@ -2223,6 +2286,57 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
   </div>
 </div>
 
+<!-- ── NOTIFICACIÓN PUSH HIJO (decisión de padres) ── -->
+<div id="hijoNotifOverlay" class="hijo-notif-overlay">
+  <div class="hijo-notif-card">
+    <span class="hijo-notif-icon" id="hijoNotifIcon">🔔</span>
+    <div class="hijo-notif-title" id="hijoNotifTitle">Novedad en tu solicitud</div>
+    <div class="hijo-notif-msg"  id="hijoNotifMsg"></div>
+    <div class="hijo-notif-note" id="hijoNotifNote" style="display:none;"></div>
+    <button style="width:100%;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));color:#fff;" onclick="closeHijoNotif()">✅ Entendido</button>
+  </div>
+</div>
+
+<!-- ── MODAL RESOLUCIÓN (nota obligatoria para padres) ── -->
+<div id="resolveModal" class="resolve-overlay" onclick="if(event.target===this)closeResolveModal()">
+  <div class="resolve-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:800;">💬 Tu respuesta</div>
+      <button onclick="closeResolveModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">×</button>
+    </div>
+    <div id="resolveActionBadge" class="resolve-action-badge rab-approve">✅ Aprobar</div>
+    <div id="resolveItemTitle" style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;"></div>
+    <label style="font-size:11px;font-weight:700;color:var(--text-main);display:block;margin-bottom:6px;">📝 Nota para tu hijo/a <span style="color:var(--accent-coral);font-size:9px;">OBLIGATORIO</span></label>
+    <textarea id="resolveNote" class="resolve-textarea" placeholder="Escribe tu mensaje... ¿Por qué esta decisión?" oninput="onResolveNoteInput(this)"></textarea>
+    <div id="resolveNoteError" style="color:var(--accent-coral);font-size:11px;margin-top:4px;display:none;">⚠️ Debes ingresar una razón para tu decisión.</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">📱 Al confirmar, se abrirá WhatsApp para notificar a tu hijo/a.</div>
+    <button id="resolveConfirmBtn" class="resolve-confirm-btn" disabled onclick="confirmResolveAction()">Confirmar respuesta</button>
+    <button onclick="closeResolveModal()" style="width:100%;padding:10px;background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;margin-top:4px;font-family:'Inter',sans-serif;">Cancelar</button>
+  </div>
+</div>
+
+<!-- ── PANEL FAMILIA (Papá/Mamá: Permisos + Propuestas) ── -->
+<div class="page" id="pg-familia">
+  <div style="padding:14px 14px 0;">
+    <div class="card" style="background:linear-gradient(135deg,#2D3142,#1a2040);border:none;margin-bottom:12px;">
+      <div style="color:#fff;">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Panel Familiar · Papá &amp; Mamá</div>
+        <div style="font-size:16px;font-weight:800;">🏠 Solicitudes &amp; Propuestas</div>
+        <div style="font-size:11px;color:#aaa;margin-top:3px;">Revisa, evalúa y responde a tus hijos</div>
+      </div>
+    </div>
+    <div class="fam-stats" id="famStats"></div>
+    <div class="fam-filter-bar">
+      <button class="fam-filter-btn active" id="famf-all"      onclick="setFamFilter('all')">📋 Todos</button>
+      <button class="fam-filter-btn"        id="famf-perm"     onclick="setFamFilter('perm')">🔑 Permisos</button>
+      <button class="fam-filter-btn"        id="famf-prop"     onclick="setFamFilter('prop')">💡 Propuestas</button>
+      <button class="fam-filter-btn"        id="famf-pending"  onclick="setFamFilter('pending')">⏳ Pendientes</button>
+      <button class="fam-filter-btn"        id="famf-resolved" onclick="setFamFilter('resolved')">✅ Resueltos</button>
+    </div>
+    <div id="famContainer"><div style="text-align:center;padding:24px;color:var(--text-muted);">⏳ Cargando...</div></div>
+  </div>
+</div>
+
 <!-- ── MODAL ALTA DE INTEGRANTE ── -->
 <div id="newMemberModal" class="nm-overlay" onclick="if(event.target===this)closeNewMemberModal()">
   <div class="nm-card">
@@ -2495,8 +2609,8 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','auditoria','admin'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','permisos','coach'],canReadAll:false},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','familia','coach','control','auditoria'], canReadAll:true,  canApprove:true},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','familia','coach'],canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
@@ -2529,6 +2643,7 @@ const NAV_META = {
   'mi-panel':{icon:'🏠', label:'Mi Panel'},
   permisos:  {icon:'🔑', label:'Permisos'},
   auditoria: {icon:'🗂️', label:'Auditoría'},
+  familia:   {icon:'🏠', label:'Familia'},
   admin:     {icon:'🛡️', label:'Admin DB'},
 };
 
@@ -2619,6 +2734,7 @@ function showPage(p){
   if(p==='equipo'){renderFamily();renderTeam();renderCheckins();}
   if(p==='coach'){renderScenarios();initMoodUI();if(!planOrder.length)refreshDayPlan();else renderDayPlan();}
   if(p==='control'){renderControlTower();}
+  if(p==='familia'){loadFamiliaPanel();}
   if(p==='club')  {renderClubPage();}
   if(p==='bazar') {renderBazarPage();}
   if(p==='tienda'){renderTiendaPage();}
@@ -4147,6 +4263,251 @@ function toast(msg){
   el.textContent=msg; el.classList.add('show');
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2300);
 }
+
+// ═══════════════ PANEL FAMILIA — Permisos + Propuestas ═══════════════
+
+let famFilter  = 'all';
+let famAllItems = [];
+let _resolveCtx = {};
+
+const RESOLVE_LABELS = {
+  approve:{badge:'✅ Aprobar',     cls:'rab-approve',bg:'linear-gradient(135deg,var(--primary-green),#7DAD2E)'},
+  eval:   {badge:'🔄 Evaluando',   cls:'rab-eval',   bg:'linear-gradient(135deg,#3B82F6,#2563EB)'},
+  reject: {badge:'❌ Rechazar',    cls:'rab-reject',  bg:'linear-gradient(135deg,var(--accent-coral),#D94540)'},
+};
+
+const CEL_MSGS_FAMILIA = {
+  approved:   {icons:['🎉','🌟','✅'],msgs:['¡Permiso aprobado! Mamá y Papá han dicho SÍ. ¡Disfruta y recuerda tu compromiso!','¡Lo lograste! Tu solicitud fue aprobada. Confían en ti.']},
+  evaluating: {icons:['🤔','💭'],   msgs:['Tus padres están evaluando tu solicitud. Ten paciencia, pronto sabrás.','Lo están analizando con cuidado. ¡Pronto tendrás respuesta!']},
+  rejected:   {icons:['💙','🌱'],   msgs:['Esta vez no fue posible. Tus papás tienen buenas razones. Lee el mensaje con calma.','A veces hay que esperar. Te quieren mucho, aunque sea un no.']},
+};
+function getRandFam(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+async function loadFamiliaPanel(){
+  const el=document.getElementById('famContainer');
+  if(el) el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-muted);">⏳ Cargando...</div>';
+  try{
+    const perms  = await window.loadPermissionRequests()||[];
+    const props  = await window.loadAllProposals()||[];
+    famAllItems  = [
+      ...perms.map(p=>({...p,_type:'perm'})),
+      ...props.map(p=>({...p,_type:'prop'}))
+    ].sort((a,b)=>(b.ts||0)-(a.ts||0));
+  }catch(e){ famAllItems=[]; console.error('[Familia]',e); }
+  renderFamiliaPanel();
+}
+window.loadFamiliaPanel=loadFamiliaPanel;
+
+function setFamFilter(f){
+  famFilter=f;
+  ['all','perm','prop','pending','resolved'].forEach(k=>{
+    const btn=document.getElementById('famf-'+k);
+    if(btn) btn.classList.toggle('active',k===f);
+  });
+  renderFamiliaPanel();
+}
+window.setFamFilter=setFamFilter;
+
+function renderFamiliaPanel(){
+  const container=document.getElementById('famContainer'); if(!container) return;
+  const statsEl=document.getElementById('famStats');
+  const total=famAllItems.length;
+  const pending=famAllItems.filter(i=>i.status==='pending').length;
+  const evaluat=famAllItems.filter(i=>i.status==='evaluating').length;
+  const approved=famAllItems.filter(i=>i.status==='approved').length;
+  const rejected=famAllItems.filter(i=>i.status==='rejected').length;
+  if(statsEl) statsEl.innerHTML=`
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--text-muted)">${total}</div><div class="fam-stat-lbl">Total</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--accent-gold)">${pending}</div><div class="fam-stat-lbl">Pendientes</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:#2563EB">${evaluat}</div><div class="fam-stat-lbl">Evaluando</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--primary-green)">${approved}</div><div class="fam-stat-lbl">Aprobados</div></div>
+    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--accent-coral)">${rejected}</div><div class="fam-stat-lbl">Rechazados</div></div>`;
+  let list=[...famAllItems];
+  if(famFilter==='perm')     list=list.filter(i=>i._type==='perm');
+  if(famFilter==='prop')     list=list.filter(i=>i._type==='prop');
+  if(famFilter==='pending')  list=list.filter(i=>i.status==='pending'||i.status==='evaluating');
+  if(famFilter==='resolved') list=list.filter(i=>i.status==='approved'||i.status==='rejected');
+  if(!list.length){
+    container.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text-muted);">
+      <div style="font-size:32px;margin-bottom:10px;opacity:.3;">📭</div>
+      <div style="font-weight:700;">Sin solicitudes aquí</div>
+      <div style="font-size:11px;margin-top:4px;">Los hijos envían permisos y propuestas desde su panel 🏠 Mi Panel</div>
+    </div>`; return;
+  }
+  container.innerHTML='';
+  list.forEach(item=>container.appendChild(item._type==='perm'?makeFamPermCard(item):makeFamPropCard(item)));
+}
+
+function makeFamPermCard(p){
+  const rc=ROLES[p.requesterRole]||{};
+  const sMap={pending:'⏳ Pendiente',evaluating:'🔄 En evaluación',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
+  const sCls={pending:'fsb-pending',evaluating:'fsb-eval',approved:'fsb-approved',rejected:'fsb-rejected'};
+  const isMama=currentRole==='mama', isDir=currentRole==='director';
+  const myApproval=isMama?p.approvedByMom:isDir?p.approvedByDad:false;
+  const canAct=(isMama||isDir)&&p.status!=='rejected';
+  const card=document.createElement('div'); card.className='fam-card';
+  card.innerHTML=`
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+      <span class="fam-type-badge fam-tb-perm">🔑 Permiso</span>
+      <div style="width:32px;height:32px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;background:${rc.color||'#888'}18;flex-shrink:0;">${rc.emoji||'👦'}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="fam-title">${p.requesterName||'—'}: ${p.motivo||'—'}</div>
+        <div class="fam-detail">📍 ${p.lugar||'—'} · 📅 ${p.fecha||'—'} · ⏰ ${p.horaFin||'—'}${p.acompañantes?' · 👥 '+p.acompañantes:''}</div>
+      </div>
+    </div>
+    ${p.compromiso?`<div class="fam-compromiso">🤝 <strong>Compromiso:</strong> ${p.compromiso}</div>`:''}
+    <div class="fam-status-row">
+      <span class="fam-status-badge ${sCls[p.status]||'fsb-pending'}">${sMap[p.status]||'⏳'}</span>
+      <span class="fam-sig-dot ${p.approvedByMom?'fsd-ok':'fsd-pend'}">👩 ${p.approvedByMom?'Aprobó':'Pendiente'}</span>
+      <span class="fam-sig-dot ${p.approvedByDad?'fsd-ok':'fsd-pend'}">👨 ${p.approvedByDad?'Aprobó':'Pendiente'}</span>
+    </div>
+    ${p.responseNote?`<div class="fam-response-note">💬 <strong>${p.responseBy||'Respuesta'}:</strong> ${p.responseNote}</div>`:''}
+    ${p.responseNote?`<div style="margin-top:4px;"><span class="wa-notif-badge ${p.notifiedByWhatsApp?'wa-notif-ok':'wa-notif-no'}" ${!p.notifiedByWhatsApp?'onclick="reenviarWaPermiso(\''+p.id+'\')" title="Reenviar WA"':''}>📱 ${p.notifiedByWhatsApp?'WA enviado ✅':'Reenviar WA ⚠️'}</span></div>`:''}
+    ${canAct?`<div class="fam-actions">
+      ${!myApproval?`<button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','perm','approve')">✅ Aprobar</button>`:`<button class="fam-action-btn fab-done">✅ Ya aprobaste</button>`}
+      <button class="fam-action-btn fab-eval"   onclick="openResolveModal('${p.id}','perm','eval')">🔄 Evaluando</button>
+      <button class="fam-action-btn fab-reject" onclick="openResolveModal('${p.id}','perm','reject')">❌ Rechazar</button>
+    </div>`:''}`;
+  return card;
+}
+
+function makeFamPropCard(p){
+  const rc=ROLES[p.requesterRole]||{};
+  const sMap={pending:'⏳ Pendiente',evaluating:'🔄 En evaluación',approved:'✅ Aceptada',rejected:'❌ Rechazada'};
+  const sCls={pending:'fsb-pending',evaluating:'fsb-eval',approved:'fsb-approved',rejected:'fsb-rejected'};
+  const canAct=(currentRole==='mama'||currentRole==='director')&&p.status!=='approved'&&p.status!=='rejected';
+  const card=document.createElement('div'); card.className='fam-card';
+  card.innerHTML=`
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+      <span class="fam-type-badge fam-tb-prop">💡 Propuesta</span>
+      <div style="width:32px;height:32px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;background:${rc.color||'#888'}18;flex-shrink:0;">${rc.emoji||'👦'}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="fam-title">${p.requesterName||'—'}: ${p.titulo||'—'}</div>
+        <div class="fam-detail">${p.modulo?'📦 '+p.modulo+' · ':''} ${p.descripcion||''}</div>
+      </div>
+    </div>
+    <div class="fam-status-row"><span class="fam-status-badge ${sCls[p.status]||'fsb-pending'}">${sMap[p.status]||'⏳ Pendiente'}</span></div>
+    ${p.responseNote?`<div class="fam-response-note">💬 <strong>${p.responseBy||'Respuesta'}:</strong> ${p.responseNote}</div>`:''}
+    ${canAct?`<div class="fam-actions">
+      <button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','prop','approve')">✅ Aceptar</button>
+      <button class="fam-action-btn fab-eval"    onclick="openResolveModal('${p.id}','prop','eval')">🔄 Evaluando</button>
+      <button class="fam-action-btn fab-reject"  onclick="openResolveModal('${p.id}','prop','reject')">❌ Rechazar</button>
+    </div>`:''}`;
+  return card;
+}
+
+// ── Modal de resolución con nota obligatoria ──
+function openResolveModal(id,type,action){
+  _resolveCtx={id,type,action};
+  const item=famAllItems.find(i=>i.id===id);
+  const lbl=RESOLVE_LABELS[action]||RESOLVE_LABELS.approve;
+  const badge=document.getElementById('resolveActionBadge');
+  badge.textContent=lbl.badge; badge.className='resolve-action-badge '+lbl.cls;
+  const titleEl=document.getElementById('resolveItemTitle');
+  if(titleEl&&item) titleEl.textContent=`${item.requesterName||'—'}: "${item.motivo||item.titulo||'—'}"`;
+  const btn=document.getElementById('resolveConfirmBtn');
+  btn.style.background=lbl.bg; btn.disabled=true;
+  document.getElementById('resolveNote').value='';
+  const errEl=document.getElementById('resolveNoteError'); if(errEl) errEl.style.display='none';
+  document.getElementById('resolveModal').style.display='flex';
+  setTimeout(()=>document.getElementById('resolveNote').focus(),200);
+}
+window.openResolveModal=openResolveModal;
+function closeResolveModal(){ document.getElementById('resolveModal').style.display='none'; _resolveCtx={}; }
+window.closeResolveModal=closeResolveModal;
+function onResolveNoteInput(el){
+  const len=el.value.trim().length;
+  document.getElementById('resolveConfirmBtn').disabled=(len<5);
+  const errEl=document.getElementById('resolveNoteError');
+  if(errEl) errEl.style.display=(len>0&&len<5)?'block':'none';
+}
+window.onResolveNoteInput=onResolveNoteInput;
+async function confirmResolveAction(){
+  const {id,type,action}=_resolveCtx;
+  const note=document.getElementById('resolveNote').value.trim();
+  if(!note||note.length<5){ const e=document.getElementById('resolveNoteError'); if(e){e.style.display='block';e.textContent='⚠️ Escribe una nota de al menos 5 caracteres.';} return; }
+  closeResolveModal();
+  await handleFamiliaResponse(id,type,action,note);
+}
+window.confirmResolveAction=confirmResolveAction;
+
+// ── Lógica central de respuesta ──
+async function handleFamiliaResponse(id,type,action,note){
+  const isMama=currentRole==='mama';
+  const resolverName=currentProfile.displayName||(isMama?'Mamá':'Papá');
+  const item=famAllItems.find(i=>i.id===id);
+  const patch={responseNote:note,responseBy:resolverName,responseAt:new Date().toISOString(),isReadByChild:false,hijoNotified:false,updatedAt:new Date().toISOString()};
+  if(type==='perm'){
+    if(action==='approve'){ if(isMama) patch.approvedByMom=true; else patch.approvedByDad=true;
+      if(item){ const mOk=isMama?true:item.approvedByMom; const dOk=!isMama?true:item.approvedByDad; if(mOk&&dOk) patch.status='approved'; }
+    } else if(action==='eval') patch.status='evaluating';
+    else patch.status='rejected';
+    try{ patch.notifiedByWhatsApp=false; await window.updatePermissionRequest(id,patch); }catch(e){toast('⚠️ '+e.message);return;}
+  } else {
+    patch.status=action==='approve'?'approved':action==='eval'?'evaluating':'rejected';
+    try{ await window.updateProposalStatus(id,patch); }catch(e){toast('⚠️ '+e.message);return;}
+  }
+  // Enviar WA + log
+  if(item){ const waUrl=enviarNotificacionWhatsApp(item,action,note,resolverName);
+    const ap={notifiedByWhatsApp:!!waUrl,notifiedAt:new Date().toISOString(),notifiedBy:resolverName};
+    if(type==='perm') window.updatePermissionRequest(id,ap).catch(()=>{});
+    else              window.updateProposalStatus(id,ap).catch(()=>{});
+  }
+  toast(action==='approve'?'✅ Aprobado con nota':action==='eval'?'🔄 En evaluación':'❌ Rechazado con nota');
+  await loadFamiliaPanel();
+}
+
+// ── WhatsApp contextual ──
+function enviarNotificacionWhatsApp(item,action,note,resolverName){
+  const member=(window.orgMembers||[]).find(m=>m.uid===item.requesterId||m.displayName===item.requesterName);
+  const phone=(member?.phone||'').replace(/\D/g,'');
+  if(!phone||phone.length<8){ toast('ℹ️ '+item.requesterName+' no tiene teléfono registrado'); return null; }
+  let num=phone.startsWith('56')?phone.slice(2):phone;
+  if(!num.startsWith('9')) num='9'+num;
+  const sl={approve:{icon:'✅',label:'APROBADA'},evaluating:{icon:'🔄',label:'EN EVALUACIÓN'},reject:{icon:'❌',label:'NO APROBADA'}}[action]||{icon:'📋',label:'ACTUALIZADA'};
+  const titulo=item.motivo||item.titulo||'tu solicitud';
+  const msg=`Hola ${item.requesterName||''}! 👋\n\nTenemos una respuesta sobre tu solicitud:\n📋 *"${titulo}"*\n\n${sl.icon} Estado: *${sl.label}*\n\n💬 Mensaje de ${resolverName}:\n"${note}"\n\nRevisa tu panel en la app.\n— Gestión Familiar 🏠`;
+  window.open(`https://wa.me/56${num}?text=${encodeURIComponent(msg)}`,'_blank');
+  return true;
+}
+
+function reenviarWaPermiso(id){
+  const item=famAllItems.find(i=>i.id===id); if(!item) return;
+  const rn=currentProfile.displayName||(currentRole==='mama'?'Mamá':'Papá');
+  enviarNotificacionWhatsApp(item,item.status==='approved'?'approve':item.status==='evaluating'?'evaluating':'reject',item.responseNote||'Tu solicitud ha sido revisada.',rn);
+  window.updatePermissionRequest&&window.updatePermissionRequest(id,{notifiedByWhatsApp:true}).catch(()=>{});
+  loadFamiliaPanel();
+}
+window.reenviarWaPermiso=reenviarWaPermiso;
+
+// ── Notificación push al hijo ──
+async function checkHijoNotifications(){
+  if(currentRole!=='hijo1'&&currentRole!=='hijo2') return;
+  try{
+    const uid=currentProfile.uid||'';
+    const perms=await window.loadPermissionRequests()||[];
+    const mine=perms.filter(p=>p.requesterId===uid&&p.status!=='pending'&&!p.hijoNotified);
+    if(!mine.length) return;
+    const latest=mine.sort((a,b)=>b.ts-a.ts)[0];
+    const type=latest.status==='approved'?'approved':latest.status==='evaluating'?'evaluating':'rejected';
+    const n=CEL_MSGS_FAMILIA[type];
+    const overlay=document.getElementById('hijoNotifOverlay');
+    document.getElementById('hijoNotifIcon').textContent=getRandFam(n.icons);
+    document.getElementById('hijoNotifTitle').textContent=type==='approved'?'¡Permiso Aprobado!':type==='evaluating'?'Lo están pensando...':'Esta vez no pudo ser...';
+    document.getElementById('hijoNotifMsg').textContent=getRandFam(n.msgs);
+    const noteEl=document.getElementById('hijoNotifNote');
+    if(latest.responseNote){ noteEl.style.display='block'; noteEl.textContent=`Mensaje de ${latest.responseBy||'tus padres'}: "${latest.responseNote}"`; }
+    else noteEl.style.display='none';
+    if(overlay) overlay.style.display='flex';
+    window.updatePermissionRequest&&window.updatePermissionRequest(latest.id,{hijoNotified:true}).catch(()=>{});
+  }catch(e){ console.warn('[HijoNotif]',e.message); }
+}
+window.checkHijoNotifications=checkHijoNotifications;
+function closeHijoNotif(){ document.getElementById('hijoNotifOverlay').style.display='none'; }
+window.closeHijoNotif=closeHijoNotif;
+
+// ── updateProposalStatus (Firebase) ──
+// (definido en módulo Firebase más abajo como window.updateProposalStatus)
 
 // ═══════════════ PANEL DE AUDITORÍA (Master Data Control) ═══════════════
 
@@ -7225,6 +7586,10 @@ function initApp(cloudData, profile){
   mountRoleUI(role, safeProfile);
   if(role !== 'pending'){
     setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 500);
+    // Verificar notificaciones de permisos para hijos
+    if(role==='hijo1'||role==='hijo2') setTimeout(checkHijoNotifications, 1200);
+    // Cargar notificaciones de permisos para padres
+    if(role==='director'||role==='mama') setTimeout(()=>window.checkPendingPermissions&&window.checkPendingPermissions(), 1500);
 
     // Para roles TÁCTICOS: limpiar tareas contaminadas (owner de otro rol)
     var isExecRole = EXECUTIVE_ROLES_VIS.includes(role)||role==='director';
@@ -7735,6 +8100,18 @@ window.loadPermissionRequests = async function(){
 // ── Propuestas / Ideas ──
 window.saveProposal = async function(proposal){
   await setDoc(doc(db,'proposals',proposal.id), proposal);
+};
+// Cargar TODAS las propuestas de la org (para padres)
+window.loadAllProposals = async function(){
+  try{
+    const {collection:c2,getDocs:gd2,query:q2,where:w2}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+    const snap=await gd2(q2(c2(db,'proposals'),w2('orgId','==',ORG_ID)));
+    return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);
+  }catch(e){console.warn('loadAllProposals:',e.message);return[];}
+};
+// Actualizar estado de propuesta
+window.updateProposalStatus = async function(id,patch){
+  await setDoc(doc(db,'proposals',id),patch,{merge:true});
 };
 window.loadMyProposals = async function(uid){
   try{
