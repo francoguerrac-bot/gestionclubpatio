@@ -317,7 +317,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 /* ── DAILY CHECK-IN OVERLAY ── */
 .ci-overlay{position:fixed;inset:0;z-index:190;background:linear-gradient(160deg,#1A1A1A 0%,#1A3025 100%);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
 .ci-card{width:100%;max-width:360px;background:#fff;border-radius:20px;padding:22px 20px 20px;box-shadow:0 20px 60px rgba(0,0,0,.5);font-family:'Inter',sans-serif;}
-.ci-step{display:none;} .ci-step.active{display:block;}
+.ci-step{display:none;}
+.ci-step.active{display:block;animation:step-fadein .25s ease;}
+@keyframes step-fadein{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
 .ci-q{font-size:15px;font-weight:700;color:#1A1A1A;margin-bottom:3px;line-height:1.4;}
 .ci-sub{font-size:11px;color:#6B7280;margin-bottom:12px;line-height:1.4;}
 .ci-opts{display:grid;gap:7px;}
@@ -2664,19 +2666,40 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 
 <div class="toast" id="toast"></div>
 
-<!-- ── PWA INSTALL BANNER ── -->
-<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9990;background:linear-gradient(135deg,#1E2D3D,#2D4A3E);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);width:calc(100% - 28px);max-width:380px;font-family:'Inter',sans-serif;border:1px solid rgba(91,192,190,.3);animation:pwa-slide-in .4s cubic-bezier(.34,1.56,.64,1);">
-  @keyframes pwa-slide-in{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-  <div style="display:flex;align-items:center;gap:12px;">
-    <img src="/assets/Logo2.png" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">
+<!-- ── PWA GHOST TOAST (discreto, esquina inferior derecha) ── -->
+<div id="pwaInstallBanner" style="
+  display:none;
+  position:fixed;
+  bottom:88px;
+  right:14px;
+  z-index:9990;
+  background:var(--bg-card);
+  border-radius:14px;
+  padding:10px 14px 10px 12px;
+  box-shadow:0 4px 20px rgba(45,49,66,.18);
+  border:1.5px solid var(--border);
+  font-family:'Inter',sans-serif;
+  max-width:240px;
+  animation:pwa-toast-in .35s cubic-bezier(.34,1.56,.64,1);
+">
+  <style>
+    @keyframes pwa-toast-in{from{opacity:0;transform:translateY(12px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+  </style>
+  <div style="display:flex;align-items:center;gap:9px;">
+    <img src="/assets/Logo2.png" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border);" onerror="this.style.display='none'">
     <div style="flex:1;min-width:0;">
-      <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px;">Club Patio · Instalar App</div>
-      <div style="font-size:11px;color:#9CA3AF;line-height:1.4;">Acceso directo desde tu pantalla de inicio</div>
+      <div style="font-size:11px;font-weight:800;color:var(--text-main);line-height:1.2;">Instala Club Patio</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">en tu pantalla de inicio</div>
     </div>
-    <button onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:none;border:none;color:#6B7280;font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;">×</button>
+    <button onclick="dismissPwaBanner()" title="No mostrar por 7 días"
+      style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;opacity:.6;">×</button>
   </div>
-  <button id="pwaInstallBtn" onclick="triggerPwaInstall()" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.02em;">
-    📲 Descargar App
+  <button id="pwaInstallBtn" onclick="triggerPwaInstall()"
+    style="width:100%;margin-top:8px;padding:7px;
+    background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));
+    color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:800;
+    cursor:pointer;font-family:'Inter',sans-serif;">
+    📲 Descargar
   </button>
 </div>
 
@@ -3801,6 +3824,14 @@ function ciSelect(step,val,el){
   ciAnswers[step]=val;
   el.closest('.ci-opts').querySelectorAll('.ci-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
+  // Auto-avance: ir al siguiente paso 350ms después de seleccionar
+  const totalSteps=3;
+  if(step < totalSteps-1){
+    setTimeout(()=>ciNext(step+1), 350);
+  } else {
+    // Último paso: calcular resultado automáticamente
+    setTimeout(()=>calcCheckin(), 350);
+  }
 }
 
 function ciFlashRequired(stepEl){
@@ -6482,6 +6513,12 @@ function hmSelect(step,val,el){
   hmoodAnswers[step]=val;
   el.closest('div').querySelectorAll('.hmood-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
+  // Auto-avance igual que ciSelect
+  if(step < 2){
+    setTimeout(()=>hmNext(step+1), 350);
+  } else {
+    setTimeout(()=>submitHijoMood(), 350);
+  }
 }
 function hmNext(to){
   if(hmoodAnswers[to-1]===null){
@@ -9098,40 +9135,57 @@ if('serviceWorker' in navigator){
   });
 }
 
-// ── PWA: Banner de instalación inteligente ──
+// ── PWA: Ghost Toast — discreto + dismiss 7 días ──
 let pwaInstallEvent = null;
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
                   || window.navigator.standalone === true;
 
-// Android / Chrome: capturar el evento nativo de instalación
+// Verificar si el usuario ya cerró el banner en los últimos 7 días
+function pwaDismissed(){
+  const d = localStorage.getItem('pwa-dismissed');
+  if(!d) return false;
+  return (Date.now() - parseInt(d)) < 7 * 24 * 60 * 60 * 1000; // 7 días
+}
+
+function showPwaBanner(){
+  if(isStandalone || pwaDismissed()) return; // ya instalada o ya dismissado
+  const banner = document.getElementById('pwaInstallBanner');
+  if(banner) banner.style.display='block';
+}
+
+// Cerrar y recordar por 7 días
+function dismissPwaBanner(){
+  localStorage.setItem('pwa-dismissed', Date.now().toString());
+  const banner = document.getElementById('pwaInstallBanner');
+  if(banner) banner.style.display='none';
+}
+window.dismissPwaBanner = dismissPwaBanner;
+
+// Android / Chrome
 window.addEventListener('beforeinstallprompt', (e)=>{
   e.preventDefault();
   pwaInstallEvent = e;
-  // Mostrar el banner después de 3 segundos si no está instalada
-  if(!isStandalone){
-    setTimeout(()=>{
-      document.getElementById('pwaInstallBanner').style.display='flex';
-    }, 3000);
-  }
+  setTimeout(showPwaBanner, 5000); // 5s delay, discreto
 });
 
-// Cuando el usuario instala la app, ocultar el banner
+// App instalada → ocultar y limpiar
 window.addEventListener('appinstalled', ()=>{
-  console.log('[PWA] App instalada');
-  document.getElementById('pwaInstallBanner').style.display='none';
+  const banner = document.getElementById('pwaInstallBanner');
+  if(banner) banner.style.display='none';
   pwaInstallEvent = null;
+  localStorage.setItem('pwa-dismissed', Date.now().toString());
   if(window.toast) window.toast('✅ ¡App instalada! Búscala en tu pantalla de inicio');
 });
 
-// iOS: mostrar instrucciones manuales si aún no está instalada
+// iOS Safari
 if(isIOS && !isStandalone){
   setTimeout(()=>{
-    document.getElementById('pwaInstallBanner').style.display='flex';
-    // Cambiar el botón para abrir instrucciones de iOS
+    if(pwaDismissed()) return;
+    showPwaBanner();
     const btn = document.getElementById('pwaInstallBtn');
     if(btn){
-      btn.textContent='📲 Ver cómo instalar en iPhone';
+      btn.textContent='📲 Cómo instalar en iPhone';
       btn.onclick = ()=>{
         document.getElementById('pwaInstallBanner').style.display='none';
         document.getElementById('pwaIosModal').style.display='flex';
