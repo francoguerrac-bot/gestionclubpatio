@@ -9,7 +9,7 @@
 <!-- ── CACHE BUSTER: detecta versión vieja y fuerza recarga ── -->
 <script>
 (function(){
-  var BUILD = '2026-06-25-v5-clean'; // v5: rewrite completo del flujo de inicio
+  var BUILD = '2026-06-25-v6'; // v6: bootApp definido en head
   var stored = localStorage.getItem('app-build');
   if(stored && stored !== BUILD){
     // Versión diferente → limpiar SW y recargar
@@ -978,6 +978,25 @@ window._hideLoading = function(){
   if(ls&&ls.style.display!=='none'){ls.style.opacity='0';setTimeout(function(){ls.style.display='none';},300);}
 };
 setTimeout(window._hideLoading, 5000);
+
+// ── bootApp definido aquí (HEAD) para que siempre exista ──
+// El módulo Firebase lo llama. Si initApp no está lista, encola la llamada.
+var _bootQueue = [];
+window.bootApp = function(cloudData, profile){
+  if(typeof window.initApp === 'function'){
+    window.initApp(cloudData, profile);
+  } else {
+    console.warn('[bootApp] initApp no lista, encolando...');
+    _bootQueue.push({cloudData:cloudData, profile:profile});
+  }
+};
+// Cuando initApp se defina, drena la cola
+window._drainBootQueue = function(){
+  while(_bootQueue.length > 0){
+    var item = _bootQueue.shift();
+    window.initApp(item.cloudData, item.profile);
+  }
+};
 </script>
 
 <!-- ── LOGIN / AUTH OVERLAY ── -->
@@ -8417,13 +8436,10 @@ window.initApp = function(cloudData, profile){
   setTimeout(applyMasterTasks, 900);
 };
 
-// Alias para compatibilidad con código existente
-function bootApp(cloudData, profile){ return window.initApp(cloudData, profile); }
-// Exponer ambos
-window.bootApp = bootApp;
-
-// NOTA: initApp() reemplaza bootApp. El alias bootApp llama a initApp().
-// Ambos expuestos en window. El módulo Firebase llama window.bootApp(data, profile).
+// initApp ya está definida — drenar cola si Firebase llamó antes
+window._drainBootQueue && window._drainBootQueue();
+// Alias de compatibilidad (por si algo llama bootApp directamente)
+window.bootApp = function(cloudData, profile){ window.initApp(cloudData, profile); };
 </script>
 
 <!-- ═══════════════ FIREBASE · AUTH + FIRESTORE ═══════════════ -->
