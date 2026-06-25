@@ -4845,7 +4845,6 @@ function makeFamPermCard(p){
       <span class="fam-sig-dot ${p.approvedByDad?'fsd-ok':'fsd-pend'}">👨 ${p.approvedByDad?'Aprobó':'Pendiente'}</span>
     </div>
     ${p.responseNote?`<div class="fam-response-note">💬 <strong>${p.responseBy||'Respuesta'}:</strong> ${p.responseNote}</div>`:''}
-    <!-- Estado de notificación WhatsApp -->
     ${p.responseNote?`<div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
       ${p.notifiedByWhatsApp
         ?`<span class="wa-notif-badge wa-notif-ok" title="Notificado por WhatsApp el ${p.notifiedAt?new Date(p.notifiedAt).toLocaleString('es-CL'):'—'}">📱 WA enviado ✅</span>`
@@ -7622,7 +7621,6 @@ function makePersonaCard(p){
       <div class="persona-avatar" style="background:${rc.color||'#888'}18;color:${rc.color||'#888'};">${rc.emoji||'👤'}</div>
       <div style="flex:1;min-width:0;">
         <div class="persona-name">${p.displayName}</div>
-        <!-- Badges de todos los roles — sin duplicados -->
         <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${rolesBadges}</div>
       </div>
       <div class="persona-mood-dot ${mood.dot}" title="${mood.label}"></div>
