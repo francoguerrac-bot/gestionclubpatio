@@ -2678,11 +2678,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <div id="emergencyDiag" style="font-size:11px;color:#d1d5db;line-height:1.7;font-family:monospace;"></div>
     </div>
 
-    <button onclick="emergencyRecoverProfile()" class="btn btn-sage" style="width:100%;padding:14px;font-size:14px;margin-bottom:8px;">
-      🔄 Recuperar perfil automáticamente
+    <button onclick="reconnectSystem()" style="width:100%;padding:14px;font-size:14px;margin-bottom:8px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:11px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;">
+      🚀 Reconexión total del sistema
+    </button>
+    <button onclick="emergencyRecoverProfile()" class="btn btn-sage" style="width:100%;padding:12px;font-size:13px;margin-bottom:8px;">
+      🔄 Recuperar perfil
     </button>
     <button onclick="emergencyForceLoadTasks()" class="btn btn-ghost" style="width:100%;padding:12px;font-size:13px;margin-bottom:8px;color:#fff;border-color:#444;">
-      📋 Cargar todas las tareas (sin filtro)
+      📋 Cargar tareas sin filtro
     </button>
     <button onclick="emergencyClearCache()" style="width:100%;padding:12px;font-size:13px;border:1.5px solid #EF4444;background:none;color:#EF4444;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:8px;">
       🗑️ Limpiar caché del Service Worker
@@ -2694,41 +2697,38 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
   </div>
 </div>
 
-<!-- ── PWA GHOST TOAST (discreto, esquina inferior derecha) ── -->
+<!-- ── PWA MICRO BADGE (mínimo invasivo: 44px alto máx) ── -->
 <div id="pwaInstallBanner" style="
   display:none;
   position:fixed;
-  bottom:88px;
-  right:14px;
+  bottom:90px;
+  right:12px;
   z-index:9990;
-  background:var(--bg-card);
-  border-radius:14px;
-  padding:10px 14px 10px 12px;
-  box-shadow:0 4px 20px rgba(45,49,66,.18);
-  border:1.5px solid var(--border);
-  font-family:'Inter',sans-serif;
-  max-width:240px;
-  animation:pwa-toast-in .35s cubic-bezier(.34,1.56,.64,1);
+  animation:pwa-toast-in .3s cubic-bezier(.34,1.56,.64,1);
 ">
   <style>
-    @keyframes pwa-toast-in{from{opacity:0;transform:translateY(12px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes pwa-toast-in{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
   </style>
-  <div style="display:flex;align-items:center;gap:9px;">
-    <img src="/assets/Logo2.png" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border);" onerror="this.style.display='none'">
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:11px;font-weight:800;color:var(--text-main);line-height:1.2;">Instala Club Patio</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">en tu pantalla de inicio</div>
-    </div>
-    <button onclick="dismissPwaBanner()" title="No mostrar por 7 días"
-      style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:2px;line-height:1;flex-shrink:0;opacity:.6;">×</button>
+  <!-- Pill compacto de una sola línea, max 44px alto -->
+  <div style="
+    display:flex;align-items:center;gap:7px;
+    background:var(--bg-card);
+    border:1.5px solid var(--border);
+    border-radius:99px;
+    padding:6px 10px 6px 8px;
+    box-shadow:0 3px 12px rgba(45,49,66,.14);
+    font-family:'Inter',sans-serif;
+    max-height:44px;
+    white-space:nowrap;
+  ">
+    <img src="/assets/Logo2.png" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">
+    <button id="pwaInstallBtn" onclick="triggerPwaInstall()"
+      style="background:none;border:none;font-size:11px;font-weight:700;color:var(--primary-blue);cursor:pointer;padding:0;font-family:'Inter',sans-serif;white-space:nowrap;">
+      📲 Instalar app
+    </button>
+    <button onclick="dismissPwaBanner()" title="No mostrar 7 días"
+      style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:0 0 0 2px;line-height:1;flex-shrink:0;opacity:.5;">×</button>
   </div>
-  <button id="pwaInstallBtn" onclick="triggerPwaInstall()"
-    style="width:100%;margin-top:8px;padding:7px;
-    background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));
-    color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:800;
-    cursor:pointer;font-family:'Inter',sans-serif;">
-    📲 Descargar
-  </button>
 </div>
 
 <!-- ── PWA iOS INSTRUCTIONS MODAL ── -->
@@ -8319,15 +8319,18 @@ function bootApp(cloudData, profile){
         const refetched = await window.fetchTasksFromFirestore();
         if(refetched && refetched.length > 0){ tasks=refetched; renderTasks(); }
       } else {
-        console.log('[bootApp] ℹ️ Sin tareas locales ni en /tasks. Aplicando tareas maestras...');
-        // Sin datos en ningún lado → aplicar tareas maestras del rol
-        setTimeout(applyMasterTasks, 200);
+        // Estado cero total: sembrar demo + tareas del rol
+        console.log('[bootApp] ℹ️ Estado cero → seedTasks + applyMasterTasks');
+        seedTasks(); renderTasks();
+        setTimeout(applyMasterTasks, 300);
       }
     } else {
-      console.warn('[bootApp] ❌ Error al leer /tasks — manteniendo tareas locales');
-      // fetched===null → error Firestore → mantener lo que hay localmente
+      console.warn('[bootApp] ❌ Error Firestore /tasks → usando locales');
+      if(tasks.length === 0){ seedTasks(); renderTasks(); }
     }
   }, 800);
+  // Tareas maestras del rol SIEMPRE (corre en paralelo, no bloquea)
+  setTimeout(applyMasterTasks, 1200);
   const role = (profile&&profile.role)||'pending';
   mountRoleUI(role, profile||{});
   if(role !== 'pending'){
@@ -8363,6 +8366,7 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 const ORG_ID = 'curauma_001'; // mirror del main script
+window._db_ref = db; // exponer para reconnectSystem()
 
 let currentUser = null;
 let booted = false;
@@ -9180,6 +9184,48 @@ onAuthStateChanged(auth, async (user)=>{
 
 // Panel de emergencia: SOLO se activa manualmente (botón 🔧)
 // NO se activa automáticamente para evitar bucles con auth flow
+
+// 0. RECONEXIÓN TOTAL DEL SISTEMA
+async function reconnectSystem(){
+  const res=document.getElementById('emergencyResult');
+  if(res) res.textContent='⏳ Reconectando sistema...';
+  console.log('[reconnect] Iniciando reconexión total');
+
+  // 1. Limpiar estado en memoria
+  window.tasks=[];
+  window.sprintTasks=[];
+  window.orgMembers=[];
+  window.currentRole='pending';
+  window.currentProfile={};
+
+  // 2. Forzar recarga de tareas sin filtro de rol
+  try{
+    const { collection:c2, getDocs:gd2, query:q2, where:w2 }
+      = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+    // Necesitamos db — está en el módulo Firebase
+    if(!window._db_ref){ throw new Error('DB no disponible'); }
+    const snap = await gd2(q2(c2(window._db_ref,'tasks'), w2('orgId','==','curauma_001')));
+    console.log('[reconnect] /tasks sin filtro:', snap.size, 'docs');
+    if(snap.size > 0){
+      window.tasks = snap.docs.map(d=>({...d.data(),id:d.id}));
+      if(window.renderTasks) window.renderTasks();
+      if(res) res.textContent=`✅ ${snap.size} tareas cargadas. Cerrando panel...`;
+      setTimeout(()=>{ document.getElementById('emergencyPanel').style.display='none'; },1500);
+    } else {
+      if(res) res.textContent='⚠️ /tasks vacía. Aplicando tareas maestras del rol...';
+      if(window.applyMasterTasks){ window.applyMasterTasks(); }
+      if(window.seedTasks&&(!window.tasks||window.tasks.length===0)) window.seedTasks();
+      if(window.renderTasks) window.renderTasks();
+    }
+  }catch(e){
+    console.warn('[reconnect] Error:', e.message, '→ usando seedTasks');
+    if(window.seedTasks) window.seedTasks();
+    if(window.applyMasterTasks) window.applyMasterTasks();
+    if(window.renderTasks) window.renderTasks();
+    if(res) res.textContent='⚠️ Modo offline. Tareas demo cargadas.';
+  }
+}
+window.reconnectSystem=reconnectSystem;
 
 // 1. Recuperar perfil desde Firestore manualmente
 async function emergencyRecoverProfile(){
