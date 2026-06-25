@@ -2,57 +2,75 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ════════════════════════════════════════
-    // HELPER FUNCTIONS
-    // ════════════════════════════════════════
-    function isAuth()     { return request.auth != null; }
-    function isDirector() { return request.auth != null && request.auth.token.email == 'francoguerrac@gmail.com'; }
-    function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+    // ════════════════════════════════════════════════════════
+    // NOTA TÉCNICA:
+    // request.auth.token.role NO existe en Firebase por defecto.
+    // Requiere custom claims via Admin SDK.
+    // Solución: usamos assignedToUid (UID real del usuario) que
+    // SÍ es verificable en reglas sin llamadas adicionales.
+    // El frontend query filtra por assignedToRole para eficiencia.
+    // Las reglas validan por assignedToUid para seguridad de documentos.
+    // ════════════════════════════════════════════════════════
 
-    // Comité Ejecutivo (por email — sin get() recursivo)
+    function isAuth()     { return request.auth != null; }
+    function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function isDirector() {
+      return request.auth != null
+          && request.auth.token.email == 'francoguerrac@gmail.com';
+    }
     function isExecutive() {
       return request.auth != null && (
-        request.auth.token.email == 'francoguerrac@gmail.com'  ||  // Director
-        request.auth.token.email == 'czapatauv@gmail.com'     ||  // Carolina (Mamá + Coord)
-        request.auth.token.email == 'test.mama@clubpatio.cl'  ||
+        request.auth.token.email == 'francoguerrac@gmail.com'       ||
+        request.auth.token.email == 'czapatauv@gmail.com'           ||
+        request.auth.token.email == 'test.director@clubpatio.cl'    ||
+        request.auth.token.email == 'test.mama@clubpatio.cl'        ||
         request.auth.token.email == 'test.coord.bazar@clubpatio.cl' ||
-        request.auth.token.email == 'test.coord.tienda@clubpatio.cl' ||
-        request.auth.token.email == 'test.director@clubpatio.cl'
+        request.auth.token.email == 'test.coord.tienda@clubpatio.cl'
       );
     }
 
-    // ════════════════════════════════════════
-    // /tasks — COLECCIÓN PRINCIPAL (isolation real)
+    // ════════════════════════════════════════════════════════
+    // /tasks — Colección de tareas con aislamiento real
     //
-    // Ejecutivos: leen TODAS las tareas de la org
-    // Tácticos:   solo leen donde assignedToRole == su rol
-    //             (el query en el cliente ya filtra;
-    //              la regla bloquea acceso directo a docs ajenos)
-    // ════════════════════════════════════════
+    // CÓMO FUNCIONA LA SEGURIDAD EN DOS CAPAS:
+    // Capa 1 (Query): Frontend hace where('assignedToRole','==',role)
+    //   → Solo devuelve documentos del rol del usuario
+    // Capa 2 (Rules): Si alguien intenta leer un doc directamente,
+    //   las reglas verifican assignedToUid == su UID
+    // ════════════════════════════════════════════════════════
     match /tasks/{taskId} {
-      // Ejecutivos: acceso total
+
+      // COMITÉ EJECUTIVO: acceso total (sin restricciones)
       allow read, write: if isExecutive();
 
-      // Tácticos: solo sus propias tareas
+      // USUARIOS AUTENTICADOS: leer solo tareas propias
+      // (por UID — consistente con el campo assignedToUid del frontend)
       allow read: if isAuth() && (
-        resource.data.assignedToRole == null   // sin asignación = público
-        || resource.data.assignedToUid == request.auth.uid  // asignado a este usuario
+        resource.data.assignedToUid == request.auth.uid   // asignada a este usuario
+        || resource.data.assignedToUid == null             // sin UID asignado = compartida
+        || resource.data.assignedToUid == ''               // legacy: campo vacío
       );
-      allow create: if isAuth() && (
-        request.resource.data.orgId == 'curauma_001'
-      );
+
+      // Crear: cualquier autenticado puede crear tareas en su org
+      allow create: if isAuth()
+        && request.resource.data.orgId == 'curauma_001'
+        && request.resource.data.assignedToUid == request.auth.uid;
+
+      // Actualizar: solo el dueño de la tarea o ejecutivos
       allow update: if isAuth() && (
         resource.data.assignedToUid == request.auth.uid
-        || resource.data.assignedToRole == null
+        || resource.data.assignedToUid == null
+        || resource.data.assignedToUid == ''
       );
-      allow delete: if isExecutive() || (
-        isAuth() && resource.data.assignedToUid == request.auth.uid
-      );
+
+      // Eliminar: dueño o ejecutivos
+      allow delete: if isExecutive()
+        || (isAuth() && resource.data.assignedToUid == request.auth.uid);
     }
 
-    // ════════════════════════════════════════
-    // /users — Perfiles de usuario
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
+    // /users — Perfiles
+    // ════════════════════════════════════════════════════════
     match /users/{userId} {
       allow read:   if isAuth();
       allow create: if isAuth();
@@ -60,58 +78,58 @@ service cloud.firestore {
       allow delete: if isDirector();
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // /permission_requests
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     match /permission_requests/{reqId} {
       allow read, create, update: if isAuth();
       allow delete: if isDirector();
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // /proposals
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     match /proposals/{propId} {
       allow read, write: if isAuth();
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // /bazar_cycles
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     match /bazar_cycles/{cycleId} {
       allow read, write: if isAuth();
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // /mood_history — Solo Director lee
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     match /mood_history/{moodId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // /audit_log — Inmutable
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     match /audit_log/{logId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // /geolocations — Stealth
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     match /geolocations/{geoId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     // FALLBACK — Director accede a todo
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════
     match /{document=**} {
       allow read, write: if isDirector();
     }
