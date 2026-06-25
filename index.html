@@ -8327,7 +8327,19 @@ function init(){
 const APP_STATES = {LOADING:'loading', AUTH:'auth', PROFILE:'profile', READY:'ready', ERROR:'error'};
 let _appState = APP_STATES.LOADING;
 
+// WATCHDOG: si en 8s no avanzamos, ocultar loading y mostrar login
+const _loadingWatchdog = setTimeout(()=>{
+  if(_appState === APP_STATES.LOADING || _appState === APP_STATES.AUTH){
+    console.warn('[Watchdog] Timeout — Firebase tardó demasiado. Mostrando login.');
+    const ls=document.getElementById('loadingScreen');
+    const auth=document.getElementById('authOverlay');
+    if(ls){ ls.style.opacity='0'; setTimeout(()=>{ if(ls) ls.style.display='none'; },400); }
+    if(auth) auth.style.display='flex';
+  }
+}, 8000);
+
 function setAppState(state, msg){
+  if(state===APP_STATES.READY||state===APP_STATES.AUTH) clearTimeout(_loadingWatchdog);
   _appState = state;
   const msgEl = document.getElementById('loadingMsg');
   const screen = document.getElementById('loadingScreen');
