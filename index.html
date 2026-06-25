@@ -356,8 +356,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .ci-q{font-size:15px;font-weight:700;color:#1A1A1A;margin-bottom:3px;line-height:1.4;}
 .ci-sub{font-size:11px;color:#6B7280;margin-bottom:12px;line-height:1.4;}
 .ci-opts{display:grid;gap:7px;}
-.ci-opt{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;border:2px solid #E5E7EB;background:#F9FAFB;cursor:pointer;transition:all .18s;user-select:none;}
-.ci-opt:hover,.ci-opt.sel{border-color:#1F7A52;background:#E8F5EE;}
+.ci-opt{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;border:2px solid #E5E7EB;background:#F9FAFB;cursor:pointer;transition:all .2s cubic-bezier(.34,1.56,.64,1);user-select:none;}
+.ci-opt:hover{border-color:#1F7A52;background:#E8F5EE;}
+.ci-opt.sel{border-color:#1F7A52;background:#DCFCE7;box-shadow:0 3px 12px rgba(31,122,82,.25);transform:scale(1.02);}
 .ci-opt-emoji{font-size:20px;flex-shrink:0;width:26px;text-align:center;}
 .ci-opt-text{font-size:13px;font-weight:500;flex:1;line-height:1.3;}
 .ci-pips{display:flex;gap:5px;margin-bottom:14px;}
@@ -827,7 +828,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 /* ── HIJO MANDATORY MOOD OVERLAY ── */
 .hmood-overlay{position:fixed;inset:0;z-index:300;background:linear-gradient(160deg,#1D4ED8 0%,#7C3AED 100%);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
 .hmood-card{width:100%;max-width:350px;background:#fff;border-radius:20px;padding:22px 20px;font-family:'Inter',sans-serif;}
-.hmood-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;border:2px solid #E5E7EB;background:#F9FAFB;cursor:pointer;margin-bottom:7px;transition:all .18s;user-select:none;}
+.hmood-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);cursor:pointer;margin-bottom:7px;transition:all .2s cubic-bezier(.34,1.56,.64,1);user-select:none;color:#fff;}
+.hmood-opt:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.6);}
+.hmood-opt.sel{background:rgba(255,255,255,.95);border-color:#fff;color:#1D4ED8;box-shadow:0 4px 16px rgba(0,0,0,.2);transform:scale(1.02);}
 .hmood-opt:hover,.hmood-opt.sel{border-color:#7C3AED;background:#EDE9FE;}
 .hmood-opt-emoji{font-size:24px;width:30px;text-align:center;flex-shrink:0;}
 .hmood-opt-text{font-size:13px;font-weight:500;flex:1;}
@@ -1089,7 +1092,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
           <div class="hmood-opt" onclick="hmSelect(0,'mal',this)"><span class="hmood-opt-emoji">😔</span><span class="hmood-opt-text">No muy bien</span></div>
           <div class="hmood-opt" onclick="hmSelect(0,'estresado',this)"><span class="hmood-opt-emoji">😤</span><span class="hmood-opt-text">Estresado/a o agotado/a</span></div>
         </div>
-        <div class="ci-nav"><button class="btn btn-sage" onclick="hmNext(1)" style="flex:1;margin-top:8px;">Siguiente →</button></div>
+        <div class="ci-nav" style="display:none;"><button class="btn btn-sage" onclick="hmNext(1)" style="flex:1;margin-top:8px;">Siguiente →</button></div>
       </div>
       <!-- Q2 -->
       <div class="ci-step" id="hmstep-1">
@@ -1103,7 +1106,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
         </div>
         <div class="ci-nav">
           <button class="btn btn-ghost" onclick="hmPrev(0)">← Atrás</button>
-          <button class="btn btn-sage" onclick="hmNext(2)" style="flex:1;">Siguiente →</button>
         </div>
       </div>
       <!-- Q3 -->
@@ -1118,7 +1120,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
         </div>
         <div class="ci-nav">
           <button class="btn btn-ghost" onclick="hmPrev(1)">← Atrás</button>
-          <button class="btn btn-sage" onclick="submitHijoMood()" style="flex:1;">Ver mi plan →</button>
         </div>
       </div>
     </div>
@@ -1165,7 +1166,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
           <div class="ci-opt" onclick="ciSelect(0,'baja',this)"><span class="ci-opt-emoji">😶</span><span class="ci-opt-text">Regular, tirando</span></div>
           <div class="ci-opt" onclick="ciSelect(0,'minima',this)"><span class="ci-opt-emoji">🪫</span><span class="ci-opt-text">Sin batería hoy</span></div>
         </div>
-        <div class="ci-nav"><button class="btn btn-sage" onclick="ciNext(1)" style="flex:1;margin-top:6px;">Siguiente →</button></div>
+        <div class="ci-nav" style="display:none;"><button class="btn btn-sage" onclick="ciNext(1)" style="flex:1;margin-top:6px;">Siguiente →</button></div>
       </div>
       <!-- Q2: Tiempo disponible -->
       <div class="ci-step" id="cistep-1">
@@ -1179,7 +1180,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
         </div>
         <div class="ci-nav">
           <button class="btn btn-ghost" onclick="ciPrev(0)" style="margin-top:6px;">← Atrás</button>
-          <button class="btn btn-sage" onclick="ciNext(2)" style="flex:1;margin-top:6px;">Siguiente →</button>
         </div>
       </div>
       <!-- Q3: Estado emocional -->
@@ -1195,7 +1195,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
         </div>
         <div class="ci-nav">
           <button class="btn btn-ghost" onclick="ciPrev(1)" style="margin-top:6px;">← Atrás</button>
-          <button class="btn btn-sage" onclick="calcCheckin()" style="flex:1;margin-top:6px;">Ver mi plan →</button>
         </div>
       </div>
     </div>
@@ -3627,10 +3626,17 @@ function updateCiPips(active){
   for(let i=0;i<3;i++){const d=document.createElement('div');d.className='ci-pip'+(i<active?' done':i===active?' cur':'');c.appendChild(d);}
 }
 
+// Auto-avance por step:  0→Q2  1→Q3  2→calcCheckin
+const CI_AUTO_FN = [()=>ciNext(1), ()=>ciNext(2), ()=>calcCheckin()];
+
 function ciSelect(step,val,el){
   ciAnswers[step]=val;
+  // Feedback visual inmediato
   el.closest('.ci-opts').querySelectorAll('.ci-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
+  // Micro-delay 320ms para que el usuario vea la selección antes de avanzar
+  el.style.transform='scale(1.04)';
+  setTimeout(()=>{ el.style.transform=''; CI_AUTO_FN[step]&&CI_AUTO_FN[step](); }, 320);
 }
 
 function ciFlashRequired(stepEl){
@@ -5990,10 +5996,17 @@ function updateHmoodPips(active){
   const c=document.getElementById('hmoodPips'); if(!c)return; c.innerHTML='';
   for(let i=0;i<3;i++){const d=document.createElement('div');d.className='ci-pip'+(i<active?' done':i===active?' cur':'');c.appendChild(d);}
 }
+// Auto-avance hijo:  0→Q2  1→Q3  2→submitHijoMood
+const HM_AUTO_FN = [()=>hmNext(1), ()=>hmNext(2), ()=>submitHijoMood()];
+
 function hmSelect(step,val,el){
   hmoodAnswers[step]=val;
+  // Feedback visual
   el.closest('div').querySelectorAll('.hmood-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
+  // Micro-delay 320ms antes de avanzar
+  el.style.transform='scale(1.04)';
+  setTimeout(()=>{ el.style.transform=''; HM_AUTO_FN[step]&&HM_AUTO_FN[step](); }, 320);
 }
 function hmNext(to){
   if(hmoodAnswers[to-1]===null){
