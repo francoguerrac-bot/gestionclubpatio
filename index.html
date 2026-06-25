@@ -5,25 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Gestión de Equipos Club Patio</title>
 
-<!-- ── PWA: Web App Manifest ── -->
-<!-- ── CACHE BUSTER: detecta versión vieja y fuerza recarga ── -->
+<!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var BUILD = '2026-06-25-v7'; // v7: auto-repair pending role
-  var stored = localStorage.getItem('app-build');
-  if(stored && stored !== BUILD){
-    // Versión diferente → limpiar SW y recargar
-    localStorage.setItem('app-build', BUILD);
-    if('caches' in window){
-      caches.keys().then(function(keys){
-        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
-      }).then(function(){ location.reload(true); });
-    } else { location.reload(true); }
+  var B='2026-06-25-v8-stable';
+  var s=localStorage.getItem('app-build');
+  if(s&&s!==B){
+    localStorage.setItem('app-build',B);
+    if('caches' in window){caches.keys().then(function(k){return Promise.all(k.map(function(c){return caches.delete(c);}));}).then(function(){location.reload(true);});}
+    else{location.reload(true);}
     return;
   }
-  localStorage.setItem('app-build', BUILD);
+  localStorage.setItem('app-build',B);
+  // bootApp definido aquí — siempre disponible aunque el main script falle
+  var _q=[];
+  window.bootApp=function(d,p){
+    if(typeof window.initApp==='function'){window.initApp(d,p);}
+    else{_q.push({d:d,p:p});}
+  };
+  window._drainBootQueue=function(){
+    while(_q.length){var i=_q.shift();window.initApp(i.d,i.p);}
+  };
+  // Loading screen máx 5s
+  window._hideLoading=function(){
+    var ls=document.getElementById('loadingScreen');
+    if(ls&&ls.style.display!=='none'){ls.style.opacity='0';setTimeout(function(){ls.style.display='none';},300);}
+  };
+  setTimeout(window._hideLoading,5000);
 })();
 </script>
+<!-- ── PWA: Web App Manifest ── -->
 <link rel="manifest" href="/manifest.json">
 
 <!-- ── PWA: Meta tags generales ── -->
@@ -335,9 +346,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 /* ── DAILY CHECK-IN OVERLAY ── */
 .ci-overlay{position:fixed;inset:0;z-index:190;background:linear-gradient(160deg,#1A1A1A 0%,#1A3025 100%);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
 .ci-card{width:100%;max-width:360px;background:#fff;border-radius:20px;padding:22px 20px 20px;box-shadow:0 20px 60px rgba(0,0,0,.5);font-family:'Inter',sans-serif;}
-.ci-step{display:none;}
-.ci-step.active{display:block;animation:step-fadein .25s ease;}
-@keyframes step-fadein{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+.ci-step{display:none;} .ci-step.active{display:block;}
 .ci-q{font-size:15px;font-weight:700;color:#1A1A1A;margin-bottom:3px;line-height:1.4;}
 .ci-sub{font-size:11px;color:#6B7280;margin-bottom:12px;line-height:1.4;}
 .ci-opts{display:grid;gap:7px;}
@@ -521,101 +530,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .mh-alert-badge{font-size:9px;font-weight:800;background:#FEE2E2;color:#DC2626;padding:2px 7px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
 .mh-day-label{display:flex;gap:5px;flex:1;padding-left:94px;margin-bottom:4px;}
 .mh-day-lbl{flex:1;max-width:32px;text-align:center;font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;}
-/* ── NOTIFICACIÓN PUSH HIJO ── */
-.hijo-notif-overlay{position:fixed;inset:0;z-index:995;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:20px;}
-.hijo-notif-card{background:var(--bg-card);border-radius:22px;padding:28px 22px;max-width:340px;width:100%;text-align:center;font-family:'Inter',sans-serif;animation:cel-pop .45s cubic-bezier(.34,1.56,.64,1);}
-.hijo-notif-icon{font-size:64px;margin-bottom:10px;display:block;animation:cel-bounce .6s ease-in-out infinite alternate;}
-.hijo-notif-title{font-size:20px;font-weight:800;margin-bottom:8px;}
-.hijo-notif-msg{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;}
-.hijo-notif-note{font-size:12px;font-style:italic;color:var(--primary-blue);background:var(--sage-dim);border-radius:9px;padding:9px 12px;margin-bottom:18px;line-height:1.5;}
-.hijo-notif-close{width:100%;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;}
-/* ── PERMISSION CHECKLIST PANEL (Hijo) ── */
-.perm-checklist-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;}
-.perm-checklist-card{background:var(--bg-card);border-radius:22px 22px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;font-family:'Inter',sans-serif;animation:pwa-slide-in .35s ease;max-height:90vh;overflow-y:auto;}
-.perm-step{display:none;} .perm-step.active{display:block;}
-.perm-checklist-item-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
-.perm-checklist-item-row:last-child{border-bottom:none;}
-.perm-cl-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center;}
-.perm-cl-text{flex:1;font-size:13px;font-weight:500;color:var(--text-main);line-height:1.4;}
-.perm-cl-sub{font-size:10px;color:var(--text-muted);margin-top:2px;}
-.perm-step-dots{display:flex;gap:5px;justify-content:center;margin-bottom:16px;}
-.perm-step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s;}
-.perm-step-dot.active{background:var(--primary-blue);}
-/* Mis permisos status en hijo */
-.hijo-perm-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;border-left:4px solid var(--primary-blue);}
-.hijo-perm-status-row{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;}
-/* ── MODAL DE RESOLUCIÓN (nota obligatoria) ── */
-.resolve-overlay{position:fixed;inset:0;z-index:980;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:20px;}
-.resolve-card{background:var(--bg-card);border-radius:18px;padding:22px;max-width:380px;width:100%;font-family:'Inter',sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.3);}
-.resolve-action-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;margin-bottom:12px;}
-.rab-approve{background:#DCFCE7;color:#16A34A;}
-.rab-eval{background:#DBEAFE;color:#1E40AF;}
-.rab-reject{background:#FEE2E2;color:#DC2626;}
-.resolve-textarea{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:11px;padding:11px 13px;outline:none;resize:none;background:var(--bg-main);box-sizing:border-box;min-height:90px;transition:border-color .2s;}
-.resolve-textarea:focus{border-color:var(--primary-blue);}
-.resolve-char-hint{font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right;}
-.resolve-confirm-btn{width:100%;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;margin-top:10px;transition:all .2s;}
-.resolve-confirm-btn:disabled{opacity:.35;cursor:not-allowed;}
-.resolve-confirm-btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.15);}
-/* Burbuja nota padres en perfil hijo */
-.parent-note-bubble{background:linear-gradient(135deg,#EEF2FF,#E0E7FF);border:1.5px solid #C7D2FE;border-radius:4px 14px 14px 14px;padding:10px 13px;margin-top:8px;font-size:12px;color:#3730A3;line-height:1.5;position:relative;}
-.parent-note-bubble::before{content:'';position:absolute;top:-8px;left:10px;border:4px solid transparent;border-bottom-color:#C7D2FE;}
-.parent-note-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6366F1;margin-bottom:4px;}
-.read-btn{font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;margin-top:6px;transition:all .15s;font-family:'Inter',sans-serif;}
-.read-btn:hover{background:var(--primary-green);color:#fff;border-color:var(--primary-green);}
-.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-coral);display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
-/* ── PANEL FAMILIA (Permisos + Propuestas) ── */
-.fam-filter-bar{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
-.fam-filter-btn{flex-shrink:0;font-size:10px;font-weight:700;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
-.fam-filter-btn.active{background:var(--text-main);color:#fff;border-color:var(--text-main);}
-.fam-stats{display:flex;gap:8px;margin-bottom:14px;}
-.fam-stat{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;}
-.fam-stat-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;line-height:1;}
-.fam-stat-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
-.fam-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(45,49,66,.05);transition:all .2s;}
-.fam-card:hover{box-shadow:0 4px 16px rgba(45,49,66,.09);}
-.fam-card-hdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
-.fam-type-badge{font-size:9px;font-weight:800;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;margin-top:2px;}
-.fam-tb-perm{background:#EDE9FE;color:#7C3AED;}
-.fam-tb-prop{background:#DBEAFE;color:#2563EB;}
-.fam-requester{width:34px;height:34px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.fam-title{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:2px;}
-.fam-detail{font-size:11px;color:var(--text-muted);line-height:1.4;}
-.fam-status-row{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap;}
-.fam-status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;}
-.fsb-pending{background:#FEF3C7;color:#92400E;}
-.fsb-eval{background:#DBEAFE;color:#1E40AF;}
-.fsb-approved{background:#DCFCE7;color:#16A34A;}
-.fsb-rejected{background:#FEE2E2;color:#DC2626;}
-.fam-sig-dot{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:99px;}
-.fsd-ok{background:#DCFCE7;color:#16A34A;}
-.fsd-pend{background:#F3F4F6;color:#9CA3AF;}
-.fam-compromiso{background:var(--sage-dim);border-left:3px solid var(--primary-blue);border-radius:0 8px 8px 0;padding:7px 10px;font-size:11px;color:var(--text-main);margin:8px 0;line-height:1.5;}
-.fam-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
-.fam-action-btn{flex:1;min-width:80px;font-size:11px;font-weight:700;padding:8px 10px;border-radius:9px;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;text-align:center;}
-.fab-approve{background:linear-gradient(135deg,var(--primary-green),#7DAD2E);color:#fff;box-shadow:0 2px 6px rgba(155,197,61,.3);}
-.fab-eval{background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;box-shadow:0 2px 6px rgba(59,130,246,.3);}
-.fab-reject{background:linear-gradient(135deg,var(--accent-coral),#D94540);color:#fff;box-shadow:0 2px 6px rgba(242,92,84,.3);}
-.fab-done{background:#F3F4F6;color:#9CA3AF;cursor:default;}
-.fam-note-wrap{margin-top:8px;display:none;}
-.fam-note-input{width:100%;font-family:'Inter',sans-serif;font-size:12px;border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;outline:none;resize:none;background:var(--bg-main);box-sizing:border-box;}
-.fam-note-input:focus{border-color:var(--primary-blue);}
-.fam-note-send{margin-top:5px;font-size:11px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;background:var(--text-main);color:#fff;cursor:pointer;font-family:'Inter',sans-serif;}
-.fam-response-note{margin-top:8px;padding:7px 10px;background:#F9FAFB;border-radius:8px;border-left:3px solid var(--text-muted);font-size:11px;color:var(--text-muted);font-style:italic;}
-/* Estado de notificación WA */
-.wa-notif-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;cursor:default;}
-.wa-notif-ok{background:#DCFCE7;color:#16A34A;}
-.wa-notif-no{background:#FEF3C7;color:#D97706;cursor:pointer;}
-.wa-notif-no:hover{background:#D97706;color:#fff;}
-/* Activity log */
-.activity-log-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px;}
-.activity-log-item:last-child{border-bottom:none;}
-.activity-log-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--bg-main);}
-.activity-log-body{flex:1;min-width:0;}
-.activity-log-who{font-weight:700;color:var(--text-main);}
-.activity-log-what{color:var(--text-muted);margin-top:1px;line-height:1.4;}
-.activity-log-time{font-size:9px;color:#C4C4C4;margin-top:2px;font-family:'JetBrains Mono',monospace;}
-.fam-empty{text-align:center;padding:32px 16px;color:var(--text-muted);}
 /* ── ORGANIGRAMA ── */
 .org-section{margin-bottom:20px;}
 .org-section-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px 12px 0 0;margin-bottom:0;}
@@ -961,44 +875,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 </head>
 <body>
 
-<!-- ── PANTALLA DE CARGA (se oculta sola en max 5s) ── -->
-<div id="loadingScreen" style="position:fixed;inset:0;z-index:999;background:linear-gradient(160deg,#1E2D3D,#2D4A3E);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Inter',sans-serif;transition:opacity .3s;">
-  <img src="/assets/Logo2.png" style="width:64px;height:64px;border-radius:14px;object-fit:cover;margin-bottom:14px;" onerror="this.style.display='none'">
-  <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;">Club Patio Curauma</div>
-  <div id="loadingMsg" style="font-size:11px;color:#9CA3AF;">Cargando...</div>
-  <style>@keyframes ld{0%{width:0%}100%{width:100%}}</style>
-  <div style="width:48px;height:2px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;margin-top:14px;">
-    <div style="height:100%;background:#5BC0BE;animation:ld 3s ease forwards;"></div>
-  </div>
-</div>
-<script>
-// Ocultar loading screen máximo en 5 segundos (pase lo que pase)
-window._hideLoading = function(){
-  var ls=document.getElementById('loadingScreen');
-  if(ls&&ls.style.display!=='none'){ls.style.opacity='0';setTimeout(function(){ls.style.display='none';},300);}
-};
-setTimeout(window._hideLoading, 5000);
-
-// ── bootApp definido aquí (HEAD) para que siempre exista ──
-// El módulo Firebase lo llama. Si initApp no está lista, encola la llamada.
-var _bootQueue = [];
-window.bootApp = function(cloudData, profile){
-  if(typeof window.initApp === 'function'){
-    window.initApp(cloudData, profile);
-  } else {
-    console.warn('[bootApp] initApp no lista, encolando...');
-    _bootQueue.push({cloudData:cloudData, profile:profile});
-  }
-};
-// Cuando initApp se defina, drena la cola
-window._drainBootQueue = function(){
-  while(_bootQueue.length > 0){
-    var item = _bootQueue.shift();
-    window.initApp(item.cloudData, item.profile);
-  }
-};
-</script>
-
 <!-- ── LOGIN / AUTH OVERLAY ── -->
 <div id="authOverlay" style="position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#1E2D3D 0%,#2D4A3E 60%,#1E3D2E 100%);display:flex;align-items:center;justify-content:center;padding:24px;">
   <div style="width:100%;max-width:360px;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);border-radius:22px;padding:30px 26px;box-shadow:0 24px 60px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.1);font-family:'Inter',sans-serif;">
@@ -1014,7 +890,6 @@ window._drainBootQueue = function(){
       style="width:100%;padding:13px 14px;margin-bottom:10px;border:1.5px solid #E5E7EB;border-radius:11px;font-size:14px;outline:none;font-family:inherit;">
     <div style="position:relative;margin-bottom:6px;">
       <input id="authPass" type="password" autocomplete="current-password" placeholder="Contraseña"
-        onkeydown="if(event.key==='Enter' && window.submitAuth) window.submitAuth()"
         style="width:100%;padding:13px 44px 13px 14px;border:1.5px solid #E5E7EB;border-radius:11px;font-size:14px;outline:none;font-family:inherit;box-sizing:border-box;">
       <button type="button" id="togglePassBtn" onclick="togglePassVis()"
         title="Mostrar/ocultar contraseña"
@@ -1027,7 +902,6 @@ window._drainBootQueue = function(){
     <div id="authError" style="color:#DC2626;font-size:12px;min-height:16px;margin:4px 2px 10px;"></div>
     <div id="authSuccess" style="color:#1F7A52;font-size:12px;min-height:16px;margin:4px 2px 10px;display:none;"></div>
     <button id="authPrimaryBtn" type="button"
-      onclick="window.submitAuth ? window.submitAuth() : alert('Cargando Firebase, espera 2 segundos y vuelve a intentar')"
       style="width:100%;padding:14px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(91,192,190,.35);letter-spacing:.02em;transition:all .2s;">Entrar</button>
     <div style="text-align:center;margin-top:16px;font-size:12.5px;color:#6B7280;">
       <span id="authToggleText">¿No tienes cuenta?</span>
@@ -2269,17 +2143,12 @@ window._drainBootQueue = function(){
         <div class="hijo-dash-title">⏳ Próximas pendientes</div>
         <div id="misTareasProx"></div>
       </div>
-      <!-- Botón permiso (siempre visible para hijos, abre checklist) -->
+      <!-- Botón permiso solo para hijos -->
       <div id="btnPermisoCont" style="display:none;">
-        <button class="btn btn-sage" onclick="openPermChecklist()"
-          style="width:100%;padding:14px;font-size:14px;border-radius:12px;
-          background:linear-gradient(135deg,#7C3AED,#9B59B6);
-          box-shadow:0 4px 14px rgba(124,58,237,.35);">
+        <button class="btn btn-sage" onclick="openPermissionModal()"
+          style="width:100%;padding:13px;font-size:13px;border-radius:12px;">
           🔑 Solicitar Permiso
         </button>
-        <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:4px;">
-          Mamá y Papá recibirán tu solicitud
-        </div>
       </div>
     </div>
 
@@ -2326,41 +2195,6 @@ window._drainBootQueue = function(){
         <div class="hijo-dash-title">📬 Mis propuestas enviadas</div>
         <div id="myProposalsList"><div class="workplan-empty">Sin propuestas aún.</div></div>
       </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════
-     PAGE: FAMILIA — Permisos + Propuestas
-════════════════════════════════════════ -->
-<div class="page" id="pg-familia">
-  <div style="padding:14px 14px 0;">
-
-    <!-- Header -->
-    <div class="card" style="background:linear-gradient(135deg,#2D3142,#1a2040);border:none;margin-bottom:12px;">
-      <div style="color:#fff;">
-        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#888;margin-bottom:4px;">Panel Familiar · Papá &amp; Mamá</div>
-        <div style="font-size:16px;font-weight:800;">🏠 Solicitudes &amp; Propuestas</div>
-        <div style="font-size:11px;color:#aaa;margin-top:3px;">Revisa, evalúa y responde a tus hijos</div>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="fam-stats" id="famStats"></div>
-
-    <!-- Filtros -->
-    <div class="fam-filter-bar">
-      <button class="fam-filter-btn active" id="famf-all"      onclick="setFamFilter('all')">📋 Todos</button>
-      <button class="fam-filter-btn"        id="famf-perm"     onclick="setFamFilter('perm')">🔑 Permisos</button>
-      <button class="fam-filter-btn"        id="famf-prop"     onclick="setFamFilter('prop')">💡 Propuestas</button>
-      <button class="fam-filter-btn"        id="famf-pending"  onclick="setFamFilter('pending')">⏳ Pendientes</button>
-      <button class="fam-filter-btn"        id="famf-resolved" onclick="setFamFilter('resolved')">✅ Resueltos</button>
-    </div>
-
-    <!-- Lista unificada -->
-    <div id="famContainer">
-      <div class="fam-empty">⏳ Cargando solicitudes...</div>
     </div>
 
   </div>
@@ -2432,153 +2266,6 @@ window._drainBootQueue = function(){
       style="width:100%;padding:13px;font-size:14px;margin-top:4px;">
       ✅ Crear Integrante
     </button>
-  </div>
-</div>
-
-<!-- ── MODAL DE RESOLUCIÓN (nota obligatoria para padres) ── -->
-<div id="resolveModal" class="resolve-overlay" onclick="if(event.target===this)closeResolveModal()">
-  <div class="resolve-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <div style="font-size:15px;font-weight:800;">💬 Tu respuesta</div>
-      <button onclick="closeResolveModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">×</button>
-    </div>
-
-    <!-- Acción seleccionada -->
-    <div id="resolveActionBadge" class="resolve-action-badge rab-approve">✅ Aprobar</div>
-    <div id="resolveItemTitle" style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;"></div>
-
-    <!-- Nota obligatoria -->
-    <label style="font-size:11px;font-weight:700;color:var(--text-main);display:block;margin-bottom:6px;">
-      📝 Nota para tu hijo/a <span style="color:var(--accent-coral);font-size:9px;margin-left:4px;">OBLIGATORIO</span>
-    </label>
-    <textarea id="resolveNote"
-      class="resolve-textarea"
-      required
-      placeholder="Escribe tu mensaje... ¿Por qué esta decisión? ¿Qué condiciones tienen que cumplirse?"
-      oninput="onResolveNoteInput(this)"></textarea>
-    <div class="resolve-char-hint">
-      <span id="resolveCharCount">0</span> / 300 caracteres mínimo recomendado
-    </div>
-
-    <div id="resolveNoteError" style="color:var(--accent-coral);font-size:11px;margin-top:4px;display:none;">
-      ⚠️ Debes ingresar una razón para tu decisión (mínimo 5 caracteres).
-    </div>
-    <div style="font-size:10px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:5px;">
-      <span>📱</span> Al confirmar, se abrirá WhatsApp automáticamente para notificar a tu hijo/a.
-    </div>
-
-    <!-- Botón confirmar (disabled hasta que haya nota) -->
-    <button id="resolveConfirmBtn"
-      class="resolve-confirm-btn"
-      disabled
-      onclick="confirmResolveAction()">
-      Confirmar respuesta
-    </button>
-    <button onclick="closeResolveModal()"
-      style="width:100%;padding:10px;background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;margin-top:4px;font-family:'Inter',sans-serif;">
-      Cancelar
-    </button>
-  </div>
-</div>
-
-<!-- ── NOTIFICACIÓN PUSH HIJO ── -->
-<div id="hijoNotifOverlay" class="hijo-notif-overlay">
-  <div class="hijo-notif-card">
-    <span class="hijo-notif-icon" id="hijoNotifIcon">🔔</span>
-    <div class="hijo-notif-title" id="hijoNotifTitle">Novedad en tu solicitud</div>
-    <div class="hijo-notif-msg"  id="hijoNotifMsg"></div>
-    <div class="hijo-notif-note" id="hijoNotifNote" style="display:none;"></div>
-    <button class="hijo-notif-close" id="hijoNotifClose" onclick="closeHijoNotif()"
-      style="background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));color:#fff;">
-      ✅ Entendido
-    </button>
-  </div>
-</div>
-
-<!-- ── PANEL CHECKLIST SOLICITUD DE PERMISO ── -->
-<div id="permChecklistOverlay" class="perm-checklist-overlay" onclick="if(event.target===this)closePermChecklist()">
-  <div class="perm-checklist-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <div style="font-size:16px;font-weight:800;">🔑 Solicitar Permiso</div>
-      <button onclick="closePermChecklist()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">×</button>
-    </div>
-    <div class="perm-step-dots">
-      <div class="perm-step-dot active" id="psd-0"></div>
-      <div class="perm-step-dot" id="psd-1"></div>
-      <div class="perm-step-dot" id="psd-2"></div>
-    </div>
-
-    <!-- Paso 1: Checklist de requisitos -->
-    <div class="perm-step active" id="pstep-0">
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Antes de solicitar, prepara esto:</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">Tu solicitud llegará a Mamá y Papá. Cuanto más clara sea, más fácil aprobarla.</div>
-      <div class="perm-checklist-item-row">
-        <span class="perm-cl-icon">🎯</span>
-        <div><div class="perm-cl-text">Motivo claro y específico</div><div class="perm-cl-sub">¿Qué quieres hacer? ¿Por qué?</div></div>
-      </div>
-      <div class="perm-checklist-item-row">
-        <span class="perm-cl-icon">📅</span>
-        <div><div class="perm-cl-text">Fecha y hora exacta</div><div class="perm-cl-sub">¿Cuándo y a qué hora regresas?</div></div>
-      </div>
-      <div class="perm-checklist-item-row">
-        <span class="perm-cl-icon">📍</span>
-        <div><div class="perm-cl-text">Lugar específico</div><div class="perm-cl-sub">¿Dónde exactamente vas a estar?</div></div>
-      </div>
-      <div class="perm-checklist-item-row">
-        <span class="perm-cl-icon">👥</span>
-        <div><div class="perm-cl-text">Con quién vas</div><div class="perm-cl-sub">Nombres de acompañantes</div></div>
-      </div>
-      <div class="perm-checklist-item-row">
-        <span class="perm-cl-icon">🤝</span>
-        <div><div class="perm-cl-text">Tu compromiso</div><div class="perm-cl-sub">¿Qué ofreces a cambio? ¿Qué responsabilidad cumplirás?</div></div>
-      </div>
-      <button class="btn btn-sage" onclick="permChecklistNext(1)" style="width:100%;padding:13px;margin-top:16px;font-size:14px;">
-        Listo, voy al formulario →
-      </button>
-    </div>
-
-    <!-- Paso 2: Formulario compacto -->
-    <div class="perm-step" id="pstep-1">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">📝 Completa tu solicitud:</div>
-      <div style="display:grid;gap:10px;">
-        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Motivo *</label>
-          <input id="pf-motivo" class="nm-input" type="text" placeholder="Ej: Salir al cine con amigos"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Fecha *</label>
-            <input id="pf-fecha" class="nm-input" type="date"></div>
-          <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Regreso *</label>
-            <input id="pf-hora" class="nm-input" type="time"></div>
-        </div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Lugar *</label>
-          <input id="pf-lugar" class="nm-input" type="text" placeholder="Ej: Mall Curicó"></div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Acompañantes</label>
-          <input id="pf-acomp" class="nm-input" type="text" placeholder="Ej: Amigos del colegio"></div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:flex;align-items:center;gap:4px;">
-            🤝 Mi Compromiso * <span style="font-size:8px;background:var(--sage-dim);color:var(--primary-blue);padding:1px 5px;border-radius:99px;">obligatorio</span>
-          </label>
-          <textarea id="pf-comp" class="nm-input" rows="2" placeholder="Si me dan permiso, me comprometo a..." style="resize:none;"></textarea></div>
-      </div>
-      <div id="pf-error" style="color:var(--accent-coral);font-size:11px;margin-top:6px;display:none;"></div>
-      <div style="display:flex;gap:8px;margin-top:14px;">
-        <button class="btn btn-ghost" onclick="permChecklistNext(0)" style="padding:12px 16px;">← Atrás</button>
-        <button class="btn btn-sage" onclick="permChecklistNext(2)" style="flex:1;padding:12px;">Vista previa →</button>
-      </div>
-    </div>
-
-    <!-- Paso 3: Resumen / confirmación -->
-    <div class="perm-step" id="pstep-2">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📋 Resumen de tu solicitud:</div>
-      <div id="pf-preview" style="background:var(--bg-main);border-radius:12px;padding:14px;font-size:12px;line-height:1.8;margin-bottom:14px;border:1.5px solid var(--border);"></div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;text-align:center;">
-        ¿Todo está correcto? Cuando envíes, Mamá y Papá recibirán la notificación.
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost" onclick="permChecklistNext(1)" style="padding:12px 16px;">← Editar</button>
-        <button class="btn btn-sage" onclick="submitFromChecklist()" id="pf-submit-btn" style="flex:1;padding:12px;font-size:14px;">
-          📤 Enviar solicitud
-        </button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -2724,69 +2411,20 @@ window._drainBootQueue = function(){
 
 <div class="toast" id="toast"></div>
 
-<!-- ── PANEL DE EMERGENCIA (aparece si bootApp falla) ── -->
-<div id="emergencyPanel" style="display:none;position:fixed;inset:0;z-index:9998;background:linear-gradient(135deg,#1A1A1A,#1a3025);padding:30px 20px;font-family:'Inter',sans-serif;overflow-y:auto;">
-  <div style="max-width:380px;margin:0 auto;">
-    <div style="font-size:36px;text-align:center;margin-bottom:10px;">🔧</div>
-    <div style="font-size:18px;font-weight:800;color:#fff;text-align:center;margin-bottom:6px;">Recuperación de sesión</div>
-    <div style="font-size:12px;color:#9CA3AF;text-align:center;margin-bottom:20px;">El sistema detectó un problema al cargar tu perfil</div>
-
-    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px;margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;color:#5BC0BE;margin-bottom:6px;">DIAGNÓSTICO</div>
-      <div id="emergencyDiag" style="font-size:11px;color:#d1d5db;line-height:1.7;font-family:monospace;"></div>
+<!-- ── PWA INSTALL BANNER ── -->
+<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9990;background:linear-gradient(135deg,#1E2D3D,#2D4A3E);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);width:calc(100% - 28px);max-width:380px;font-family:'Inter',sans-serif;border:1px solid rgba(91,192,190,.3);animation:pwa-slide-in .4s cubic-bezier(.34,1.56,.64,1);">
+  @keyframes pwa-slide-in{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  <div style="display:flex;align-items:center;gap:12px;">
+    <img src="/assets/Logo2.png" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px;">Club Patio · Instalar App</div>
+      <div style="font-size:11px;color:#9CA3AF;line-height:1.4;">Acceso directo desde tu pantalla de inicio</div>
     </div>
-
-    <button onclick="reconnectSystem()" style="width:100%;padding:14px;font-size:14px;margin-bottom:8px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:11px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;">
-      🚀 Reconexión total del sistema
-    </button>
-    <button onclick="emergencyRecoverProfile()" class="btn btn-sage" style="width:100%;padding:12px;font-size:13px;margin-bottom:8px;">
-      🔄 Recuperar perfil
-    </button>
-    <button onclick="emergencyForceLoadTasks()" class="btn btn-ghost" style="width:100%;padding:12px;font-size:13px;margin-bottom:8px;color:#fff;border-color:#444;">
-      📋 Cargar tareas sin filtro
-    </button>
-    <button onclick="emergencyClearCache()" style="width:100%;padding:12px;font-size:13px;border:1.5px solid #EF4444;background:none;color:#EF4444;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:8px;">
-      🗑️ Limpiar caché del Service Worker
-    </button>
-    <button onclick="document.getElementById('emergencyPanel').style.display='none'" style="width:100%;padding:10px;font-size:12px;background:none;border:none;color:#6B7280;cursor:pointer;font-family:'Inter',sans-serif;">
-      Cerrar
-    </button>
-    <div id="emergencyResult" style="margin-top:10px;font-size:12px;color:#9CA3AF;text-align:center;min-height:20px;"></div>
+    <button onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:none;border:none;color:#6B7280;font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;">×</button>
   </div>
-</div>
-
-<!-- ── PWA MICRO BADGE (mínimo invasivo: 44px alto máx) ── -->
-<div id="pwaInstallBanner" style="
-  display:none;
-  position:fixed;
-  bottom:90px;
-  right:12px;
-  z-index:9990;
-  animation:pwa-toast-in .3s cubic-bezier(.34,1.56,.64,1);
-">
-  <style>
-    @keyframes pwa-toast-in{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
-  </style>
-  <!-- Pill compacto de una sola línea, max 44px alto -->
-  <div style="
-    display:flex;align-items:center;gap:7px;
-    background:var(--bg-card);
-    border:1.5px solid var(--border);
-    border-radius:99px;
-    padding:6px 10px 6px 8px;
-    box-shadow:0 3px 12px rgba(45,49,66,.14);
-    font-family:'Inter',sans-serif;
-    max-height:44px;
-    white-space:nowrap;
-  ">
-    <img src="/assets/Logo2.png" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">
-    <button id="pwaInstallBtn" onclick="triggerPwaInstall()"
-      style="background:none;border:none;font-size:11px;font-weight:700;color:var(--primary-blue);cursor:pointer;padding:0;font-family:'Inter',sans-serif;white-space:nowrap;">
-      📲 Instalar app
-    </button>
-    <button onclick="dismissPwaBanner()" title="No mostrar 7 días"
-      style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:0 0 0 2px;line-height:1;flex-shrink:0;opacity:.5;">×</button>
-  </div>
+  <button id="pwaInstallBtn" onclick="triggerPwaInstall()" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.02em;">
+    📲 Descargar App
+  </button>
 </div>
 
 <!-- ── PWA iOS INSTRUCTIONS MODAL ── -->
@@ -2850,8 +2488,8 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','familia','coach','control','auditoria'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','familia','coach'],canReadAll:false},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','coach','control','auditoria','admin'], canReadAll:true,  canApprove:true},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','permisos','coach'],canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
@@ -2885,26 +2523,18 @@ const NAV_META = {
   permisos:  {icon:'🔑', label:'Permisos'},
   auditoria: {icon:'🗂️', label:'Auditoría'},
   admin:     {icon:'🛡️', label:'Admin DB'},
-  familia:   {icon:'🏠', label:'Familia'},
 };
 
-let currentRole    = 'pending';
+let currentRole = 'pending';
 let currentProfile = {};
-// Exponer globalmente para que el módulo Firebase los lea
-window.currentRole    = currentRole;
-window.currentProfile = currentProfile;
-window.orgMembers     = [];
+window.orgMembers = [];
 window._localAuditLog = [];
 
 // ═══════════════ STORAGE (Firestore en la nube) ═══════════════
 // Los datos del usuario se cargan desde Firestore en applyCloudData() antes
 // de llamar a load(); aquí solo sembramos datos de inicio si está vacío.
 function load(){
-  // Solo sembrar datos demo para Director/Ejecutivos
-  // Los roles tácticos reciben sus tareas desde fetchTasksFromFirestore()
-  if(!tasks.length && (currentRole==='director'||EXECUTIVE_ROLES.includes(currentRole)||currentRole==='pending')){
-    seedTasks();
-  }
+  if(!tasks.length) seedTasks();
   if(!sprintTasks.length) seedSprint();
   if(!checkins.length) seedCheckins();
 }
@@ -2923,12 +2553,7 @@ function applyCloudData(d){
   tiendaAbierta  = d.tienda_abierta || false;
   if(d.kpis) window.clubKPIs = {...DEFAULT_KPIS, ...d.kpis};
 }
-function saveTasks(){
-  // Escribe en /users/{uid}.tasks[] (backward compat) Y en /tasks collection
-  window.cloudSet && window.cloudSet('tasks', tasks);
-  // Sync a la colección /tasks (sin bloquear UI)
-  if(window.migrateTasksToCollection) window.migrateTasksToCollection(tasks).catch(()=>{});
-}
+function saveTasks(){    window.cloudSet && window.cloudSet('tasks', tasks); }
 function saveSprint(){   window.cloudSet && window.cloudSet('sprint', sprintTasks); }
 function saveCheckins(){ window.cloudSet && window.cloudSet('checkins', checkins); }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -2993,7 +2618,6 @@ function showPage(p){
   if(p==='permisos')  {renderPermissionsCenter();}
   if(p==='auditoria') {loadAuditData();}
   if(p==='admin')     {loadAdminPanel();}
-  if(p==='familia')   {loadFamiliaPanel();}
   window.scrollTo(0,0);
 }
 
@@ -3016,8 +2640,7 @@ function mountRoleUI(role, profile){
 
   currentRole = primaryRole;
   window.currentRole = primaryRole;
-  currentProfile = profile || {};
-  window.currentProfile = currentProfile; // sync para Firebase module
+  currentProfile = profile;
 
   // Fusionar nav y módulos de TODOS los roles válidos
   const mergedNav     = [...new Set(allRoles.flatMap(r => (ROLES[r]||{}).nav    ||[]).filter(Boolean))];
@@ -3047,9 +2670,6 @@ function mountRoleUI(role, profile){
     setTimeout(()=>window.loadOrgData&&window.loadOrgData(), 600);
     setTimeout(()=>window.checkPendingPermissions&&window.checkPendingPermissions(), 1500);
   } else setTimeout(initMoodSelfBar, 400);
-
-  // Aplicar tareas maestras con nivel de visibilidad correcto
-  setTimeout(applyMasterTasks, 900);
 
   // Inicializar módulos (rc.modules ya fusionado para multi-rol)
   if(rc.modules&&rc.modules.includes('casa'))  setTimeout(initCasaModule,  200);
@@ -3318,41 +2938,27 @@ function addTask(){
   const dur=parseInt(document.getElementById('metaDur').value)||0;
   const ownerSel=document.getElementById('metaOwner');
   const ownerVal=ownerSel.value;
-  const newTask = {
-    id:uid(), text,
+  tasks.unshift({
+    id:uid(),text,
     ctx:document.getElementById('metaCtx').value,
     prio:document.getElementById('metaPrio').value,
     freq,
     deadline:freq==='diaria'?'':document.getElementById('metaDate').value,
     time:document.getElementById('metaTime').value,
-    dur, done:false, ts:Date.now(),
+    dur,done:false,ts:Date.now(),
     owner:ownerVal,
-    assignedToUid:  currentProfile.uid||'',   // ← UID del creador (para Firestore rules)
-    assignedToRole: currentRole,               // ← rol del creador
-    orgId:          ORG_ID,
-  };
-  tasks.unshift(newTask);
-  // Escribir directamente a /tasks collection (sin esperar saveTasks batch)
-  if(window.saveTaskToCollection) window.saveTaskToCollection(newTask).catch(()=>{});
+  });
   saveTasks(); input.value=''; ownerSel.value=''; input.focus();
   renderTasks();
   toast(ownerVal?'✅ Asignada a '+ownerVal:'✅ Tarea anotada');
 }
 function toggleDone(id){
   const t=tasks.find(t=>t.id===id);
-  if(!t)return;
-  t.done=!t.done;
-  if(t.done){ t.doneAt=new Date().toISOString(); t.completedAt=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}); }
-  else { delete t.doneAt; delete t.completedAt; }
-  // Actualizar en colección /tasks (campo específico)
-  if(window.updateTaskInCollection) window.updateTaskInCollection(id,{done:t.done,doneAt:t.doneAt||null,completedAt:t.completedAt||null}).catch(()=>{});
-  saveTasks(); renderTasks();
+  if(!t)return; t.done=!t.done; saveTasks(); renderTasks();
   if(t.done) toast('✓ '+t.text.slice(0,28)+(t.text.length>28?'…':''));
 }
 function deleteTask(id){
-  tasks=tasks.filter(t=>t.id!==id);
-  if(window.deleteTaskFromCollection) window.deleteTaskFromCollection(id).catch(()=>{});
-  saveTasks(); renderTasks(); toast('🗑️ Eliminada');
+  tasks=tasks.filter(t=>t.id!==id); saveTasks(); renderTasks(); toast('🗑️ Eliminada');
 }
 
 // ═══════════════ FILTER / SORT ═══════════════
@@ -3374,84 +2980,12 @@ function setSort(s){
 // ═══════════════ RENDER TASKS ═══════════════
 function durLabel(m){if(!m)return'';if(m<60)return m+'min';const h=Math.floor(m/60),r=m%60;return r?`${h}h${r}m`:`${h}h`;}
 
-// ══════════════════════════════════════════════════════════
-// GOBERNANZA DE DATOS — Niveles de Visibilidad de Tareas
-// ══════════════════════════════════════════════════════════
-
-// ── NIVEL TOTAL — Visión completa de todos los módulos ──
-const EXECUTIVE_ROLES = [
-  'director',
-  'mama',
-  'coordinadora_bazares',
-  'coordinadora_tienda',
-];
-
-// ── NIVEL TÁCTICO — Solo ven sus propias tareas asignadas ──
-// Estos roles aplican el filtro estricto: assignedToRole === suRol
-const TACTICAL_ROLES = [
-  'hijo1',              // Hijo 1
-  'hijo2',              // Hijo 2
-  'publicista',         // Publicista
-  'disenador',          // Diseñador/a
-  'disenador_pub',      // Diseñador/Publicista
-  'staff_eventos',      // Staff Eventos Deportivos  ← NUEVO
-  'staff_montaje',      // Staff de Montaje
-  'soporte_app',        // Soporte de Aplicaciones
-  'logistica',          // Logística
-  'vendedor',           // Vendedor/a
-  'programador',        // Encargado Web
-];
-
-// Bloques de visibilidad por tipo de tarea
-const VISIBILITY_LEVELS = {
-  executive: 'executive', // Solo roles ejecutivos
-  children:  'children',  // Solo hijos
-  club:      'club',      // Solo roles Club Patio
-  all:       'all',       // Todos (público)
-};
-
+// ── FILTRO ANTI-SOBRECARGA: solo el Director ve todas las tareas ──
 function getVisibleTasks(){
-  // ── COMITÉ EJECUTIVO: visibilidad TOTAL ──
-  if(currentRole === 'director' || EXECUTIVE_ROLES.includes(currentRole)) return tasks;
-
-  // ── PENDING: no filtrar (no han recibido rol aún) ──
-  if(currentRole === 'pending') return tasks;
-
-  // ── EJECUCIÓN TÁCTICA (todos estos roles tienen vista aislada) ──
-  // publicista · disenador · disenador_pub · staff_eventos · staff_montaje
-  // soporte_app · logistica · vendedor · programador · hijo1 · hijo2
-  if(!TACTICAL_ROLES.includes(currentRole)) return tasks; // rol desconocido = sin filtro
-
-  // ── EJECUCIÓN TÁCTICA: filtro ESTRICTO ──
-  // Solo ven tareas donde assignedToRole coincide con SU rol
-  const me      = currentProfile.displayName || '';
-  const myRoles = (Array.isArray(currentProfile.roles) && currentProfile.roles.filter(Boolean).length)
-    ? currentProfile.roles.filter(Boolean) : [currentRole];
-
-  return tasks.filter(t => {
-    // REGLA PRINCIPAL: assignedToRole coincide exactamente con alguno de sus roles
-    if(t.assignedToRole && myRoles.some(r => r === t.assignedToRole)) return true;
-    // COMPATIBILIDAD: tarea asignada a esta persona (owner) y sin assignedToRole
-    if(!t.assignedToRole && t.owner === me) return true;
-    // TODO LO DEMÁS: BLOQUEADO — isolación táctica completa
-    return false;
-  });
-}
-
-function updateFilterBadge(){
-  let badge=document.getElementById('myTasksBadge');
-  if(EXECUTIVE_ROLES.includes(currentRole)||currentRole==='director'){
-    if(badge) badge.remove(); return; // ejecutivos no necesitan el badge
-  }
-  if(currentRole==='pending'){if(badge)badge.remove();return;}
-  if(!badge){
-    const sortBar=document.querySelector('.sort-bar');
-    if(sortBar){
-      badge=document.createElement('span');badge.id='myTasksBadge';badge.className='filter-me-badge';
-      sortBar.appendChild(badge);
-    }
-  }
-  if(badge) badge.textContent='👤 Vista táctica aislada';
+  if(currentRole==='director'||currentRole==='pending') return tasks;
+  const me = currentProfile.displayName||'';
+  // Mostrar tareas sin asignar (propias del contexto) O asignadas al usuario
+  return tasks.filter(t=>!t.owner||t.owner===me);
 }
 
 function updateFilterBadge(){
@@ -3914,14 +3448,6 @@ function ciSelect(step,val,el){
   ciAnswers[step]=val;
   el.closest('.ci-opts').querySelectorAll('.ci-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
-  // Auto-avance: ir al siguiente paso 350ms después de seleccionar
-  const totalSteps=3;
-  if(step < totalSteps-1){
-    setTimeout(()=>ciNext(step+1), 350);
-  } else {
-    // Último paso: calcular resultado automáticamente
-    setTimeout(()=>calcCheckin(), 350);
-  }
 }
 
 function ciFlashRequired(stepEl){
@@ -4561,568 +4087,6 @@ function toast(msg){
   el.textContent=msg; el.classList.add('show');
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2300);
 }
-
-// ═══════════════ NOTIFICACIONES PUSH HIJO ═══════════════
-
-const NOTIF_MESSAGES = {
-  approved:{
-    icons:['🎉','🌟','🎊','✨'],
-    titles:['¡Permiso Aprobado!','¡Sí pueden! ¡A disfrutar!','¡Lo lograste!','¡Genial, sí te autorizan!'],
-    msgs:[
-      'Mamá y Papá han dicho ✅ SÍ. ¡Confían en ti! Recuerda tu compromiso y vuelve a la hora acordada. 🚀',
-      '¡Excelente noticia! Tu solicitud fue aprobada. El permiso es una muestra de confianza — ¡no la decepciones! 💪',
-      '¡Sí! ¡Sí! ¡SÍ! 🎊 Tus papás dijeron que sí. Pásala increíble y honra el compromiso que hiciste.',
-    ]
-  },
-  evaluating:{
-    icons:['🤔','💭','⏰','🔍'],
-    titles:['Lo están pensando...','Solicitud en revisión','Un momento más...','Evaluando tu pedido'],
-    msgs:[
-      'Mamá y/o Papá están analizando tu solicitud con cuidado. Ten paciencia, ¡pronto sabrás! 💙',
-      'Tu permiso está siendo evaluado. Esto significa que se lo están tomando en serio. ¡Espera un poco más! 🕐',
-      'Están pensándolo bien. A veces las mejores decisiones toman tiempo. ¡Mantente disponible! 📱',
-    ]
-  },
-  rejected:{
-    icons:['💙','🌱','🤗','💝'],
-    titles:['Esta vez no pudo ser...','Te quieren mucho 💙','Para la próxima','Con cariño, no esta vez'],
-    msgs:[
-      'Esta vez Mamá y/o Papá no pudieron autorizar tu solicitud. Recuerda que sus decisiones siempre son con cariño. Lee el motivo. 💙',
-      'No fue posible esta vez, pero no te rindas. Habla con ellos, entiende el motivo y propón alternativas. 🌱',
-      'Te quieren tanto que a veces el "no" es la forma de cuidarte. Lee su explicación con calma y sin enojo. 🤗',
-    ]
-  }
-};
-
-function getRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-async function checkHijoNotifications(){
-  if(currentRole!=='hijo1'&&currentRole!=='hijo2') return;
-  try{
-    const uid=currentProfile.uid||'';
-    if(!uid) return;
-    const perms = await window.loadPermissionRequests()||[];
-    const myPerms = perms.filter(p=>p.requesterId===uid);
-
-    // Buscar permisos con estado cambiado no notificado al hijo
-    const unnotified = myPerms.filter(p=>p.status!=='pending'&&!p.hijoNotified);
-    if(!unnotified.length) return;
-
-    // Mostrar notificación por el más reciente
-    const latest = unnotified.sort((a,b)=>b.ts-a.ts)[0];
-    showHijoNotif(latest);
-
-    // Marcar como notificado
-    await window.updatePermissionRequest(latest.id,{hijoNotified:true}).catch(()=>{});
-  }catch(e){ console.warn('[HijoNotif]',e.message); }
-}
-window.checkHijoNotifications=checkHijoNotifications;
-
-function showHijoNotif(perm){
-  const type = perm.status==='approved'?'approved':perm.status==='evaluating'?'evaluating':'rejected';
-  const n = NOTIF_MESSAGES[type];
-  const overlay = document.getElementById('hijoNotifOverlay');
-  const icon    = document.getElementById('hijoNotifIcon');
-  const title   = document.getElementById('hijoNotifTitle');
-  const msg     = document.getElementById('hijoNotifMsg');
-  const note    = document.getElementById('hijoNotifNote');
-  const closeBtn= document.getElementById('hijoNotifClose');
-
-  if(!overlay) return;
-  icon.textContent  = getRandom(n.icons);
-  title.textContent = getRandom(n.titles);
-  msg.textContent   = getRandom(n.msgs);
-
-  const bgColors={approved:'linear-gradient(135deg,var(--primary-green),#7DAD2E)',evaluating:'linear-gradient(135deg,#3B82F6,#2563EB)',rejected:'linear-gradient(135deg,#9CA3AF,#6B7280)'};
-  closeBtn.style.background = bgColors[type];
-
-  if(perm.responseNote){
-    note.style.display='block';
-    note.innerHTML=`<strong>Mensaje de tus padres:</strong><br>"${perm.responseNote}"`;
-  } else { note.style.display='none'; }
-
-  overlay.style.display='flex';
-}
-
-function closeHijoNotif(){
-  document.getElementById('hijoNotifOverlay').style.display='none';
-}
-window.closeHijoNotif=closeHijoNotif;
-
-// ═══════════════ CHECKLIST SOLICITUD DE PERMISO (HIJO) ═══════════════
-
-function openPermChecklist(){
-  // Resetear formulario
-  ['pf-motivo','pf-lugar','pf-acomp','pf-comp'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('pf-fecha').value=new Date().toISOString().split('T')[0];
-  document.getElementById('pf-hora').value='';
-  const errEl=document.getElementById('pf-error');if(errEl){errEl.style.display='none';errEl.textContent='';}
-  permChecklistNext(0);
-  document.getElementById('permChecklistOverlay').style.display='flex';
-}
-window.openPermChecklist=openPermChecklist;
-
-function closePermChecklist(){
-  document.getElementById('permChecklistOverlay').style.display='none';
-}
-window.closePermChecklist=closePermChecklist;
-
-function permChecklistNext(step){
-  // Validar paso 1 antes de ir a paso 2
-  if(step===2){
-    const motivo = document.getElementById('pf-motivo').value.trim();
-    const fecha  = document.getElementById('pf-fecha').value;
-    const hora   = document.getElementById('pf-hora').value;
-    const lugar  = document.getElementById('pf-lugar').value.trim();
-    const comp   = document.getElementById('pf-comp').value.trim();
-    const errEl  = document.getElementById('pf-error');
-    if(!motivo||!fecha||!hora||!lugar){
-      if(errEl){errEl.style.display='block';errEl.textContent='⚠️ Completa motivo, fecha, hora de regreso y lugar.';}
-      return;
-    }
-    if(!comp){
-      if(errEl){errEl.style.display='block';errEl.textContent='⚠️ El campo "Mi Compromiso" es obligatorio.';}
-      document.getElementById('pf-comp').focus(); return;
-    }
-    // Generar vista previa
-    const preview=document.getElementById('pf-preview');
-    if(preview) preview.innerHTML=`
-      <div><strong>🎯 Motivo:</strong> ${motivo}</div>
-      <div><strong>📅 Fecha:</strong> ${new Date(fecha+'T00:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</div>
-      <div><strong>⏰ Regreso:</strong> ${hora} hrs</div>
-      <div><strong>📍 Lugar:</strong> ${lugar}</div>
-      ${document.getElementById('pf-acomp').value.trim()?`<div><strong>👥 Con:</strong> ${document.getElementById('pf-acomp').value.trim()}</div>`:''}
-      <div style="margin-top:8px;padding:8px;background:var(--sage-dim);border-radius:7px;border-left:3px solid var(--primary-blue);">
-        <strong>🤝 Mi Compromiso:</strong><br>${comp}
-      </div>`;
-  }
-  // Cambiar paso visible
-  document.querySelectorAll('.perm-step').forEach((s,i)=>s.classList.toggle('active',i===step));
-  document.querySelectorAll('.perm-step-dot').forEach((d,i)=>d.classList.toggle('active',i<=step));
-}
-window.permChecklistNext=permChecklistNext;
-
-async function submitFromChecklist(){
-  const motivo    = document.getElementById('pf-motivo').value.trim();
-  const fecha     = document.getElementById('pf-fecha').value;
-  const horaFin   = document.getElementById('pf-hora').value;
-  const lugar     = document.getElementById('pf-lugar').value.trim();
-  const acomp     = document.getElementById('pf-acomp').value.trim();
-  const compromiso= document.getElementById('pf-comp').value.trim();
-
-  const btn=document.getElementById('pf-submit-btn');
-  btn.disabled=true; btn.textContent='Enviando...';
-
-  const req={
-    id:uid(), orgId:ORG_ID,
-    requesterId:currentProfile.uid||'', requesterName:currentProfile.displayName||'',
-    requesterRole:currentRole, requesterEmoji:(ROLES[currentRole]||{}).emoji||'👤',
-    motivo, lugar, acompañantes:acomp, compromiso,
-    mensaje:'', fecha, horaInicio:'', horaFin,
-    status:'pending', approvedByMom:false, approvedByDad:false,
-    notifiedToDirector:false, hijoNotified:false,
-    createdAt:new Date().toISOString(), ts:Date.now()
-  };
-  try{
-    await window.savePermissionRequest(req);
-    myPermissions.unshift(req);
-    closePermChecklist();
-    renderMyPermissions();
-    toast('🔑 Solicitud enviada — Mamá y Papá la recibirán pronto');
-    writeAuditEntry&&writeAuditEntry('permission_requested',{emoji:'🔑',motivo,fecha});
-  }catch(e){
-    const errEl=document.getElementById('pf-error');
-    if(errEl){errEl.style.display='block';errEl.textContent='Error: '+e.message;}
-  }finally{
-    btn.disabled=false; btn.textContent='📤 Enviar solicitud';
-  }
-}
-window.submitFromChecklist=submitFromChecklist;
-
-// ═══════════════ PANEL FAMILIA — Permisos + Propuestas ═══════════════
-
-let famFilter = 'all';
-let famAllItems = []; // {type:'perm'|'prop', ...data}
-
-async function loadFamiliaPanel(){
-  const container = document.getElementById('famContainer');
-  if(container) container.innerHTML = '<div class="fam-empty">⏳ Cargando...</div>';
-  try{
-    const perms  = await window.loadPermissionRequests()||[];
-    const props  = await window.loadAllProposals()||[];
-    famAllItems = [
-      ...perms.map(p=>({...p,_type:'perm'})),
-      ...props.map(p=>({...p,_type:'prop'}))
-    ].sort((a,b)=>b.ts-a.ts);
-  }catch(e){
-    famAllItems=[];
-    console.error('[Familia]',e.message);
-  }
-  renderFamiliaPanel();
-}
-window.loadFamiliaPanel=loadFamiliaPanel;
-
-function setFamFilter(f){
-  famFilter=f;
-  ['all','perm','prop','pending','resolved'].forEach(k=>{
-    const btn=document.getElementById('famf-'+k);
-    if(btn) btn.classList.toggle('active',k===f);
-  });
-  renderFamiliaPanel();
-}
-window.setFamFilter=setFamFilter;
-
-function renderFamiliaPanel(){
-  const container=document.getElementById('famContainer'); if(!container) return;
-  const statsEl=document.getElementById('famStats');
-
-  // Stats
-  const total    = famAllItems.length;
-  const pending  = famAllItems.filter(i=>i.status==='pending').length;
-  const evaluat  = famAllItems.filter(i=>i.status==='evaluating').length;
-  const approved = famAllItems.filter(i=>i.status==='approved').length;
-  const rejected = famAllItems.filter(i=>i.status==='rejected').length;
-
-  if(statsEl) statsEl.innerHTML = `
-    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--text-muted)">${total}</div><div class="fam-stat-lbl">Total</div></div>
-    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--accent-gold)">${pending}</div><div class="fam-stat-lbl">Pendientes</div></div>
-    <div class="fam-stat"><div class="fam-stat-num" style="color:#2563EB">${evaluat}</div><div class="fam-stat-lbl">Evaluando</div></div>
-    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--primary-green)">${approved}</div><div class="fam-stat-lbl">Aprobados</div></div>
-    <div class="fam-stat"><div class="fam-stat-num" style="color:var(--accent-coral)">${rejected}</div><div class="fam-stat-lbl">Rechazados</div></div>`;
-
-  // Filtrar
-  let list = [...famAllItems];
-  if(famFilter==='perm')     list=list.filter(i=>i._type==='perm');
-  if(famFilter==='prop')     list=list.filter(i=>i._type==='prop');
-  if(famFilter==='pending')  list=list.filter(i=>i.status==='pending'||i.status==='evaluating');
-  if(famFilter==='resolved') list=list.filter(i=>i.status==='approved'||i.status==='rejected');
-
-  if(!list.length){
-    container.innerHTML=`<div class="fam-empty">
-      <div style="font-size:32px;margin-bottom:10px;opacity:.3;">${famFilter==='perm'?'🔑':famFilter==='prop'?'💡':'📭'}</div>
-      <div style="font-weight:700;">Sin solicitudes aquí</div>
-      <div style="font-size:11px;margin-top:4px;">Los hijos envían permisos y propuestas desde su panel 🏠 Mi Panel</div>
-    </div>`;
-    return;
-  }
-
-  container.innerHTML='';
-  list.forEach(item=>{
-    container.appendChild(item._type==='perm' ? makeFamPermCard(item) : makeFamPropCard(item));
-  });
-}
-
-// ── Tarjeta de PERMISO ──
-function makeFamPermCard(p){
-  const rc = ROLES[p.requesterRole]||{};
-  const statusMap = {pending:'⏳ Pendiente',evaluating:'🔄 En evaluación',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
-  const statusCls = {pending:'fsb-pending',evaluating:'fam-status-badge fsb-eval',approved:'fsb-approved',rejected:'fsb-rejected'};
-  const isMama    = currentRole==='mama';
-  const isDir     = currentRole==='director';
-  const myApproval= isMama?p.approvedByMom:isDir?p.approvedByDad:false;
-  const canAct    = (isMama||isDir) && p.status!=='rejected';
-
-  const card=document.createElement('div');
-  card.className='fam-card';
-  card.id='famcard-'+p.id;
-
-  card.innerHTML=`
-    <div class="fam-card-hdr">
-      <span class="fam-type-badge fam-tb-perm">🔑 Permiso</span>
-      <div class="fam-requester" style="background:${rc.color||'#888'}18;color:${rc.color||'#888'};">${rc.emoji||'👦'}</div>
-      <div style="flex:1;min-width:0;">
-        <div class="fam-title">${p.requesterName||'—'} solicita: ${p.motivo||'—'}</div>
-        <div class="fam-detail">
-          📍 ${p.lugar||'—'} · 📅 ${p.fecha||'—'} · ⏰ Hasta las ${p.horaFin||'—'}
-          ${p.acompañantes?'<br>👥 '+p.acompañantes:''}
-        </div>
-      </div>
-    </div>
-    ${p.compromiso?`<div class="fam-compromiso">🤝 <strong>Compromiso:</strong> ${p.compromiso}</div>`:''}
-    <div class="fam-status-row">
-      <span class="fam-status-badge ${statusCls[p.status]||'fsb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
-      <span class="fam-sig-dot ${p.approvedByMom?'fsd-ok':'fsd-pend'}">👩 ${p.approvedByMom?'Aprobó':'Pendiente'}</span>
-      <span class="fam-sig-dot ${p.approvedByDad?'fsd-ok':'fsd-pend'}">👨 ${p.approvedByDad?'Aprobó':'Pendiente'}</span>
-    </div>
-    ${p.responseNote?`<div class="fam-response-note">💬 <strong>${p.responseBy||'Respuesta'}:</strong> ${p.responseNote}</div>`:''}
-    ${p.responseNote?`<div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-      ${p.notifiedByWhatsApp
-        ?`<span class="wa-notif-badge wa-notif-ok" title="Notificado por WhatsApp el ${p.notifiedAt?new Date(p.notifiedAt).toLocaleString('es-CL'):'—'}">📱 WA enviado ✅</span>`
-        :`<button class="wa-notif-badge wa-notif-no" onclick="reenviarWaPermiso('${p.id}')" title="WA no enviado — clic para reenviar">📱 Reenviar WA ⚠️</button>`}
-      ${p.notifiedAt?`<span style="font-size:9px;color:var(--text-muted);">${new Date(p.notifiedAt).toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>`:''}
-    </div>`:''}
-    ${canAct?`
-    <div class="fam-actions">
-      ${!myApproval?`<button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','perm','approve')">✅ Aprobar</button>`
-        :`<button class="fam-action-btn fab-done">✅ Aprobaste</button>`}
-      <button class="fam-action-btn fab-eval"   onclick="openResolveModal('${p.id}','perm','eval')">🔄 Evaluando</button>
-      <button class="fam-action-btn fab-reject" onclick="openResolveModal('${p.id}','perm','reject')">❌ Rechazar</button>
-    </div>
-    <div class="fam-note-wrap" id="famnote-${p.id}" style="display:none;">
-      <textarea class="fam-note-input" id="famnoteinput-${p.id}" rows="2" placeholder="Escribe el motivo del rechazo o tu comentario..."></textarea>
-      <button class="fam-note-send" onclick="famAction('${p.id}','perm','reject')">Enviar respuesta</button>
-    </div>`:''}`;
-  return card;
-}
-
-// ── Tarjeta de PROPUESTA ──
-function makeFamPropCard(p){
-  const rc = ROLES[p.requesterRole]||{};
-  const statusMap = {pending:'⏳ Pendiente',evaluating:'🔄 En evaluación',approved:'✅ Aprobada',rejected:'❌ Rechazada'};
-  const statusCls = {pending:'fsb-pending',evaluating:'fsb-eval',approved:'fsb-approved',rejected:'fsb-rejected'};
-  const canAct    = (currentRole==='mama'||currentRole==='director') && p.status!=='rejected'&&p.status!=='approved';
-
-  const card=document.createElement('div');
-  card.className='fam-card';
-  card.id='famcard-'+p.id;
-
-  card.innerHTML=`
-    <div class="fam-card-hdr">
-      <span class="fam-type-badge fam-tb-prop">💡 Propuesta</span>
-      <div class="fam-requester" style="background:${rc.color||'#888'}18;color:${rc.color||'#888'};">${rc.emoji||'👦'}</div>
-      <div style="flex:1;min-width:0;">
-        <div class="fam-title">${p.requesterName||'—'}: ${p.titulo||'—'}</div>
-        <div class="fam-detail">${p.modulo?'📦 '+p.modulo+' · ':''} ${p.descripcion||''}</div>
-      </div>
-    </div>
-    <div class="fam-status-row">
-      <span class="fam-status-badge ${statusCls[p.status]||'fsb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
-    </div>
-    ${p.responseNote?`<div class="fam-response-note">💬 <strong>${p.responseBy||'Respuesta'}:</strong> ${p.responseNote}</div>`:''}
-    ${p.responseNote?`<div style="margin-top:6px;">
-      ${p.notifiedByWhatsApp
-        ?`<span class="wa-notif-badge wa-notif-ok" title="Notificado el ${p.notifiedAt?new Date(p.notifiedAt).toLocaleString('es-CL'):'—'}">📱 WA enviado ✅</span>`
-        :`<button class="wa-notif-badge wa-notif-no" onclick="reenviarWaPermiso('${p.id}')" title="WA no enviado">📱 Reenviar WA ⚠️</button>`}
-    </div>`:''}
-    ${canAct?`
-    <div class="fam-actions">
-      <button class="fam-action-btn fab-approve" onclick="openResolveModal('${p.id}','prop','approve')">✅ Aceptar idea</button>
-      <button class="fam-action-btn fab-eval"    onclick="openResolveModal('${p.id}','prop','eval')">🔄 Lo pensamos</button>
-      <button class="fam-action-btn fab-reject"  onclick="openResolveModal('${p.id}','prop','reject')">❌ Rechazar</button>
-    </div>
-    <div class="fam-note-wrap" id="famnote-${p.id}">
-      <textarea class="fam-note-input" id="famnoteinput-${p.id}" rows="2" placeholder="Deja un comentario o motivo..."></textarea>
-      <button class="fam-note-send" onclick="famAction('${p.id}','prop','reject')">Enviar respuesta</button>
-    </div>`:''}`;
-  return card;
-}
-
-// ── Estado del modal de resolución ──
-let _resolveCtx = {}; // {id, type, action}
-
-const RESOLVE_LABELS = {
-  approve: {badge:'✅ Aprobar',     cls:'rab-approve', btn:'✅ Confirmar aprobación',    bg:'linear-gradient(135deg,var(--primary-green),#7DAD2E)'},
-  eval:    {badge:'🔄 En evaluación',cls:'rab-eval',    btn:'🔄 Confirmar evaluación',    bg:'linear-gradient(135deg,#3B82F6,#2563EB)'},
-  reject:  {badge:'❌ Rechazar',    cls:'rab-reject',  btn:'❌ Confirmar rechazo',       bg:'linear-gradient(135deg,var(--accent-coral),#D94540)'},
-};
-
-function famShowNote(id, type){ openResolveModal(id, type, 'reject'); }
-window.famShowNote=famShowNote;
-
-// Reemplaza el click directo — ahora todo pasa por el modal
-function famAction(id, type, action){ openResolveModal(id, type, action); }
-window.famAction=famAction;
-
-function openResolveModal(id, type, action){
-  _resolveCtx = {id, type, action};
-  const item = famAllItems.find(i=>i.id===id);
-  const lbl  = RESOLVE_LABELS[action]||RESOLVE_LABELS.approve;
-
-  // Configurar badge
-  const badge = document.getElementById('resolveActionBadge');
-  badge.textContent = lbl.badge;
-  badge.className   = 'resolve-action-badge '+lbl.cls;
-
-  // Título de la solicitud
-  const titleEl = document.getElementById('resolveItemTitle');
-  if(titleEl && item){
-    titleEl.textContent = `${item.requesterName||'—'}: "${item.motivo||item.titulo||'—'}"`;
-  }
-
-  // Botón confirmar
-  const btn = document.getElementById('resolveConfirmBtn');
-  btn.style.background = lbl.btn ? lbl.bg : '';
-  btn.textContent = lbl.btn;
-  btn.disabled    = true; // siempre empieza deshabilitado
-
-  // Limpiar
-  document.getElementById('resolveNote').value='';
-  document.getElementById('resolveCharCount').textContent='0';
-  const errEl=document.getElementById('resolveNoteError');
-  if(errEl) errEl.style.display='none';
-
-  document.getElementById('resolveModal').style.display='flex';
-  setTimeout(()=>document.getElementById('resolveNote').focus(),200);
-}
-
-function closeResolveModal(){
-  document.getElementById('resolveModal').style.display='none';
-  _resolveCtx={};
-}
-window.closeResolveModal=closeResolveModal;
-
-// Habilitar botón solo cuando hay nota
-function onResolveNoteInput(el){
-  const len = el.value.trim().length;
-  document.getElementById('resolveCharCount').textContent = len;
-  const btn = document.getElementById('resolveConfirmBtn');
-  btn.disabled = len < 5; // mínimo 5 caracteres
-  const errEl=document.getElementById('resolveNoteError');
-  if(errEl) errEl.style.display = len > 0 && len < 5 ? 'block' : 'none';
-}
-window.onResolveNoteInput=onResolveNoteInput;
-
-// Confirmar acción con nota obligatoria
-async function confirmResolveAction(){
-  const {id, type, action} = _resolveCtx;
-  const note = document.getElementById('resolveNote').value.trim();
-  if(!note || note.length < 5){
-    const errEl=document.getElementById('resolveNoteError');
-    if(errEl){errEl.style.display='block'; errEl.textContent='⚠️ Escribe una nota de al menos 5 caracteres.';}
-    return;
-  }
-  closeResolveModal();
-  await handleResponse(id, type, action, note);
-}
-window.confirmResolveAction=confirmResolveAction;
-
-// ── Notificación WhatsApp al hijo tras resolución ──
-function enviarNotificacionWhatsApp(item, action, note, resolverName){
-  const hijoMember = (window.orgMembers||[]).find(m=>
-    m.uid===item.requesterId || m.displayName===item.requesterName
-  );
-  const phone  = (hijoMember?.phone||'').replace(/\D/g,'');
-  if(!phone || phone.length < 8){
-    toast('ℹ️ WA no enviado: '+item.requesterName+' no tiene teléfono registrado');
-    return null;
-  }
-  let num = phone.startsWith('56') ? phone.slice(2) : phone;
-  if(!num.startsWith('9')) num='9'+num;
-
-  const sl = {approve:{icon:'✅',label:'APROBADA'},evaluating:{icon:'🔄',label:'EN EVALUACIÓN'},reject:{icon:'❌',label:'NO APROBADA'}}[action]||{icon:'📋',label:'ACTUALIZADA'};
-  const titulo = item.motivo||item.titulo||'tu solicitud';
-  const msg = `Hola ${item.requesterName||''}! 👋\n\n`+
-    `Tenemos una respuesta sobre tu solicitud:\n📋 *"${titulo}"*\n\n`+
-    `${sl.icon} Estado: *${sl.label}*\n\n`+
-    `💬 Mensaje de ${resolverName}:\n"${note}"\n\n`+
-    `Revisa tu panel en la app para más detalles.\n— Gestión Familiar 🏠`;
-
-  const url = `https://wa.me/56${num}?text=${encodeURIComponent(msg)}`;
-  window.open(url,'_blank');
-  return url;
-}
-
-// ── handleResponse: nota obligatoria + WA + audit log ──
-async function handleResponse(id, type, action, note){
-  // Validación extra de seguridad
-  if(!note||note.trim().length<5){
-    toast('⚠️ Debes ingresar una razón para tu decisión');
-    return;
-  }
-  const isMama=currentRole==='mama';
-  const isDir =currentRole==='director';
-  const resolverName = currentProfile.displayName||(isMama?'Mamá':'Papá');
-  const item = famAllItems.find(i=>i.id===id);
-  let patch = {
-    responseNote:   note,
-    responseBy:     resolverName,
-    responseAt:     new Date().toISOString(),
-    isReadByChild:  false,      // ← hijo aún no ha leído
-    updatedAt:      new Date().toISOString()
-  };
-
-// handleResponse: lógica central con nota obligatoria e isReadByChild
-async function handleResponse(id, type, action, note){
-  const isMama        = currentRole==='mama';
-  const resolverName  = currentProfile.displayName||(isMama?'Mamá':'Papá');
-  const item          = famAllItems.find(i=>i.id===id);
-
-  // Patch base — nota siempre requerida, nunca null
-  let patch = {
-    responseNote:   note,           // obligatorio
-    responseBy:     resolverName,   // quién respondió
-    responseAt:     new Date().toISOString(),
-    isReadByChild:  false,          // hijo aún no ha visto
-    hijoNotified:   false,          // para el push al hijo
-    updatedAt:      new Date().toISOString()
-  };
-
-  if(type==='perm'){
-    if(action==='approve'){
-      if(isMama) patch.approvedByMom=true; else patch.approvedByDad=true;
-      if(item){
-        const momOk = isMama ? true  : item.approvedByMom;
-        const dadOk = !isMama? true  : item.approvedByDad;
-        if(momOk && dadOk) patch.status='approved';
-      }
-    } else if(action==='eval')   patch.status='evaluating';
-    else if(action==='reject')   patch.status='rejected';
-
-    try{
-      await window.updatePermissionRequest(id, patch);
-      toast(action==='approve'?'✅ Firma registrada con nota':action==='eval'?'🔄 En evaluación':' ❌ Rechazado con nota');
-      writeAuditEntry&&writeAuditEntry('familia_perm_'+action,{emoji:action==='approve'?'✅':action==='eval'?'🔄':'❌',id,note:note.slice(0,40)});
-    }catch(e){toast('⚠️ Error: '+e.message); return;}
-
-  } else {
-    patch.status = action==='approve'?'approved':action==='eval'?'evaluating':'rejected';
-    try{
-      await window.updateProposalStatus(id, patch);
-      toast(action==='approve'?'✅ Propuesta aceptada':action==='eval'?'🔄 En evaluación':'❌ Rechazada con nota');
-      writeAuditEntry&&writeAuditEntry('familia_prop_'+action,{emoji:'💡',id,note:note.slice(0,40)});
-    }catch(e){toast('⚠️ Error: '+e.message); return;}
-  }
-
-  // ── Disparar WhatsApp + Log de auditoría ──
-  if(item){
-    const waUrl = enviarNotificacionWhatsApp(item, action, note, resolverName);
-
-    const auditPatch = {
-      notifiedByWhatsApp: !!waUrl,
-      notifiedAt:         new Date().toISOString(),
-      notifiedBy:         resolverName,
-    };
-    try{
-      if(type==='perm') await window.updatePermissionRequest(id, auditPatch).catch(()=>{});
-      else              await window.updateProposalStatus(id, auditPatch).catch(()=>{});
-    }catch(_){}
-
-    // ── Insertar en activity_logs (historial de intervenciones) ──
-    const actionLabels={approve:'Aprobó',evaluating:'Marcó en evaluación',reject:'Rechazó'};
-    window.saveActivityLog&&window.saveActivityLog({
-      orgId:         ORG_ID,
-      type:          type==='perm'?'permission':'proposal',
-      refId:         id,
-      action,
-      actionLabel:   actionLabels[action]||action,
-      actor:         resolverName,
-      actorRole:     currentRole,
-      targetName:    item.requesterName||'—',
-      title:         item.motivo||item.titulo||'—',
-      note:          note,
-      notifiedByWa:  !!waUrl,
-      ts:            Date.now(),
-      createdAt:     new Date().toISOString(),
-    });
-  }
-
-  await loadFamiliaPanel();
-}
-window.handleResponse=handleResponse;
-
-// Reenviar WA desde el botón ⚠️ de la tarjeta
-function reenviarWaPermiso(id){
-  const item=famAllItems.find(i=>i.id===id); if(!item) return;
-  const resolverName=currentProfile.displayName||(currentRole==='mama'?'Mamá':'Papá');
-  const note=item.responseNote||'Tu solicitud ha sido revisada.';
-  const action=item.status==='approved'?'approve':item.status==='evaluating'?'evaluating':'reject';
-  const waUrl=enviarNotificacionWhatsApp(item,action,note,resolverName);
-  if(waUrl){
-    window.updatePermissionRequest&&window.updatePermissionRequest(id,{notifiedByWhatsApp:true,notifiedAt:new Date().toISOString()}).catch(()=>{});
-    loadFamiliaPanel();
-  }
-}
-window.reenviarWaPermiso=reenviarWaPermiso;
 
 // ═══════════════ PANEL DE AUDITORÍA (Master Data Control) ═══════════════
 
@@ -6602,12 +5566,6 @@ function hmSelect(step,val,el){
   hmoodAnswers[step]=val;
   el.closest('div').querySelectorAll('.hmood-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
-  // Auto-avance igual que ciSelect
-  if(step < 2){
-    setTimeout(()=>hmNext(step+1), 350);
-  } else {
-    setTimeout(()=>submitHijoMood(), 350);
-  }
 }
 function hmNext(to){
   if(hmoodAnswers[to-1]===null){
@@ -6825,9 +5783,6 @@ function renderMiPanel(){
   const misPerm = document.getElementById('misPermisosSection');
   if(btnCont) btnCont.style.display = isHijo ? 'block' : 'none';
   if(misPerm) misPerm.style.display = isHijo ? 'block' : 'none';
-
-  // Verificar notificaciones pendientes (decisiones de padres)
-  if(isHijo) setTimeout(checkHijoNotifications, 1200);
 }
 
 function renderMiPanelHeader(){
@@ -7019,48 +5974,20 @@ window.submitPermissionRequest=submitPermissionRequest;
 function renderMyPermissions(){
   const el=document.getElementById('misPermisosList'); if(!el) return;
   if(!myPermissions.length){el.innerHTML='<div class="workplan-empty">Sin solicitudes de permiso.</div>';return;}
-
-  const statusMap={pending:'⏳ En revisión',evaluating:'🔄 Evaluando',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
-  const clsMap   ={pending:'psb-pending',evaluating:'psb-pending',approved:'psb-approved',rejected:'psb-rejected'};
-
   el.innerHTML=myPermissions.map(p=>{
-    const isUnread = p.responseNote && p.isReadByChild===false;
-    const resolverLabel = p.responseBy || 'Tus padres';
-    return `<div class="hijo-perm-status" style="${isUnread?'border-color:var(--accent-coral);':''}">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-        ${isUnread?'<span class="unread-dot"></span>':''}
-        <span class="perm-status-badge ${clsMap[p.status]||'psb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</span>
-      </div>
-      <div style="font-weight:700;font-size:12px;">${p.motivo||'—'}</div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${p.fecha||''} · ${p.horaFin||''} · ${p.lugar||''}</div>
-
-      ${p.status==='pending'||p.status==='evaluating'?`
-        <div style="font-size:10px;margin-top:6px;color:var(--text-muted);">
-          ${!p.approvedByMom?'⏳ Falta firma de Mamá':'✅ Mamá aprobó'} ·
-          ${!p.approvedByDad?'⏳ Falta firma de Papá':'✅ Papá aprobó'}
-        </div>`:''
-      }
-
-      ${p.responseNote?`
-        <div class="parent-note-bubble">
-          <div class="parent-note-label">💬 Nota de ${resolverLabel}</div>
-          ${p.responseNote}
-        </div>
-        ${isUnread?`<button class="read-btn" onclick="markPermissionRead('${p.id}')">✅ Marcar como leído</button>`:'<div style="font-size:9px;color:var(--text-muted);margin-top:4px;">✅ Leído</div>'}
-      `:''}
+    const statusMap={pending:'⏳ En revisión',approved:'✅ Aprobado',rejected:'❌ Rechazado'};
+    const clsMap={pending:'psb-pending',approved:'psb-approved',rejected:'psb-rejected'};
+    return `<div class="hijo-perm-status">
+      <div class="perm-status-badge ${clsMap[p.status]||'psb-pending'}">${statusMap[p.status]||'⏳ Pendiente'}</div>
+      <div style="font-weight:700;font-size:12px;">${p.motivo}</div>
+      <div style="font-size:10px;color:var(--text-muted);">${p.fecha} · ${p.horaFin} · ${p.lugar}</div>
+      ${p.status==='pending'?`<div style="font-size:10px;margin-top:5px;">
+        ${!p.approvedByMom?'⏳ Falta firma de Mamá':'✅ Mamá aprobó'} ·
+        ${!p.approvedByDad?'⏳ Falta firma de Papá':'✅ Papá aprobó'}
+      </div>`:''}
     </div>`;
   }).join('');
 }
-
-async function markPermissionRead(id){
-  const p=myPermissions.find(x=>x.id===id);
-  if(!p) return;
-  p.isReadByChild=true;
-  await window.updatePermissionRequest(id,{isReadByChild:true}).catch(()=>{});
-  renderMyPermissions();
-  toast('✅ Marcado como leído');
-}
-window.markPermissionRead=markPermissionRead;
 
 // ── CENTRO DE APROBACIONES (Padres / Director) ──
 let allPermissions = [];
@@ -8108,134 +7035,6 @@ function seedDirectorCoreTasks(){
 }
 window.seedDirectorCoreTasks=seedDirectorCoreTasks;
 
-// ═══════════════ JSON MAESTRO DE TAREAS (GOBERNANZA) ═══════════════
-// Cada tarea tiene: visibilityLevel + assignedToRole para control de acceso
-
-const MASTER_TASKS_JSON = [
-  // ── BLOQUE EJECUTIVO (Director, Mamá, Coord. Bazar) ──
-  {
-    text:'📊 Supervisión de Presupuesto Mensual', ctx:'club', prio:'p1', freq:'unica',
-    time:'09:00', dur:60, visibilityLevel:'executive', assignedToRole:'director',
-    tags:['ejecutivo','presupuesto']
-  },
-  {
-    text:'✅ Revisión y Aprobación de Permisos Familiares', ctx:'casa', prio:'p1', freq:'semanal',
-    time:'10:00', dur:30, visibilityLevel:'executive', assignedToRole:'director',
-    tags:['ejecutivo','familia']
-  },
-  {
-    text:'📅 Planificación Semanal Bazar y Tienda', ctx:'bazar', prio:'p2', freq:'semanal',
-    time:'09:00', dur:45, visibilityLevel:'executive', assignedToRole:'mama',
-    tags:['ejecutivo','bazar','tienda']
-  },
-  {
-    text:'📋 Revisión de Nómina de Inscritos Bazar', ctx:'bazar', prio:'p1', freq:'semanal',
-    time:'09:00', dur:20, visibilityLevel:'executive', assignedToRole:'coordinadora_bazares',
-    tags:['ejecutivo','bazar']
-  },
-  {
-    text:'💰 Validación de Arriendos Tienda', ctx:'tienda', prio:'p1', freq:'unica',
-    time:'11:00', dur:45, visibilityLevel:'executive', assignedToRole:'coordinadora_tienda',
-    tags:['ejecutivo','tienda']
-  },
-
-  // ── BLOQUE HIJOS (Solo visible para hijo1 e hijo2) ──
-  {
-    text:'🏠 Orden de habitaciones y espacios personales', ctx:'casa', prio:'p3', freq:'semanal',
-    time:'16:00', dur:20, visibilityLevel:'children', assignedToRole:'hijo1',
-    tags:['hijos','hogar']
-  },
-  {
-    text:'📚 Estudio de materias del colegio', ctx:'casa', prio:'p2', freq:'diaria',
-    time:'19:00', dur:45, visibilityLevel:'children', assignedToRole:'hijo1',
-    tags:['hijos','estudio']
-  },
-  {
-    text:'💭 Check-in emocional semanal', ctx:'casa', prio:'p2', freq:'semanal',
-    time:'20:00', dur:10, visibilityLevel:'children', assignedToRole:'hijo1',
-    tags:['hijos','bienestar']
-  },
-  {
-    text:'🏠 Orden de habitaciones y espacios personales', ctx:'casa', prio:'p3', freq:'semanal',
-    time:'16:00', dur:20, visibilityLevel:'children', assignedToRole:'hijo2',
-    tags:['hijos','hogar']
-  },
-  {
-    text:'📚 Estudio de materias del colegio', ctx:'casa', prio:'p2', freq:'diaria',
-    time:'19:00', dur:45, visibilityLevel:'children', assignedToRole:'hijo2',
-    tags:['hijos','estudio']
-  },
-  {
-    text:'💭 Check-in emocional semanal', ctx:'casa', prio:'p2', freq:'semanal',
-    time:'20:00', dur:10, visibilityLevel:'children', assignedToRole:'hijo2',
-    tags:['hijos','bienestar']
-  },
-
-  // ── BLOQUE CLUB PATIO (Publicista, Diseñador, Soporte) ──
-  {
-    text:'🎨 Gestión de piezas gráficas semanales (3 piezas min)', ctx:'club', prio:'p1', freq:'semanal',
-    time:'10:00', dur:180, visibilityLevel:'club', assignedToRole:'disenador',
-    tags:['club','diseño']
-  },
-  {
-    text:'💻 Soporte técnico de plataforma web', ctx:'club', prio:'p2', freq:'semanal',
-    time:'11:00', dur:60, visibilityLevel:'club', assignedToRole:'soporte_app',
-    tags:['club','soporte']
-  },
-  {
-    text:'📊 Optimización de embudos y conversión suscripciones', ctx:'club', prio:'p2', freq:'semanal',
-    time:'14:00', dur:90, visibilityLevel:'club', assignedToRole:'publicista',
-    tags:['club','marketing']
-  },
-  {
-    text:'🎨 Diseño piezas Diseñador/Publicista', ctx:'club', prio:'p2', freq:'semanal',
-    time:'10:00', dur:120, visibilityLevel:'club', assignedToRole:'disenador_pub',
-    tags:['club','diseño','marketing']
-  },
-  {
-    text:'🛠️ Revisión semanal estado aplicaciones Club Patio', ctx:'club', prio:'p2', freq:'semanal',
-    time:'09:30', dur:30, visibilityLevel:'club', assignedToRole:'soporte_app',
-    tags:['club','soporte','tech']
-  },
-];
-
-function applyMasterTasks(){
-  const me   = currentProfile.displayName||'';
-  const today= new Date().toISOString().split('T')[0];
-  const d=o=>{const x=new Date();x.setDate(x.getDate()+o);return x.toISOString().split('T')[0];};
-  let added=0;
-
-  MASTER_TASKS_JSON.forEach((t,i)=>{
-    const src='master_'+t.assignedToRole+'_'+i;
-    if(tasks.some(x=>x.autoGenSource===src&&!x.done)) return;
-
-    // Solo inyectar tareas visibles para el rol actual
-    const isMyTask =
-      t.assignedToRole === currentRole ||
-      (Array.isArray(currentProfile.roles)&&currentProfile.roles.includes(t.assignedToRole)) ||
-      EXECUTIVE_ROLES.includes(currentRole) || currentRole==='director';
-
-    if(!isMyTask) return;
-
-    tasks.push({
-      id:uid(), text:t.text, ctx:t.ctx, prio:t.prio, freq:t.freq||'unica',
-      deadline: t.freq==='diaria'?today:d(i%4),
-      time:t.time, dur:t.dur, done:false, ts:Date.now()-i*1000,
-      owner:           me,
-      assignedToRole:  t.assignedToRole,
-      assignedToUid:   currentProfile.uid||'',  // ← clave para Firestore rules
-      orgId:           ORG_ID,
-      visibilityLevel: t.visibilityLevel,
-      tags:            t.tags||[],
-      autoGenerated:true, autoGenSource:src
-    });
-    added++;
-  });
-
-  if(added>0){ saveTasks(); renderTasks(); console.log('[MasterTasks] Añadidas:',added); }
-}
-window.applyMasterTasks=applyMasterTasks;
-
 // ═══════════════ TAREAS PREDETERMINADAS POR ROL ═══════════════
 const ROLE_SEED_TASKS = {
   mama: [
@@ -8338,126 +7137,40 @@ function init(){
   updateOwnerOpts();
   renderTasks();
 }
-// ══════════════════════════════════════════════════════════════
-// MÁQUINA DE ESTADOS DE CARGA
-// Estado 1: Cargando (loadingScreen visible)
-// Estado 2: Auth check (Firebase onAuthStateChanged)
-// Estado 3: Carga de perfil (Firestore /users/{uid})
-// Estado 4: Renderizado seguro (rol confirmado → UI)
-// ══════════════════════════════════════════════════════════════
-
-// setAppState simplificado — solo actualiza el mensaje y oculta si está listo
-function setAppState(state, msg){
-  const el=document.getElementById('loadingMsg');
-  if(el&&msg) el.textContent=msg;
-  if(state==='ready'||state==='auth') window._hideLoading&&window._hideLoading();
-  console.log('[App]',state, msg||'');
-}
-window.setAppState=setAppState;
-
-// ══════════════════════════════════════════════════════════════
-// initApp v5 — Flujo limpio sin dependencia de /tasks collection
-// Orden: cloudData → perfil → rol → render → (bg) /tasks enrich
-// ══════════════════════════════════════════════════════════════
-window.initApp = function(cloudData, profile){
-  setAppState('profile', 'Cargando perfil...');
-
-  document.getElementById('emergencyPanel')?.setAttribute('style','display:none');
-
-  // Normalizar perfil — NUNCA rechazar
-  const safeProfile = {
-    uid:                (profile&&profile.uid)            || '',
-    email:              (profile&&profile.email)          || '',
-    role:               (profile&&profile.role)           || 'pending',
-    roles:              (profile&&Array.isArray(profile.roles)?profile.roles:[]),
-    modules:            (profile&&Array.isArray(profile.modules)?profile.modules:[]),
-    displayName:        (profile&&profile.displayName)    || 'Usuario',
-    phone:              (profile&&profile.phone)          || '',
-    onboardingComplete: (profile&&profile.onboardingComplete) || false,
-    ...(profile||{})
-  };
-
-  // 3. Inyectar en window ANTES de cualquier render
-  window.currentProfile = safeProfile;
-  window.currentRole    = safeProfile.role;
-
-  // ── Auto-reparación: si el rol es 'pending' pero el email tiene PRESET ──
-  // Esto cubre el caso donde el doc de Firestore no tiene rol asignado
-  const _preset = (window.PRESET_ROLES||{})[safeProfile.email.toLowerCase()];
-  if(_preset && (safeProfile.role === 'pending' || !safeProfile.role)){
-    safeProfile.role    = _preset.role;
-    safeProfile.roles   = safeProfile.roles.length ? safeProfile.roles : [_preset.role];
-    safeProfile.modules = (window.ROLE_MODULES||{})[_preset.role] || [];
-    safeProfile.displayName = safeProfile.displayName==='Usuario' ? _preset.displayName : safeProfile.displayName;
-    console.warn('[initApp] ⚠️ Rol en Firestore era pending → auto-reparado a:', _preset.role);
-    // Actualizar Firestore en background
-    window.cloudSet&&window.cloudSet('role', _preset.role);
-    window.cloudSet&&window.cloudSet('roles', safeProfile.roles);
-    window.cloudSet&&window.cloudSet('modules', safeProfile.modules);
+// Llamado por la capa de autenticación tras cargar los datos del usuario.
+function initApp(cloudData, profile){
+  // Normalizar perfil — nunca null
+  var safeProfile = profile || {};
+  // Auto-repair: si rol pending, aplicar PRESET_ROLES
+  var pr = (window.PRESET_ROLES||{})[(safeProfile.email||'').toLowerCase()];
+  if(pr && (!safeProfile.role || safeProfile.role==='pending')){
+    safeProfile.role = pr.role;
+    safeProfile.roles = [pr.role];
+    safeProfile.displayName = safeProfile.displayName||pr.displayName;
+    window.cloudSet&&window.cloudSet('role', pr.role);
     window.cloudSet&&window.cloudSet('orgId', 'curauma_001');
     window.cloudSet&&window.cloudSet('onboardingComplete', true);
-    // Re-sincronizar en window
-    window.currentProfile = safeProfile;
-    window.currentRole    = safeProfile.role;
   }
-
-  console.log(`[initApp] ✅ email=${safeProfile.email} | rol=${safeProfile.role}`);
-
-  // Ocultar loading — perfil confirmado
-  setAppState('ready');
-
-  // Cargar datos del doc del usuario (fuente primaria confiable)
-  const userData = cloudData||{};
-  applyCloudData(userData);
+  window.currentProfile = safeProfile;
+  window.currentRole = safeProfile.role||'pending';
+  dbg('bootApp role=' + window.currentRole + ' email=' + (safeProfile.email||'?'));
+  applyCloudData(cloudData||{});
   init();
-  try{ checkDeadlines(); }catch(e){ console.warn('[initApp] checkDeadlines:', e.message); }
-
-  // 5. Montar UI de roles (nav, módulos, etc.)
-  const role = safeProfile.role || 'pending';
+  try{ checkDeadlines(); }catch(e){}
+  var role = window.currentRole;
   mountRoleUI(role, safeProfile);
-
-  // 6. Tareas: fuente primaria = doc del usuario, secundaria = /tasks collection
-  // Si ya tenemos tareas del doc → mostrar YA, no esperar Firestore
-  if(tasks.length > 0){
-    renderTasks();
-    console.log('[initApp] ✅ Tareas desde doc usuario:', tasks.length);
-  } else {
-    // Sin tareas locales → sembrar inmediatamente (no esperar)
-    console.log('[initApp] Sin tareas locales → seedTasks()');
-    seedTasks(); renderTasks();
+  if(role !== 'pending'){
+    setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 500);
+    if(tasks.length===0){ seedTasks(); renderTasks(); }
   }
-
-  // Intentar enriquecer con /tasks collection en segundo plano (no bloquea UI)
-  setTimeout(async()=>{
-    const localBackup = [...tasks];
-    let fetched = null;
-    try{ fetched = await window.fetchTasksFromFirestore(); }catch(e){ console.warn('[initApp] /tasks error:', e.message); }
-
-    if(fetched && fetched.length > 0){
-      tasks = fetched; renderTasks();
-      console.log('[initApp] /tasks enriqueció con', fetched.length, 'docs');
-    } else if(fetched !== null && fetched.length === 0 && localBackup.length > 0){
-      // Migrar locales a /tasks en background (no bloquea)
-      window.migrateTasksToCollection&&window.migrateTasksToCollection(localBackup).catch(()=>{});
-    }
-  }, 2000); // más tiempo para no competir con la carga inicial
-
-  // 7. Notificaciones pendientes (Director)
-  if(role==='director'){
-    setTimeout(()=>window.loadOrgData&&window.loadOrgData(), 600);
-    setTimeout(()=>window.checkPendingPermissions&&window.checkPendingPermissions(), 1500);
-  } else {
-    setTimeout(initMoodSelfBar, 400);
-    if(role==='hijo1'||role==='hijo2') setTimeout(checkHijoNotifications, 1200);
-  }
-  // Tareas maestras al login
-  setTimeout(applyMasterTasks, 900);
-};
-
-// initApp ya está definida — drenar cola si Firebase llamó antes
-window._drainBootQueue && window._drainBootQueue();
-// Alias de compatibilidad (por si algo llama bootApp directamente)
-window.bootApp = function(cloudData, profile){ window.initApp(cloudData, profile); };
+  window._drainBootQueue&&window._drainBootQueue();
+  window._hideLoading&&window._hideLoading();
+}
+window.initApp = initApp;
+// bootApp llama a initApp (el head lo define primero como proxy)
+function bootApp(d,p){ return initApp(d,p); }
+window.bootApp = bootApp;
+// NOTA: el módulo Firebase llama window.bootApp(data, profile).
 </script>
 
 <!-- ═══════════════ FIREBASE · AUTH + FIRESTORE ═══════════════ -->
@@ -8486,7 +7199,6 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 const ORG_ID = 'curauma_001'; // mirror del main script
-window._db_ref = db; // exponer para reconnectSystem()
 
 let currentUser = null;
 let booted = false;
@@ -8630,8 +7342,6 @@ async function submitAuth(){
 primaryBtn.addEventListener("click", submitAuth);
 passEl.addEventListener("keydown", (e)=>{ if(e.key === "Enter") submitAuth(); });
 emailEl.addEventListener("keydown", (e)=>{ if(e.key === "Enter") passEl.focus(); });
-// Exponer para onclick directo en HTML (fallback si el módulo no registró el listener)
-window.submitAuth = submitAuth;
 
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
   // Vacía cualquier escritura pendiente antes de salir.
@@ -8885,29 +7595,6 @@ window.checkPendingPermissions = async function(){
   }catch(e){ console.warn('[checkPendingPermissions]', e.message); }
 };
 
-// ── activity_logs: historial de intervenciones familiares ──
-// Schema: {orgId, type, refId, action, actionLabel, actor, actorRole,
-//          targetName, title, note, notifiedByWa, ts, createdAt}
-window.saveActivityLog = async function(entry){
-  try{
-    const docId = `${entry.actorRole}_${entry.type}_${entry.refId}_${Date.now()}`;
-    await setDoc(doc(db,'activity_logs',docId), entry);
-    console.log('[activity_logs] Log guardado:', entry.actionLabel, '→', entry.targetName);
-  }catch(e){ console.warn('[activity_logs] Error:', e.message); }
-};
-
-// Cargar historial de actividad (para el Director)
-window.loadActivityLogs = async function(limit=20){
-  try{
-    const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2, limit:lim2 }
-      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-    const snap = await gd2(q2(col2(db,'activity_logs'),
-      w2('orgId','==',ORG_ID), ob2('ts','desc'), lim2(limit)
-    ));
-    return snap.docs.map(d=>({id:d.id,...d.data()}));
-  }catch(e){ console.warn('[activity_logs] Load error:', e.message); return []; }
-};
-
 // ── mood_history: registro cross-user para consultas del Director ──
 // Schema: {userId, userEmail, displayName, role, date (YYYY-MM-DD), dateTs,
 //          moodValue, moodLevel (green/yellow/red), emoji, label, orgId}
@@ -8966,19 +7653,6 @@ window.loadMyProposals = async function(uid){
     return snap.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);
   }catch(e){ return []; }
 };
-// Cargar TODAS las propuestas de la org (para padres)
-window.loadAllProposals = async function(){
-  try{
-    const { collection:col2, getDocs:gd2, query:q2, where:w2 }
-      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-    const snap = await gd2(q2(col2(db,'proposals'), w2('orgId','==',ORG_ID)));
-    return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);
-  }catch(e){ console.error('loadAllProposals:',e.message); return []; }
-};
-// Actualizar estado de propuesta
-window.updateProposalStatus = async function(id, patch){
-  await setDoc(doc(db,'proposals',id), patch, {merge:true});
-};
 
 // ── PANEL ADMIN: onSnapshot en tiempo real ──
 let adminSnapUnsub = null;
@@ -9027,88 +7701,6 @@ window.adminUpdateDoc = async function(uid, patch){
 window.deleteUserFirestoreDoc = async function(uid){
   console.log('[Admin DB] deleteDoc uid:', uid);
   await deleteDoc(doc(db,'users',uid));
-};
-
-// ══════════════════════════════════════════════════════════
-// COLECCIÓN /tasks — Aislamiento real a nivel Firestore
-// ══════════════════════════════════════════════════════════
-
-// fetchTasks: query con filtro estricto por rol en Firestore
-window.fetchTasksFromFirestore = async function(){
-  if(!currentUser){ console.warn('[fetchTasks] Sin usuario autenticado'); return null; }
-  try{
-    const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2 }
-      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-
-    const role    = window.currentRole || 'pending';
-    const isExec  = role==='director'||['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
-    const myRoles = window.currentProfile?.roles?.filter(Boolean) || [role];
-    const filtro  = isExec ? { orgId:'curauma_001' } : { orgId:'curauma_001', assignedToRole: role };
-
-    console.log('[fetchTasks] Filtro:', JSON.stringify(filtro), '| ejecutivo:', isExec);
-
-    let tasksQuery;
-    if(isExec){
-      // COMITÉ EJECUTIVO: todas las tareas de la organización
-      tasksQuery = q2(col2(db,'tasks'), w2('orgId','==',ORG_ID));
-    } else {
-      // EJECUCIÓN TÁCTICA: solo las tareas de su rol específico
-      // Si tiene multi-rol, usamos el rol primario (más restrictivo = más seguro)
-      tasksQuery = q2(col2(db,'tasks'), w2('orgId','==',ORG_ID), w2('assignedToRole','==',role));
-    }
-
-    const snap = await gd2(tasksQuery);
-    const fetched = snap.docs.map(d=>({...d.data(), id:d.id}));
-
-    console.log(`[fetchTasks] ✅ Tareas recibidas: ${fetched.length}`);
-    if(fetched.length === 0){
-      console.warn('[fetchTasks] ⚠️ 0 docs. Filtro aplicado:', JSON.stringify(filtro));
-      console.warn('[fetchTasks] → Verifica que /tasks tenga documentos con orgId="curauma_001"');
-      console.warn('[fetchTasks] → Ejecuta: await window.reconnectSystem()');
-    }
-    return fetched;
-  }catch(e){
-    console.error('[fetchTasks] ❌ ERROR:', e.code||'sin código', '|', e.message);
-    if(e.code==='permission-denied')
-      console.error('[fetchTasks] → PERMISSION DENIED. Pega las reglas en Firebase Console → Firestore → Rules');
-    if(e.code==='unavailable')
-      console.error('[fetchTasks] → SIN CONEXIÓN. Verifica internet.');
-    return null; // null = fallback a tareas locales
-  }
-};
-
-// Escribir una tarea individual en la colección /tasks
-window.saveTaskToCollection = async function(task){
-  if(!task||!task.id) return;
-  try{
-    await setDoc(doc(db,'tasks',task.id),{...task, orgId:ORG_ID},{merge:true});
-  }catch(e){ console.warn('[saveTask]',e.message); }
-};
-
-// Actualizar campos específicos de una tarea
-window.updateTaskInCollection = async function(taskId, patch){
-  try{
-    await setDoc(doc(db,'tasks',taskId),{...patch, updatedAt:new Date().toISOString()},{merge:true});
-  }catch(e){ console.warn('[updateTask]',e.message); }
-};
-
-// Eliminar una tarea de la colección
-window.deleteTaskFromCollection = async function(taskId){
-  try{
-    const { deleteDoc:dd } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-    await dd(doc(db,'tasks',taskId));
-  }catch(e){ console.warn('[deleteTask]',e.message); }
-};
-
-// Migrar todas las tareas locales a la colección (una sola vez)
-window.migrateTasksToCollection = async function(localTasks){
-  if(!localTasks||!localTasks.length) return;
-  const { writeBatch } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js").catch(()=>({writeBatch:null}));
-  if(!writeBatch){ for(const t of localTasks) await window.saveTaskToCollection(t); return; }
-  const batch = writeBatch(db);
-  localTasks.forEach(t=>{ if(t.id) batch.set(doc(db,'tasks',t.id),{...t,orgId:ORG_ID},{merge:true}); });
-  await batch.commit();
-  console.log('[migrateTasksToCollection] Migradas:', localTasks.length, 'tareas');
 };
 
 // ── Cargar TODOS los usuarios de la org para auditoría ──
@@ -9198,10 +7790,7 @@ const ROLE_MODULES = {
 
 // ── Estado de sesión: punto de entrada real de la app ──
 onAuthStateChanged(auth, async (user)=>{
-  // Estado 2: Auth check
-  window.setAppState&&window.setAppState('auth', 'Verificando identidad...');
   if(user){
-    window.setAppState&&window.setAppState('profile', 'Cargando tu perfil...');
     currentUser = user;
     // profile NUNCA puede ser null al llegar a bootApp — siempre es al menos {}
     let data = {}, profile = { uid:user.uid, email:user.email, role:'pending', roles:[], modules:[] };
@@ -9300,180 +7889,14 @@ onAuthStateChanged(auth, async (user)=>{
     // Garantía final: profile nunca llega null a bootApp
     window.bootApp(data || {}, profile || {uid:user.uid,email:user.email,role:'pending',roles:[],modules:[]});
   }else{
-    // Sin sesión → Estado 2 fallido → mostrar login
-    window.setAppState&&window.setAppState('auth', 'Por favor inicia sesión');
-    // Ocultar loading screen
-    const ls=document.getElementById('loadingScreen');
-    if(ls){ ls.style.opacity='0'; setTimeout(()=>{ if(ls) ls.style.display='none'; },400); }
     currentUser = null;
-    booted      = false;
+    booted = false;
     overlay.style.display = 'flex';
-    // Ocultar panel de emergencia si estaba visible (evita bucles)
-    const ep=document.getElementById('emergencyPanel');
-    if(ep) ep.style.display='none';
-    // Resetear estado para el próximo login
-    if(window.currentRole)  window.currentRole  = 'pending';
-    if(window.tasks)        window.tasks        = [];
   }
 });
 </script>
 <!-- ── PWA: Registro del Service Worker ── -->
 <script>
-// ══════════════════════════════════════════════
-// debugAuth(): estado completo en consola
-// ══════════════════════════════════════════════
-window.debugAuth = async function(){
-  console.group('🔍 DEBUG AUTH');
-  console.log('Rol:', window.currentRole, '| UID:', window.currentProfile?.uid, '| Email:', window.currentProfile?.email);
-  console.log('Tareas en memoria:', window.tasks?.length??0);
-  console.log('bootApp definido:', typeof window.bootApp);
-  console.log('_db_ref:', !!window._db_ref);
-  try{
-    const {collection:c2,getDocs:gd2,query:q2,where:w2}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
-    const db=window._db_ref; if(!db){console.error('❌ _db_ref null');console.groupEnd();return;}
-    // Sin filtro de rol
-    const all=await gd2(q2(c2(db,'tasks'),w2('orgId','==','curauma_001')));
-    console.log('/tasks (sin filtro):', all.size, 'docs | orgId=curauma_001');
-    if(all.size>0) console.log('Primera tarea:', all.docs[0].data());
-    else console.warn('⚠️ /tasks VACÍA — ejecuta: await window.reconnectSystem()');
-    // Con filtro de rol
-    const role=window.currentRole;
-    if(role&&role!=='pending'){
-      const byRole=await gd2(q2(c2(db,'tasks'),w2('orgId','==','curauma_001'),w2('assignedToRole','==',role)));
-      console.log(`/tasks (assignedToRole="${role}"):`, byRole.size, 'docs');
-    }
-    // Usuarios
-    const users=await gd2(q2(c2(db,'users'),w2('orgId','==','curauma_001')));
-    console.log('/users:', users.size, 'docs');
-    users.docs.forEach(d=>console.log(' →',d.data().email,'|',d.data().role));
-  }catch(e){console.error('❌ Firestore error:',e.code||'?',e.message);}
-  console.groupEnd();
-};
-
-// ══════════════════════════════════════════════
-// PANEL DE EMERGENCIA — Recuperación de sesión
-// ══════════════════════════════════════════════
-
-// Panel de emergencia: SOLO se activa manualmente (botón 🔧)
-// NO se activa automáticamente para evitar bucles con auth flow
-
-// 0. RECONEXIÓN TOTAL DEL SISTEMA
-async function reconnectSystem(){
-  const res=document.getElementById('emergencyResult');
-  if(res) res.textContent='⏳ Reconectando sistema...';
-  console.log('[reconnect] Iniciando reconexión total');
-
-  // 1. Limpiar estado en memoria
-  window.tasks=[];
-  window.sprintTasks=[];
-  window.orgMembers=[];
-  window.currentRole='pending';
-  window.currentProfile={};
-
-  // 2. Forzar recarga de tareas sin filtro de rol
-  try{
-    const { collection:c2, getDocs:gd2, query:q2, where:w2 }
-      = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
-    // Necesitamos db — está en el módulo Firebase
-    if(!window._db_ref){ throw new Error('DB no disponible'); }
-    const snap = await gd2(q2(c2(window._db_ref,'tasks'), w2('orgId','==','curauma_001')));
-    console.log('[reconnect] /tasks sin filtro:', snap.size, 'docs');
-    if(snap.size > 0){
-      window.tasks = snap.docs.map(d=>({...d.data(),id:d.id}));
-      if(window.renderTasks) window.renderTasks();
-      if(res) res.textContent=`✅ ${snap.size} tareas cargadas. Cerrando panel...`;
-      setTimeout(()=>{ document.getElementById('emergencyPanel').style.display='none'; },1500);
-    } else {
-      if(res) res.textContent='⚠️ /tasks vacía. Aplicando tareas maestras del rol...';
-      if(window.applyMasterTasks){ window.applyMasterTasks(); }
-      if(window.seedTasks&&(!window.tasks||window.tasks.length===0)) window.seedTasks();
-      if(window.renderTasks) window.renderTasks();
-    }
-  }catch(e){
-    console.warn('[reconnect] Error:', e.message, '→ usando seedTasks');
-    if(window.seedTasks) window.seedTasks();
-    if(window.applyMasterTasks) window.applyMasterTasks();
-    if(window.renderTasks) window.renderTasks();
-    if(res) res.textContent='⚠️ Modo offline. Tareas demo cargadas.';
-  }
-}
-window.reconnectSystem=reconnectSystem;
-
-// 1. Recuperar perfil desde Firestore manualmente
-async function emergencyRecoverProfile(){
-  const res = document.getElementById('emergencyResult');
-  res.textContent = '⏳ Buscando perfil en Firestore...';
-  try{
-    // Usar la función expuesta por el módulo Firebase
-    if(window.loadOrgData){ await window.loadOrgData(); }
-    const uid = window.currentProfile?.uid || (window.auth?.currentUser?.uid);
-    if(!uid){ res.textContent = '❌ Sin sesión activa. Recarga y vuelve a iniciar sesión.'; return; }
-    res.textContent = `✅ Perfil encontrado. Rol: ${window.currentRole}. Recargando...`;
-    setTimeout(()=>location.reload(), 1500);
-  }catch(e){
-    res.textContent = '❌ Error: '+e.message+'. Intenta recargar la página.';
-  }
-}
-window.emergencyRecoverProfile=emergencyRecoverProfile;
-
-// 2. Cargar TODAS las tareas de la org sin filtro de rol
-async function emergencyForceLoadTasks(){
-  const res = document.getElementById('emergencyResult');
-  res.textContent = '⏳ Cargando todas las tareas sin filtro...';
-  try{
-    const result = await window.fetchTasksFromFirestore?.();
-    if(result===null) throw new Error('Sin acceso a Firestore');
-    // Forzar carga sin filtro usando cloudSet de usuario
-    const allTasks = window.tasks||[];
-    res.textContent = `📋 Firestore /tasks: ${result?.length??0} docs | Local: ${allTasks.length} tareas`;
-    if(result&&result.length>0){
-      window.tasks = result;
-      if(window.renderTasks) window.renderTasks();
-      document.getElementById('emergencyPanel').style.display='none';
-    } else {
-      res.textContent += '\n⚠️ /tasks vacía. Ejecuta migración desde el rol Director.';
-    }
-  }catch(e){ res.textContent='❌ '+e.message; }
-}
-window.emergencyForceLoadTasks=emergencyForceLoadTasks;
-
-// 3. Limpiar caché del Service Worker
-async function emergencyClearCache(){
-  const res = document.getElementById('emergencyResult');
-  try{
-    if('serviceWorker' in navigator){
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for(const r of regs) await r.unregister();
-    }
-    const keys = await caches.keys();
-    for(const k of keys) await caches.delete(k);
-    res.textContent = `✅ Caché limpiado (${keys.length} entradas). Recargando...`;
-    setTimeout(()=>location.reload(true), 1500);
-  }catch(e){ res.textContent='❌ '+e.message; }
-}
-window.emergencyClearCache=emergencyClearCache;
-
-// Botón flotante de emergencia (esquina superior izquierda, solo si hay problemas)
-function showEmergencyBtn(){
-  if(document.getElementById('emergencyFloatBtn')) return;
-  const btn=document.createElement('button');
-  btn.id='emergencyFloatBtn';
-  btn.innerHTML='🔧';
-  btn.title='Panel de recuperación';
-  btn.style.cssText='position:fixed;top:8px;left:8px;z-index:9997;width:32px;height:32px;border-radius:50%;background:#EF4444;color:#fff;border:none;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(239,68,68,.4);';
-  btn.onclick=()=>document.getElementById('emergencyPanel').style.display='block';
-  document.body.appendChild(btn);
-}
-// El botón 🔧 se activa manualmente tocando 5 veces el logo del header
-let _logoTaps=0;
-document.addEventListener('DOMContentLoaded',()=>{
-  const logo=document.querySelector('.top-logo');
-  if(logo) logo.addEventListener('click',()=>{
-    _logoTaps++;
-    if(_logoTaps>=5){ _logoTaps=0; showEmergencyBtn(); }
-  });
-});
-
 // ── PWA: Service Worker ──
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
@@ -9483,57 +7906,40 @@ if('serviceWorker' in navigator){
   });
 }
 
-// ── PWA: Ghost Toast — discreto + dismiss 7 días ──
+// ── PWA: Banner de instalación inteligente ──
 let pwaInstallEvent = null;
-const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
                   || window.navigator.standalone === true;
 
-// Verificar si el usuario ya cerró el banner en los últimos 7 días
-function pwaDismissed(){
-  const d = localStorage.getItem('pwa-dismissed');
-  if(!d) return false;
-  return (Date.now() - parseInt(d)) < 7 * 24 * 60 * 60 * 1000; // 7 días
-}
-
-function showPwaBanner(){
-  if(isStandalone || pwaDismissed()) return; // ya instalada o ya dismissado
-  const banner = document.getElementById('pwaInstallBanner');
-  if(banner) banner.style.display='block';
-}
-
-// Cerrar y recordar por 7 días
-function dismissPwaBanner(){
-  localStorage.setItem('pwa-dismissed', Date.now().toString());
-  const banner = document.getElementById('pwaInstallBanner');
-  if(banner) banner.style.display='none';
-}
-window.dismissPwaBanner = dismissPwaBanner;
-
-// Android / Chrome
+// Android / Chrome: capturar el evento nativo de instalación
 window.addEventListener('beforeinstallprompt', (e)=>{
   e.preventDefault();
   pwaInstallEvent = e;
-  setTimeout(showPwaBanner, 5000); // 5s delay, discreto
+  // Mostrar el banner después de 3 segundos si no está instalada
+  if(!isStandalone){
+    setTimeout(()=>{
+      document.getElementById('pwaInstallBanner').style.display='flex';
+    }, 3000);
+  }
 });
 
-// App instalada → ocultar y limpiar
+// Cuando el usuario instala la app, ocultar el banner
 window.addEventListener('appinstalled', ()=>{
-  const banner = document.getElementById('pwaInstallBanner');
-  if(banner) banner.style.display='none';
+  console.log('[PWA] App instalada');
+  document.getElementById('pwaInstallBanner').style.display='none';
   pwaInstallEvent = null;
-  localStorage.setItem('pwa-dismissed', Date.now().toString());
   if(window.toast) window.toast('✅ ¡App instalada! Búscala en tu pantalla de inicio');
 });
 
-// iOS Safari
+// iOS: mostrar instrucciones manuales si aún no está instalada
 if(isIOS && !isStandalone){
   setTimeout(()=>{
-    if(pwaDismissed()) return;
-    showPwaBanner();
+    document.getElementById('pwaInstallBanner').style.display='flex';
+    // Cambiar el botón para abrir instrucciones de iOS
     const btn = document.getElementById('pwaInstallBtn');
     if(btn){
-      btn.textContent='📲 Cómo instalar en iPhone';
+      btn.textContent='📲 Ver cómo instalar en iPhone';
       btn.onclick = ()=>{
         document.getElementById('pwaInstallBanner').style.display='none';
         document.getElementById('pwaIosModal').style.display='flex';
