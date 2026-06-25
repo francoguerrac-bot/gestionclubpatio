@@ -8219,22 +8219,35 @@ function bootApp(cloudData, profile){
   applyCloudData(cloudData);
   init();
   try{ checkDeadlines(); }catch(e){ dbg('⚠️ checkDeadlines error: '+e.message); }
-  // Tras montar la UI, reemplazar tareas con las de Firestore (filtradas por rol)
+  // Sincronizar con /tasks collection (con protección contra vaciado)
   setTimeout(async()=>{
+    const localBackup = [...tasks]; // guardar backup antes de cualquier operación
     const fetched = await window.fetchTasksFromFirestore();
-    if(fetched !== null && fetched.length >= 0){
+    console.log(`[bootApp] /tasks Firestore: ${fetched===null?'ERROR':fetched.length+' docs'} | Local: ${localBackup.length}`);
+
+    if(fetched !== null && fetched.length > 0){
+      // Colección tiene datos → usar (ya filtrados por rol en Firestore)
       tasks = fetched;
-      console.log(`[bootApp] Tareas desde Firestore /tasks: ${tasks.length}`);
-      renderTasks();
-      checkDeadlines();
-    }
-    // Si la colección está vacía y hay tareas locales, migrarlas
-    if(fetched !== null && fetched.length === 0 && cloudData.tasks && cloudData.tasks.length > 0){
-      console.log('[bootApp] Migrando tareas locales a /tasks collection...');
-      await window.migrateTasksToCollection(cloudData.tasks);
-      // Volver a cargar
-      const refetched = await window.fetchTasksFromFirestore();
-      if(refetched) { tasks=refetched; renderTasks(); }
+      console.log('[bootApp] ✅ Tareas desde /tasks collection');
+      renderTasks(); checkDeadlines();
+    } else if(fetched !== null && fetched.length === 0){
+      // Colección vacía → NO vaciar la pantalla. Migrar locales.
+      const toMigrate = localBackup.length > 0 ? localBackup : (cloudData.tasks||[]);
+      if(toMigrate.length > 0){
+        console.log('[bootApp] ⚠️ /tasks vacía — migrando',toMigrate.length,'tareas locales...');
+        tasks = toMigrate; // restaurar locales mientras migra
+        renderTasks();
+        await window.migrateTasksToCollection(toMigrate);
+        const refetched = await window.fetchTasksFromFirestore();
+        if(refetched && refetched.length > 0){ tasks=refetched; renderTasks(); }
+      } else {
+        console.log('[bootApp] ℹ️ Sin tareas locales ni en /tasks. Aplicando tareas maestras...');
+        // Sin datos en ningún lado → aplicar tareas maestras del rol
+        setTimeout(applyMasterTasks, 200);
+      }
+    } else {
+      console.warn('[bootApp] ❌ Error al leer /tasks — manteniendo tareas locales');
+      // fetched===null → error Firestore → mantener lo que hay localmente
     }
   }, 800);
   const role = (profile&&profile.role)||'pending';
