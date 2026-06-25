@@ -2,30 +2,65 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ════════════════════════════════════════════════
-    // FUNCIONES HELPER — Gobernanza de Visibilidad
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
+    // FUNCIONES HELPER — Gobernanza de Visibilidad v2
+    // ════════════════════════════════════════════════════════════
 
-    function isAuth()     { return request.auth != null; }
-    function isDirector() { return request.auth != null && request.auth.token.email == 'francoguerrac@gmail.com'; }
-    function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function isAuth()       { return request.auth != null; }
+    function isOwner(uid)   { return request.auth != null && request.auth.uid == uid; }
 
-    // ════════════════════════════════════════════════
-    // USUARIOS — Nivel de acceso según rol
-    // ════════════════════════════════════════════════
+    // Director identificado por email (sin get() para evitar recursión)
+    function isDirector()   {
+      return request.auth != null
+          && request.auth.token.email == 'francoguerrac@gmail.com';
+    }
+
+    // Comité Ejecutivo: Director + Mamá + Coord. Bazar
+    // (czapatauv = Carolina = mama + coordinadora_bazares)
+    function isExecutive()  {
+      return isDirector()
+          || request.auth.token.email == 'czapatauv@gmail.com'
+          || request.auth.token.email == 'test.mama@clubpatio.cl'
+          || request.auth.token.email == 'test.coord.bazar@clubpatio.cl'
+          || request.auth.token.email == 'test.coord.tienda@clubpatio.cl';
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // COLECCIÓN: users
+    // ════════════════════════════════════════════════════════════
     match /users/{userId} {
-      // Cualquier autenticado puede leer perfiles (Control Tower, Panel Admin, onSnapshot)
-      allow read:   if isAuth();
-      allow create: if isAuth();
-      // Actualizar: propio doc O Director
-      allow update: if isOwner(userId) || isDirector();
-      // Eliminar: solo Director
+      allow read:   if isAuth();          // cualquier auth puede leer perfiles
+      allow create: if isAuth();          // registro de cuenta nueva
+      allow update: if isOwner(userId) || isDirector();  // propio o Director
       allow delete: if isDirector();
     }
 
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
+    // COLECCIÓN: tasks (si se migra a colección propia en el futuro)
+    // Lógica: Ejecutivos ven todo. Tácticos solo ven tasks donde
+    // assignedToRole == su rol o ellos son el owner.
+    // NOTA: Actualmente las tareas están en users/{uid}.tasks[] (array).
+    // Para enforcement total a nivel Firestore, migrar a esta colección.
+    // ════════════════════════════════════════════════════════════
+    match /tasks/{taskId} {
+      // Comité Ejecutivo: ve TODAS las tareas
+      allow read: if isExecutive();
+
+      // Ejecución Táctica: solo sus tareas
+      // (assignedToRole validado en frontend; aquí bloqueamos acceso cruzado)
+      allow read: if isAuth()
+                  && (resource.data.assignedToRole == null
+                      || resource.data.owner == request.auth.token.email);
+
+      allow write: if isAuth()
+                   && (isExecutive()
+                       || resource.data.assignedToRole == null
+                       || resource.data.owner == request.auth.token.email);
+    }
+
+    // ════════════════════════════════════════════════════════════
     // PERMISOS FAMILIARES (doble llave)
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
     match /permission_requests/{reqId} {
       allow read:   if isAuth();
       allow create: if isAuth();
@@ -33,50 +68,50 @@ service cloud.firestore {
       allow delete: if isDirector();
     }
 
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
     // PROPUESTAS / BUZÓN DE IDEAS
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
     match /proposals/{propId} {
       allow read, write: if isAuth();
     }
 
-    // ════════════════════════════════════════════════
-    // CICLOS DE BAZAR (compartido todo el equipo bazar)
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
+    // CICLOS DE BAZAR
+    // ════════════════════════════════════════════════════════════
     match /bazar_cycles/{cycleId} {
       allow read, write: if isAuth();
     }
 
-    // ════════════════════════════════════════════════
-    // HISTORIAL EMOCIONAL (Director solo lectura)
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
+    // HISTORIAL EMOCIONAL (solo Director lee)
+    // ════════════════════════════════════════════════════════════
     match /mood_history/{moodId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════════════
-    // AUDIT LOG — Inmutable, solo Director lee
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
+    // AUDIT LOG — Inmutable
+    // ════════════════════════════════════════════════════════════
     match /audit_log/{logId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
     // GEOLOCALIZACIÓN STEALTH
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
     match /geolocations/{geoId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════════════
-    // FALLBACK — Director accede a cualquier colección
-    // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
+    // FALLBACK — Director accede a cualquier colección no listada
+    // ════════════════════════════════════════════════════════════
     match /{document=**} {
       allow read, write: if isDirector();
     }

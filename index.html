@@ -3179,35 +3179,24 @@ const VISIBILITY_LEVELS = {
 };
 
 function getVisibleTasks(){
-  // Director siempre ve todo (nivel TOTAL)
-  if(currentRole === 'director') return tasks;
-
-  // Otros roles ejecutivos también ven todo
-  if(EXECUTIVE_ROLES.includes(currentRole)) return tasks;
-
-  // Pending: no filtrar
+  // ── COMITÉ EJECUTIVO: visibilidad TOTAL ──
+  if(currentRole === 'director' || EXECUTIVE_ROLES.includes(currentRole)) return tasks;
   if(currentRole === 'pending') return tasks;
 
-  // Roles TÁCTICOS: filtro de gobernanza
+  // ── EJECUCIÓN TÁCTICA: filtro ESTRICTO ──
+  // Solo ven tareas donde assignedToRole coincide con SU rol
   const me      = currentProfile.displayName || '';
-  const myRoles = Array.isArray(currentProfile.roles) && currentProfile.roles.filter(Boolean).length
+  const myRoles = (Array.isArray(currentProfile.roles) && currentProfile.roles.filter(Boolean).length)
     ? currentProfile.roles.filter(Boolean) : [currentRole];
-  const myMods  = Array.isArray(currentProfile.modules) ? currentProfile.modules
-    : (ROLES[currentRole]||{}).modules || [];
 
   return tasks.filter(t => {
-    // 1. Tarea asignada explícitamente a este ROL (campo assignedToRole)
-    if(t.assignedToRole && myRoles.includes(t.assignedToRole)) return true;
-    // 2. Tarea asignada a esta PERSONA por nombre (owner)
-    if(t.owner && t.owner === me) return true;
-    // 3. Tarea sin asignación en módulo accesible → visible
-    if(!t.owner && !t.assignedToRole && myMods.includes(t.ctx)) return true;
-    // 4. Tarea con visibilityLevel='all' → pública
-    if(t.visibilityLevel === 'all') return true;
-    // 5. Bloque children → solo hijos
-    if(t.visibilityLevel === 'children' && (currentRole==='hijo1'||currentRole==='hijo2')) return true;
-    // 6. Bloque club → solo roles Club Patio
-    if(t.visibilityLevel === 'club' && ['publicista','disenador','disenador_pub','soporte_app'].includes(currentRole)) return true;
+    // Regla 1 (PRINCIPAL): assignedToRole coincide con alguno de sus roles
+    if(t.assignedToRole && myRoles.some(r => r === t.assignedToRole)) return true;
+    // Regla 2 (COMPATIBILIDAD): tarea asignada por nombre (owner) sin assignedToRole
+    if(!t.assignedToRole && t.owner === me) return true;
+    // Regla 3 (COMPATIBILIDAD): tarea sin ninguna asignación (legacy)
+    if(!t.assignedToRole && !t.owner) return true;
+    // Todo lo demás: BLOQUEADO
     return false;
   });
 }
