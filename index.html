@@ -2830,9 +2830,12 @@ const NAV_META = {
   familia:   {icon:'🏠', label:'Familia'},
 };
 
-let currentRole = 'pending';
+let currentRole    = 'pending';
 let currentProfile = {};
-window.orgMembers = [];
+// Exponer globalmente para que el módulo Firebase los lea
+window.currentRole    = currentRole;
+window.currentProfile = currentProfile;
+window.orgMembers     = [];
 window._localAuditLog = [];
 
 // ═══════════════ STORAGE (Firestore en la nube) ═══════════════
@@ -2955,7 +2958,8 @@ function mountRoleUI(role, profile){
 
   currentRole = primaryRole;
   window.currentRole = primaryRole;
-  currentProfile = profile;
+  currentProfile = profile || {};
+  window.currentProfile = currentProfile; // sync para Firebase module
 
   // Fusionar nav y módulos de TODOS los roles válidos
   const mergedNav     = [...new Set(allRoles.flatMap(r => (ROLES[r]||{}).nav    ||[]).filter(Boolean))];
@@ -8913,12 +8917,15 @@ window.deleteUserFirestoreDoc = async function(uid){
 
 // fetchTasks: query con filtro estricto por rol en Firestore
 window.fetchTasksFromFirestore = async function(){
-  if(!currentUser) return null;
+  if(!currentUser){ console.warn('[fetchTasks] Sin usuario autenticado'); return null; }
   try{
     const { collection:col2, getDocs:gd2, query:q2, where:w2, orderBy:ob2 }
       = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
 
     const role      = window.currentRole || 'pending';
+    const uid       = currentUser.uid;
+    const email     = currentUser.email;
+    console.log(`[fetchTasks] Iniciando | rol="${role}" | uid="${uid}" | email="${email}" | orgId="curauma_001"`);
     const isExec    = role === 'director' || ['mama','coordinadora_bazares','coordinadora_tienda'].includes(role);
     const myRoles   = window.currentProfile?.roles?.filter(Boolean) || [role];
 
@@ -8938,7 +8945,11 @@ window.fetchTasksFromFirestore = async function(){
     console.log(`[fetchTasks] Rol: ${role} | Ejecutivo: ${isExec} | Tareas recibidas: ${fetched.length}`);
     return fetched;
   }catch(e){
-    console.warn('[fetchTasks] Error (usando cache local):', e.code||e.message);
+    console.error('[fetchTasks] ❌ ERROR:', e.code||'sin código', '|', e.message);
+    if(e.code==='permission-denied')
+      console.error('[fetchTasks] → PERMISSION DENIED. Pega las reglas en Firebase Console → Firestore → Rules');
+    if(e.code==='unavailable')
+      console.error('[fetchTasks] → SIN CONEXIÓN. Verifica internet.');
     return null; // null = fallback a tareas locales
   }
 };
@@ -9178,6 +9189,37 @@ onAuthStateChanged(auth, async (user)=>{
 </script>
 <!-- ── PWA: Registro del Service Worker ── -->
 <script>
+// ══════════════════════════════════════════════
+// debugAuth(): estado completo en consola
+// ══════════════════════════════════════════════
+window.debugAuth = async function(){
+  console.group('🔍 DEBUG AUTH');
+  console.log('Rol:', window.currentRole, '| UID:', window.currentProfile?.uid, '| Email:', window.currentProfile?.email);
+  console.log('Tareas en memoria:', window.tasks?.length??0);
+  console.log('bootApp definido:', typeof window.bootApp);
+  console.log('_db_ref:', !!window._db_ref);
+  try{
+    const {collection:c2,getDocs:gd2,query:q2,where:w2}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+    const db=window._db_ref; if(!db){console.error('❌ _db_ref null');console.groupEnd();return;}
+    // Sin filtro de rol
+    const all=await gd2(q2(c2(db,'tasks'),w2('orgId','==','curauma_001')));
+    console.log('/tasks (sin filtro):', all.size, 'docs | orgId=curauma_001');
+    if(all.size>0) console.log('Primera tarea:', all.docs[0].data());
+    else console.warn('⚠️ /tasks VACÍA — ejecuta: await window.reconnectSystem()');
+    // Con filtro de rol
+    const role=window.currentRole;
+    if(role&&role!=='pending'){
+      const byRole=await gd2(q2(c2(db,'tasks'),w2('orgId','==','curauma_001'),w2('assignedToRole','==',role)));
+      console.log(`/tasks (assignedToRole="${role}"):`, byRole.size, 'docs');
+    }
+    // Usuarios
+    const users=await gd2(q2(c2(db,'users'),w2('orgId','==','curauma_001')));
+    console.log('/users:', users.size, 'docs');
+    users.docs.forEach(d=>console.log(' →',d.data().email,'|',d.data().role));
+  }catch(e){console.error('❌ Firestore error:',e.code||'?',e.message);}
+  console.groupEnd();
+};
+
 // ══════════════════════════════════════════════
 // PANEL DE EMERGENCIA — Recuperación de sesión
 // ══════════════════════════════════════════════
