@@ -3023,14 +3023,18 @@ function durLabel(m){if(!m)return'';if(m<60)return m+'min';const h=Math.floor(m/
 const EXECUTIVE_ROLES_VIS = ['director','mama','coordinadora_bazares','coordinadora_tienda'];
 
 function getVisibleTasks(){
+  // Usar SIEMPRE la variable más reciente (local o window)
+  const role = currentRole || window.currentRole || 'pending';
+
   // Ejecutivos: visión total
-  if(EXECUTIVE_ROLES_VIS.includes(currentRole)||currentRole==='director') return tasks;
-  if(currentRole==='pending') return tasks;
+  if(EXECUTIVE_ROLES_VIS.includes(role) || role==='director') return tasks;
+  if(role==='pending') return tasks;
 
   // Roles tácticos: filtro ESTRICTO
-  const me      = (currentProfile&&currentProfile.displayName)||'';
-  const myRoles = (currentProfile&&Array.isArray(currentProfile.roles)&&currentProfile.roles.length)
-    ? currentProfile.roles.filter(Boolean) : [currentRole];
+  const prof    = currentProfile || window.currentProfile || {};
+  const me      = prof.displayName || '';
+  const myRoles = (Array.isArray(prof.roles) && prof.roles.length)
+    ? prof.roles.filter(Boolean) : [role];
 
   return tasks.filter(t=>{
     // 1. Tarea asignada explícitamente a mi rol
@@ -7208,16 +7212,47 @@ function initApp(cloudData, profile){
     window.cloudSet&&window.cloudSet('onboardingComplete', true);
   }
   window.currentProfile = safeProfile;
-  window.currentRole = safeProfile.role||'pending';
-  dbg('bootApp role=' + window.currentRole + ' email=' + (safeProfile.email||'?'));
+  window.currentRole    = safeProfile.role||'pending';
+  // ── FIX CRÍTICO: setear la variable LOCAL antes de init() → renderTasks() ──
+  // Sin esto, getVisibleTasks() lee currentRole='pending' y devuelve TODAS las tareas
+  currentRole    = window.currentRole;
+  currentProfile = safeProfile;
+  dbg('bootApp role=' + currentRole + ' email=' + (safeProfile.email||'?'));
   applyCloudData(cloudData||{});
   init();
   try{ checkDeadlines(); }catch(e){}
-  var role = window.currentRole;
+  var role = currentRole;
   mountRoleUI(role, safeProfile);
   if(role !== 'pending'){
     setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 500);
-    if(tasks.length===0){ seedTasks(); renderTasks(); }
+
+    // Para roles TÁCTICOS: limpiar tareas contaminadas (owner de otro rol)
+    var isExecRole = EXECUTIVE_ROLES_VIS.includes(role)||role==='director';
+    if(!isExecRole){
+      var me = safeProfile.displayName||'';
+      var myRoles = Array.isArray(safeProfile.roles)?safeProfile.roles.filter(Boolean):[role];
+      var contaminated = tasks.filter(t=>{
+        // Tarea que no es mía por rol ni por nombre → contaminada
+        var byRole = t.assignedToRole && myRoles.includes(t.assignedToRole);
+        var byName = t.owner && t.owner===me;
+        return !byRole && !byName;
+      });
+      if(contaminated.length > 0){
+        console.warn('[isolation] Eliminando',contaminated.length,'tareas ajenas del rol',role);
+        tasks = tasks.filter(t=>{
+          var byRole = t.assignedToRole && myRoles.includes(t.assignedToRole);
+          var byName = t.owner && t.owner===me;
+          return byRole || byName;
+        });
+        saveTasks(); // limpiar en Firestore también
+        renderTasks();
+      }
+      if(tasks.length===0){
+        seedTasksForRole(role);
+      }
+    } else if(tasks.length===0){
+      seedTasks(); renderTasks();
+    }
   }
   window._drainBootQueue&&window._drainBootQueue();
   window._hideLoading&&window._hideLoading();
