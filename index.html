@@ -8380,8 +8380,9 @@ window.initApp = function(cloudData, profile){
   // Estado 4: Renderizado seguro — rol confirmado
   setAppState(APP_STATES.READY);
 
-  // Cargar datos y renderizar
-  applyCloudData(cloudData||{});
+  // Cargar datos del doc del usuario (fuente primaria confiable)
+  const userData = cloudData||{};
+  applyCloudData(userData);
   init();
   try{ checkDeadlines(); }catch(e){ console.warn('[initApp] checkDeadlines:', e.message); }
 
@@ -8389,35 +8390,31 @@ window.initApp = function(cloudData, profile){
   const role = safeProfile.role || 'pending';
   mountRoleUI(role, safeProfile);
 
-  // 6. Cargar tareas desde Firestore (800ms después para dar tiempo al nav)
+  // 6. Tareas: fuente primaria = doc del usuario, secundaria = /tasks collection
+  // Si ya tenemos tareas del doc → mostrar YA, no esperar Firestore
+  if(tasks.length > 0){
+    renderTasks();
+    console.log('[initApp] ✅ Tareas desde doc usuario:', tasks.length);
+  } else {
+    // Sin tareas locales → sembrar inmediatamente (no esperar)
+    console.log('[initApp] Sin tareas locales → seedTasks()');
+    seedTasks(); renderTasks();
+  }
+
+  // Intentar enriquecer con /tasks collection en segundo plano (no bloquea UI)
   setTimeout(async()=>{
     const localBackup = [...tasks];
     let fetched = null;
-    try{ fetched = await window.fetchTasksFromFirestore(); }catch(e){ console.warn('[initApp] fetchTasks error:', e.message); }
-
-    console.log(`[initApp] /tasks: ${fetched===null?'ERROR':fetched.length+' docs'} | local: ${localBackup.length}`);
+    try{ fetched = await window.fetchTasksFromFirestore(); }catch(e){ console.warn('[initApp] /tasks error:', e.message); }
 
     if(fetched && fetched.length > 0){
-      tasks = fetched;
-      renderTasks();
-    } else if(fetched !== null && fetched.length === 0){
-      // Colección vacía → migrar locales o sembrar
-      const toSeed = localBackup.length>0 ? localBackup : (cloudData&&cloudData.tasks)||[];
-      if(toSeed.length > 0){
-        tasks = toSeed;
-        renderTasks();
-        window.migrateTasksToCollection&&window.migrateTasksToCollection(toSeed);
-      } else {
-        seedTasks(); renderTasks();
-        setTimeout(applyMasterTasks, 300);
-      }
-    } else {
-      // Error Firestore → usar locales o sembrar
-      if(tasks.length===0){ seedTasks(); renderTasks(); }
+      tasks = fetched; renderTasks();
+      console.log('[initApp] /tasks enriqueció con', fetched.length, 'docs');
+    } else if(fetched !== null && fetched.length === 0 && localBackup.length > 0){
+      // Migrar locales a /tasks en background (no bloquea)
+      window.migrateTasksToCollection&&window.migrateTasksToCollection(localBackup).catch(()=>{});
     }
-    // Tareas maestras del rol (siempre, no bloquea)
-    setTimeout(applyMasterTasks, 1200);
-  }, 800);
+  }, 2000); // más tiempo para no competir con la carga inicial
 
   // 7. Notificaciones pendientes (Director)
   if(role==='director'){
