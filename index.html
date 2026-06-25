@@ -501,6 +501,29 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .mh-alert-badge{font-size:9px;font-weight:800;background:#FEE2E2;color:#DC2626;padding:2px 7px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
 .mh-day-label{display:flex;gap:5px;flex:1;padding-left:94px;margin-bottom:4px;}
 .mh-day-lbl{flex:1;max-width:32px;text-align:center;font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;}
+/* ── NOTIFICACIÓN PUSH HIJO ── */
+.hijo-notif-overlay{position:fixed;inset:0;z-index:995;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:20px;}
+.hijo-notif-card{background:var(--bg-card);border-radius:22px;padding:28px 22px;max-width:340px;width:100%;text-align:center;font-family:'Inter',sans-serif;animation:cel-pop .45s cubic-bezier(.34,1.56,.64,1);}
+.hijo-notif-icon{font-size:64px;margin-bottom:10px;display:block;animation:cel-bounce .6s ease-in-out infinite alternate;}
+.hijo-notif-title{font-size:20px;font-weight:800;margin-bottom:8px;}
+.hijo-notif-msg{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;}
+.hijo-notif-note{font-size:12px;font-style:italic;color:var(--primary-blue);background:var(--sage-dim);border-radius:9px;padding:9px 12px;margin-bottom:18px;line-height:1.5;}
+.hijo-notif-close{width:100%;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;}
+/* ── PERMISSION CHECKLIST PANEL (Hijo) ── */
+.perm-checklist-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;}
+.perm-checklist-card{background:var(--bg-card);border-radius:22px 22px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;font-family:'Inter',sans-serif;animation:pwa-slide-in .35s ease;max-height:90vh;overflow-y:auto;}
+.perm-step{display:none;} .perm-step.active{display:block;}
+.perm-checklist-item-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.perm-checklist-item-row:last-child{border-bottom:none;}
+.perm-cl-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center;}
+.perm-cl-text{flex:1;font-size:13px;font-weight:500;color:var(--text-main);line-height:1.4;}
+.perm-cl-sub{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.perm-step-dots{display:flex;gap:5px;justify-content:center;margin-bottom:16px;}
+.perm-step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s;}
+.perm-step-dot.active{background:var(--primary-blue);}
+/* Mis permisos status en hijo */
+.hijo-perm-card{background:var(--bg-card);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;border-left:4px solid var(--primary-blue);}
+.hijo-perm-status-row{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;}
 /* ── PANEL FAMILIA (Permisos + Propuestas) ── */
 .fam-filter-bar{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
 .fam-filter-btn{flex-shrink:0;font-size:10px;font-weight:700;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
@@ -2153,12 +2176,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
         <div class="hijo-dash-title">⏳ Próximas pendientes</div>
         <div id="misTareasProx"></div>
       </div>
-      <!-- Botón permiso solo para hijos -->
+      <!-- Botón permiso (siempre visible para hijos, abre checklist) -->
       <div id="btnPermisoCont" style="display:none;">
-        <button class="btn btn-sage" onclick="openPermissionModal()"
-          style="width:100%;padding:13px;font-size:13px;border-radius:12px;">
+        <button class="btn btn-sage" onclick="openPermChecklist()"
+          style="width:100%;padding:14px;font-size:14px;border-radius:12px;
+          background:linear-gradient(135deg,#7C3AED,#9B59B6);
+          box-shadow:0 4px 14px rgba(124,58,237,.35);">
           🔑 Solicitar Permiso
         </button>
+        <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:4px;">
+          Mamá y Papá recibirán tu solicitud
+        </div>
       </div>
     </div>
 
@@ -2311,6 +2339,107 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       style="width:100%;padding:13px;font-size:14px;margin-top:4px;">
       ✅ Crear Integrante
     </button>
+  </div>
+</div>
+
+<!-- ── NOTIFICACIÓN PUSH HIJO ── -->
+<div id="hijoNotifOverlay" class="hijo-notif-overlay">
+  <div class="hijo-notif-card">
+    <span class="hijo-notif-icon" id="hijoNotifIcon">🔔</span>
+    <div class="hijo-notif-title" id="hijoNotifTitle">Novedad en tu solicitud</div>
+    <div class="hijo-notif-msg"  id="hijoNotifMsg"></div>
+    <div class="hijo-notif-note" id="hijoNotifNote" style="display:none;"></div>
+    <button class="hijo-notif-close" id="hijoNotifClose" onclick="closeHijoNotif()"
+      style="background:linear-gradient(135deg,var(--primary-blue),var(--sage-light));color:#fff;">
+      ✅ Entendido
+    </button>
+  </div>
+</div>
+
+<!-- ── PANEL CHECKLIST SOLICITUD DE PERMISO ── -->
+<div id="permChecklistOverlay" class="perm-checklist-overlay" onclick="if(event.target===this)closePermChecklist()">
+  <div class="perm-checklist-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:800;">🔑 Solicitar Permiso</div>
+      <button onclick="closePermChecklist()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">×</button>
+    </div>
+    <div class="perm-step-dots">
+      <div class="perm-step-dot active" id="psd-0"></div>
+      <div class="perm-step-dot" id="psd-1"></div>
+      <div class="perm-step-dot" id="psd-2"></div>
+    </div>
+
+    <!-- Paso 1: Checklist de requisitos -->
+    <div class="perm-step active" id="pstep-0">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Antes de solicitar, prepara esto:</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">Tu solicitud llegará a Mamá y Papá. Cuanto más clara sea, más fácil aprobarla.</div>
+      <div class="perm-checklist-item-row">
+        <span class="perm-cl-icon">🎯</span>
+        <div><div class="perm-cl-text">Motivo claro y específico</div><div class="perm-cl-sub">¿Qué quieres hacer? ¿Por qué?</div></div>
+      </div>
+      <div class="perm-checklist-item-row">
+        <span class="perm-cl-icon">📅</span>
+        <div><div class="perm-cl-text">Fecha y hora exacta</div><div class="perm-cl-sub">¿Cuándo y a qué hora regresas?</div></div>
+      </div>
+      <div class="perm-checklist-item-row">
+        <span class="perm-cl-icon">📍</span>
+        <div><div class="perm-cl-text">Lugar específico</div><div class="perm-cl-sub">¿Dónde exactamente vas a estar?</div></div>
+      </div>
+      <div class="perm-checklist-item-row">
+        <span class="perm-cl-icon">👥</span>
+        <div><div class="perm-cl-text">Con quién vas</div><div class="perm-cl-sub">Nombres de acompañantes</div></div>
+      </div>
+      <div class="perm-checklist-item-row">
+        <span class="perm-cl-icon">🤝</span>
+        <div><div class="perm-cl-text">Tu compromiso</div><div class="perm-cl-sub">¿Qué ofreces a cambio? ¿Qué responsabilidad cumplirás?</div></div>
+      </div>
+      <button class="btn btn-sage" onclick="permChecklistNext(1)" style="width:100%;padding:13px;margin-top:16px;font-size:14px;">
+        Listo, voy al formulario →
+      </button>
+    </div>
+
+    <!-- Paso 2: Formulario compacto -->
+    <div class="perm-step" id="pstep-1">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">📝 Completa tu solicitud:</div>
+      <div style="display:grid;gap:10px;">
+        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Motivo *</label>
+          <input id="pf-motivo" class="nm-input" type="text" placeholder="Ej: Salir al cine con amigos"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Fecha *</label>
+            <input id="pf-fecha" class="nm-input" type="date"></div>
+          <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Regreso *</label>
+            <input id="pf-hora" class="nm-input" type="time"></div>
+        </div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Lugar *</label>
+          <input id="pf-lugar" class="nm-input" type="text" placeholder="Ej: Mall Curicó"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Acompañantes</label>
+          <input id="pf-acomp" class="nm-input" type="text" placeholder="Ej: Amigos del colegio"></div>
+        <div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:flex;align-items:center;gap:4px;">
+            🤝 Mi Compromiso * <span style="font-size:8px;background:var(--sage-dim);color:var(--primary-blue);padding:1px 5px;border-radius:99px;">obligatorio</span>
+          </label>
+          <textarea id="pf-comp" class="nm-input" rows="2" placeholder="Si me dan permiso, me comprometo a..." style="resize:none;"></textarea></div>
+      </div>
+      <div id="pf-error" style="color:var(--accent-coral);font-size:11px;margin-top:6px;display:none;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-ghost" onclick="permChecklistNext(0)" style="padding:12px 16px;">← Atrás</button>
+        <button class="btn btn-sage" onclick="permChecklistNext(2)" style="flex:1;padding:12px;">Vista previa →</button>
+      </div>
+    </div>
+
+    <!-- Paso 3: Resumen / confirmación -->
+    <div class="perm-step" id="pstep-2">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📋 Resumen de tu solicitud:</div>
+      <div id="pf-preview" style="background:var(--bg-main);border-radius:12px;padding:14px;font-size:12px;line-height:1.8;margin-bottom:14px;border:1.5px solid var(--border);"></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;text-align:center;">
+        ¿Todo está correcto? Cuando envíes, Mamá y Papá recibirán la notificación.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="permChecklistNext(1)" style="padding:12px 16px;">← Editar</button>
+        <button class="btn btn-sage" onclick="submitFromChecklist()" id="pf-submit-btn" style="flex:1;padding:12px;font-size:14px;">
+          📤 Enviar solicitud
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -4135,6 +4264,183 @@ function toast(msg){
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2300);
 }
 
+// ═══════════════ NOTIFICACIONES PUSH HIJO ═══════════════
+
+const NOTIF_MESSAGES = {
+  approved:{
+    icons:['🎉','🌟','🎊','✨'],
+    titles:['¡Permiso Aprobado!','¡Sí pueden! ¡A disfrutar!','¡Lo lograste!','¡Genial, sí te autorizan!'],
+    msgs:[
+      'Mamá y Papá han dicho ✅ SÍ. ¡Confían en ti! Recuerda tu compromiso y vuelve a la hora acordada. 🚀',
+      '¡Excelente noticia! Tu solicitud fue aprobada. El permiso es una muestra de confianza — ¡no la decepciones! 💪',
+      '¡Sí! ¡Sí! ¡SÍ! 🎊 Tus papás dijeron que sí. Pásala increíble y honra el compromiso que hiciste.',
+    ]
+  },
+  evaluating:{
+    icons:['🤔','💭','⏰','🔍'],
+    titles:['Lo están pensando...','Solicitud en revisión','Un momento más...','Evaluando tu pedido'],
+    msgs:[
+      'Mamá y/o Papá están analizando tu solicitud con cuidado. Ten paciencia, ¡pronto sabrás! 💙',
+      'Tu permiso está siendo evaluado. Esto significa que se lo están tomando en serio. ¡Espera un poco más! 🕐',
+      'Están pensándolo bien. A veces las mejores decisiones toman tiempo. ¡Mantente disponible! 📱',
+    ]
+  },
+  rejected:{
+    icons:['💙','🌱','🤗','💝'],
+    titles:['Esta vez no pudo ser...','Te quieren mucho 💙','Para la próxima','Con cariño, no esta vez'],
+    msgs:[
+      'Esta vez Mamá y/o Papá no pudieron autorizar tu solicitud. Recuerda que sus decisiones siempre son con cariño. Lee el motivo. 💙',
+      'No fue posible esta vez, pero no te rindas. Habla con ellos, entiende el motivo y propón alternativas. 🌱',
+      'Te quieren tanto que a veces el "no" es la forma de cuidarte. Lee su explicación con calma y sin enojo. 🤗',
+    ]
+  }
+};
+
+function getRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+async function checkHijoNotifications(){
+  if(currentRole!=='hijo1'&&currentRole!=='hijo2') return;
+  try{
+    const uid=currentProfile.uid||'';
+    if(!uid) return;
+    const perms = await window.loadPermissionRequests()||[];
+    const myPerms = perms.filter(p=>p.requesterId===uid);
+
+    // Buscar permisos con estado cambiado no notificado al hijo
+    const unnotified = myPerms.filter(p=>p.status!=='pending'&&!p.hijoNotified);
+    if(!unnotified.length) return;
+
+    // Mostrar notificación por el más reciente
+    const latest = unnotified.sort((a,b)=>b.ts-a.ts)[0];
+    showHijoNotif(latest);
+
+    // Marcar como notificado
+    await window.updatePermissionRequest(latest.id,{hijoNotified:true}).catch(()=>{});
+  }catch(e){ console.warn('[HijoNotif]',e.message); }
+}
+window.checkHijoNotifications=checkHijoNotifications;
+
+function showHijoNotif(perm){
+  const type = perm.status==='approved'?'approved':perm.status==='evaluating'?'evaluating':'rejected';
+  const n = NOTIF_MESSAGES[type];
+  const overlay = document.getElementById('hijoNotifOverlay');
+  const icon    = document.getElementById('hijoNotifIcon');
+  const title   = document.getElementById('hijoNotifTitle');
+  const msg     = document.getElementById('hijoNotifMsg');
+  const note    = document.getElementById('hijoNotifNote');
+  const closeBtn= document.getElementById('hijoNotifClose');
+
+  if(!overlay) return;
+  icon.textContent  = getRandom(n.icons);
+  title.textContent = getRandom(n.titles);
+  msg.textContent   = getRandom(n.msgs);
+
+  const bgColors={approved:'linear-gradient(135deg,var(--primary-green),#7DAD2E)',evaluating:'linear-gradient(135deg,#3B82F6,#2563EB)',rejected:'linear-gradient(135deg,#9CA3AF,#6B7280)'};
+  closeBtn.style.background = bgColors[type];
+
+  if(perm.responseNote){
+    note.style.display='block';
+    note.innerHTML=`<strong>Mensaje de tus padres:</strong><br>"${perm.responseNote}"`;
+  } else { note.style.display='none'; }
+
+  overlay.style.display='flex';
+}
+
+function closeHijoNotif(){
+  document.getElementById('hijoNotifOverlay').style.display='none';
+}
+window.closeHijoNotif=closeHijoNotif;
+
+// ═══════════════ CHECKLIST SOLICITUD DE PERMISO (HIJO) ═══════════════
+
+function openPermChecklist(){
+  // Resetear formulario
+  ['pf-motivo','pf-lugar','pf-acomp','pf-comp'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('pf-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('pf-hora').value='';
+  const errEl=document.getElementById('pf-error');if(errEl){errEl.style.display='none';errEl.textContent='';}
+  permChecklistNext(0);
+  document.getElementById('permChecklistOverlay').style.display='flex';
+}
+window.openPermChecklist=openPermChecklist;
+
+function closePermChecklist(){
+  document.getElementById('permChecklistOverlay').style.display='none';
+}
+window.closePermChecklist=closePermChecklist;
+
+function permChecklistNext(step){
+  // Validar paso 1 antes de ir a paso 2
+  if(step===2){
+    const motivo = document.getElementById('pf-motivo').value.trim();
+    const fecha  = document.getElementById('pf-fecha').value;
+    const hora   = document.getElementById('pf-hora').value;
+    const lugar  = document.getElementById('pf-lugar').value.trim();
+    const comp   = document.getElementById('pf-comp').value.trim();
+    const errEl  = document.getElementById('pf-error');
+    if(!motivo||!fecha||!hora||!lugar){
+      if(errEl){errEl.style.display='block';errEl.textContent='⚠️ Completa motivo, fecha, hora de regreso y lugar.';}
+      return;
+    }
+    if(!comp){
+      if(errEl){errEl.style.display='block';errEl.textContent='⚠️ El campo "Mi Compromiso" es obligatorio.';}
+      document.getElementById('pf-comp').focus(); return;
+    }
+    // Generar vista previa
+    const preview=document.getElementById('pf-preview');
+    if(preview) preview.innerHTML=`
+      <div><strong>🎯 Motivo:</strong> ${motivo}</div>
+      <div><strong>📅 Fecha:</strong> ${new Date(fecha+'T00:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <div><strong>⏰ Regreso:</strong> ${hora} hrs</div>
+      <div><strong>📍 Lugar:</strong> ${lugar}</div>
+      ${document.getElementById('pf-acomp').value.trim()?`<div><strong>👥 Con:</strong> ${document.getElementById('pf-acomp').value.trim()}</div>`:''}
+      <div style="margin-top:8px;padding:8px;background:var(--sage-dim);border-radius:7px;border-left:3px solid var(--primary-blue);">
+        <strong>🤝 Mi Compromiso:</strong><br>${comp}
+      </div>`;
+  }
+  // Cambiar paso visible
+  document.querySelectorAll('.perm-step').forEach((s,i)=>s.classList.toggle('active',i===step));
+  document.querySelectorAll('.perm-step-dot').forEach((d,i)=>d.classList.toggle('active',i<=step));
+}
+window.permChecklistNext=permChecklistNext;
+
+async function submitFromChecklist(){
+  const motivo    = document.getElementById('pf-motivo').value.trim();
+  const fecha     = document.getElementById('pf-fecha').value;
+  const horaFin   = document.getElementById('pf-hora').value;
+  const lugar     = document.getElementById('pf-lugar').value.trim();
+  const acomp     = document.getElementById('pf-acomp').value.trim();
+  const compromiso= document.getElementById('pf-comp').value.trim();
+
+  const btn=document.getElementById('pf-submit-btn');
+  btn.disabled=true; btn.textContent='Enviando...';
+
+  const req={
+    id:uid(), orgId:ORG_ID,
+    requesterId:currentProfile.uid||'', requesterName:currentProfile.displayName||'',
+    requesterRole:currentRole, requesterEmoji:(ROLES[currentRole]||{}).emoji||'👤',
+    motivo, lugar, acompañantes:acomp, compromiso,
+    mensaje:'', fecha, horaInicio:'', horaFin,
+    status:'pending', approvedByMom:false, approvedByDad:false,
+    notifiedToDirector:false, hijoNotified:false,
+    createdAt:new Date().toISOString(), ts:Date.now()
+  };
+  try{
+    await window.savePermissionRequest(req);
+    myPermissions.unshift(req);
+    closePermChecklist();
+    renderMyPermissions();
+    toast('🔑 Solicitud enviada — Mamá y Papá la recibirán pronto');
+    writeAuditEntry&&writeAuditEntry('permission_requested',{emoji:'🔑',motivo,fecha});
+  }catch(e){
+    const errEl=document.getElementById('pf-error');
+    if(errEl){errEl.style.display='block';errEl.textContent='Error: '+e.message;}
+  }finally{
+    btn.disabled=false; btn.textContent='📤 Enviar solicitud';
+  }
+}
+window.submitFromChecklist=submitFromChecklist;
+
 // ═══════════════ PANEL FAMILIA — Permisos + Propuestas ═══════════════
 
 let famFilter = 'all';
@@ -4319,8 +4625,11 @@ async function famAction(id, type, action){
     else if(action==='reject') patch.status='rejected';
 
     try{
+      // Marcar hijoNotified:false para que hijo reciba la notificación al próximo login
+      patch.hijoNotified = false;
       await window.updatePermissionRequest(id,patch);
-      toast(action==='approve'?'✅ Firma registrada':action==='eval'?'🔄 Marcado en evaluación':'❌ Permiso rechazado');
+      const actionLabel = action==='approve'?'✅ Firma registrada':action==='eval'?'🔄 Marcado en evaluación':'❌ Permiso rechazado';
+      toast(actionLabel);
       writeAuditEntry&&writeAuditEntry('familia_perm_'+action,{emoji:action==='approve'?'✅':action==='eval'?'🔄':'❌',id});
     }catch(e){toast('⚠️ Error: '+e.message); return;}
   } else {
@@ -6032,6 +6341,9 @@ function renderMiPanel(){
   const misPerm = document.getElementById('misPermisosSection');
   if(btnCont) btnCont.style.display = isHijo ? 'block' : 'none';
   if(misPerm) misPerm.style.display = isHijo ? 'block' : 'none';
+
+  // Verificar notificaciones pendientes (decisiones de padres)
+  if(isHijo) setTimeout(checkHijoNotifications, 1200);
 }
 
 function renderMiPanelHeader(){
