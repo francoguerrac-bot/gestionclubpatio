@@ -1300,6 +1300,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       </div>
     </div>
 
+    <!-- Notificaciones Push -->
+    <div id="fcmCard" style="background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="font-size:24px;">🔔</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-main);">Notificaciones Push</div>
+          <div style="font-size:11px;color:var(--text-muted);">Recibe alertas aunque la app esté cerrada</div>
+        </div>
+      </div>
+      <button id="fcmActivateBtn"
+        onclick="requestNotificationPermission()"
+        style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg-main);font-size:13px;font-weight:700;color:var(--text-main);cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;">
+        🔔 Activar notificaciones
+      </button>
+    </div>
+
     <!-- Consola de Soporte (colapsable) -->
     <div class="support-console" id="supportConsole">
       <div class="support-console-hdr" onclick="toggleSupportConsole()">
@@ -1310,16 +1326,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       </div>
       <div class="support-console-body" id="supportConsoleBody">
         <!-- Poblado por renderDashboard() -->
-      </div>
-      <!-- Sección FCM en la consola -->
-      <div id="supportFcmSection" style="display:none;padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--bg-main);">
-        <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">🔔 Notificaciones Push</div>
-        <button id="fcmActivateBtn"
-          onclick="requestNotificationPermission()"
-          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg-card);font-size:12px;font-weight:700;color:var(--text-main);cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;">
-          🔔 Activar notificaciones
-        </button>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.5;">Recibirás alertas de tareas asignadas y respuestas de permisos aunque la app esté cerrada.</div>
       </div>
     </div>
 
@@ -4451,16 +4457,20 @@ function renderDashboard(){
   }
 }
 window.renderDashboard = renderDashboard;
+// Sincronizar estado del botón FCM cada vez que se abre el dashboard
+const _origRenderDash = renderDashboard;
+renderDashboard = function(){
+  _origRenderDash();
+  setTimeout(()=>window.checkCurrentPermissionStatus&&window.checkCurrentPermissionStatus(), 200);
+};
+window.renderDashboard = renderDashboard;
 
 function toggleSupportConsole(){
   const body    = document.getElementById('supportConsoleBody');
   const chevron = document.getElementById('supportConsoleChevron');
-  const fcmSect = document.getElementById('supportFcmSection');
   if(!body) return;
   const open = body.classList.toggle('open');
-  if(chevron)  chevron.style.transform = open ? 'rotate(90deg)' : '';
-  if(fcmSect)  fcmSect.style.display   = open ? 'block' : 'none';
-  if(open && window.checkCurrentPermissionStatus) window.checkCurrentPermissionStatus();
+  if(chevron) chevron.style.transform = open ? 'rotate(90deg)' : '';
 }
 window.toggleSupportConsole = toggleSupportConsole;
 
@@ -8813,8 +8823,9 @@ function checkCurrentPermissionStatus(){
 }
 window.checkCurrentPermissionStatus = checkCurrentPermissionStatus;
 
-// Ejecutar al cargar para sincronizar estado del botón
+// Sincronizar estado del botón al abrir el dashboard
 document.addEventListener('DOMContentLoaded', ()=>setTimeout(checkCurrentPermissionStatus, 1500));
+window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkCurrentPermissionStatus(); });
 </script>
 </body>
 </html>
