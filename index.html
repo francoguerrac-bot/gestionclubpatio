@@ -153,8 +153,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 /* ── SORT BAR ── */
 .sort-bar{display:flex;gap:6px;padding:8px 14px;background:var(--bg);align-items:center;border-bottom:1px solid var(--border);}
 .sort-label{font-size:10px;color:var(--mid);font-weight:700;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;}
-.sort-btn{font-size:10px;font-weight:600;padding:4px 10px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--mid);cursor:pointer;transition:all .15s;}
-.sort-btn.active{background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
+.sort-btn{font-size:10px;font-weight:600;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--mid);cursor:pointer;transition:all .2s;user-select:none;}
+.sort-btn:hover{border-color:var(--primary-blue);color:var(--primary-blue);background:var(--sage-dim);}
+.sort-btn.active{background:var(--text-main);color:#fff;border-color:var(--text-main);box-shadow:0 2px 6px rgba(45,49,66,.2);}
+/* Filtros de contexto con color propio cuando activos */
+#cf-casa.active  {background:var(--casa-color);border-color:var(--casa-color);}
+#cf-bazar.active {background:var(--bazar-color);border-color:var(--bazar-color);}
+#cf-tienda.active{background:#0F766E;border-color:#0F766E;}
+#cf-club.active  {background:var(--club-color);border-color:var(--club-color);}
 
 /* ── TASK CARDS ── */
 .task-card{background:var(--bg-card);border:1px solid rgba(221,227,231,.6);border-radius:14px;padding:13px 13px 11px;margin-bottom:9px;display:flex;gap:10px;align-items:flex-start;position:relative;overflow:hidden;transition:all .2s;box-shadow:0 1px 6px rgba(45,49,66,.05);}
@@ -1250,12 +1256,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
   </div>
 
   <!-- context filter -->
-  <div style="display:flex;gap:6px;padding:8px 14px;background:var(--bg);overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);" id="ctxFilterRow">
-    <div class="sort-btn active" id="cf-todo"   onclick="setCF('todo')"   style="white-space:nowrap">Todo</div>
-    <div class="sort-btn"        id="cf-casa"   onclick="setCF('casa')"   style="white-space:nowrap">🏠 Casa</div>
-    <div class="sort-btn"        id="cf-bazar"  onclick="setCF('bazar')"  style="white-space:nowrap">🛍️ Bazar</div>
-    <div class="sort-btn"        id="cf-tienda" onclick="setCF('tienda')" style="white-space:nowrap">🏪 Tienda</div>
-    <div class="sort-btn"        id="cf-club"   onclick="setCF('club')"   style="white-space:nowrap">🟢 Club Patio</div>
+  <div style="display:flex;gap:6px;padding:8px 14px;background:var(--bg-main);overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);align-items:center;" id="ctxFilterRow">
+    <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);flex-shrink:0;">Módulo:</span>
+    <div class="sort-btn active" id="cf-todo"   onclick="filterTasks('todo')"   style="white-space:nowrap;">📋 Todo</div>
+    <div class="sort-btn"        id="cf-casa"   onclick="filterTasks('casa')"   style="white-space:nowrap;">🏠 Casa</div>
+    <div class="sort-btn"        id="cf-bazar"  onclick="filterTasks('bazar')"  style="white-space:nowrap;">🛍️ Bazar</div>
+    <div class="sort-btn"        id="cf-tienda" onclick="filterTasks('tienda')" style="white-space:nowrap;">🏪 Tienda</div>
+    <div class="sort-btn"        id="cf-club"   onclick="filterTasks('club')"   style="white-space:nowrap;">🟢 Club</div>
   </div>
 
   <!-- Panel Hijo: header + Estudio Inverso (oculto por defecto) -->
@@ -2966,14 +2973,41 @@ function deleteTask(id){
 }
 
 // ═══════════════ FILTER / SORT ═══════════════
-function setCF(f){
-  ctxFilter=f;
-  ['todo','casa','bazar','tienda','club'].forEach(k=>{
+
+// Alias global para acceso programático
+window.currentContext = 'todo';
+
+/**
+ * filterTasks(context)
+ * Filtra la lista de tareas por módulo/contexto.
+ * @param {string} context - 'todo'|'casa'|'bazar'|'tienda'|'club'
+ */
+function filterTasks(context){
+  // Validar contexto
+  const valid = ['todo','casa','bazar','tienda','club'];
+  if(!valid.includes(context)) context='todo';
+
+  // Actualizar estado
+  ctxFilter = context;
+  window.currentContext = context;
+
+  // Feedback visual en los botones
+  valid.forEach(k=>{
     const el=document.getElementById('cf-'+k);
-    if(el) el.classList.toggle('active',k===f);
+    if(el) el.classList.toggle('active', k===context);
   });
+
+  // Re-renderizar con el filtro aplicado
   renderTasks();
+
+  // Badge informativo
+  const names = {todo:'Todo',casa:'🏠 Casa',bazar:'🛍️ Bazar',tienda:'🏪 Tienda',club:'🟢 Club Patio'};
+  if(context!=='todo') toast(`Filtrando: ${names[context]}`);
 }
+window.filterTasks = filterTasks;
+
+// setCF delega a filterTasks para compatibilidad con HTML existente
+function setCF(f){ filterTasks(f); }
 function setSort(s){
   sortBy=s;
   document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
