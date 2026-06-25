@@ -2847,6 +2847,9 @@ function mountRoleUI(role, profile){
     setTimeout(()=>window.checkPendingPermissions&&window.checkPendingPermissions(), 1500);
   } else setTimeout(initMoodSelfBar, 400);
 
+  // Aplicar tareas maestras con nivel de visibilidad correcto
+  setTimeout(applyMasterTasks, 900);
+
   // Inicializar módulos (rc.modules ya fusionado para multi-rol)
   if(rc.modules&&rc.modules.includes('casa'))  setTimeout(initCasaModule,  200);
   if(rc.modules&&rc.modules.includes('club'))  setTimeout(initClubModule,  250);
@@ -3156,12 +3159,73 @@ function setSort(s){
 // ═══════════════ RENDER TASKS ═══════════════
 function durLabel(m){if(!m)return'';if(m<60)return m+'min';const h=Math.floor(m/60),r=m%60;return r?`${h}h${r}m`:`${h}h`;}
 
-// ── FILTRO ANTI-SOBRECARGA: solo el Director ve todas las tareas ──
+// ══════════════════════════════════════════════════════════
+// GOBERNANZA DE DATOS — Niveles de Visibilidad de Tareas
+// ══════════════════════════════════════════════════════════
+
+// NIVEL TOTAL: visión completa de todos los módulos
+const EXECUTIVE_ROLES = ['director','mama','coordinadora_bazares','coordinadora_tienda'];
+
+// NIVEL TÁCTICO: solo ven sus propias tareas y las de su rol
+const TACTICAL_ROLES  = ['hijo1','hijo2','publicista','disenador','disenador_pub',
+                         'soporte_app','staff_montaje','logistica','vendedor','programador'];
+
+// Bloques de visibilidad por tipo de tarea
+const VISIBILITY_LEVELS = {
+  executive: 'executive', // Solo roles ejecutivos
+  children:  'children',  // Solo hijos
+  club:      'club',      // Solo roles Club Patio
+  all:       'all',       // Todos (público)
+};
+
 function getVisibleTasks(){
-  if(currentRole==='director'||currentRole==='pending') return tasks;
-  const me = currentProfile.displayName||'';
-  // Mostrar tareas sin asignar (propias del contexto) O asignadas al usuario
-  return tasks.filter(t=>!t.owner||t.owner===me);
+  // Director siempre ve todo (nivel TOTAL)
+  if(currentRole === 'director') return tasks;
+
+  // Otros roles ejecutivos también ven todo
+  if(EXECUTIVE_ROLES.includes(currentRole)) return tasks;
+
+  // Pending: no filtrar
+  if(currentRole === 'pending') return tasks;
+
+  // Roles TÁCTICOS: filtro de gobernanza
+  const me      = currentProfile.displayName || '';
+  const myRoles = Array.isArray(currentProfile.roles) && currentProfile.roles.filter(Boolean).length
+    ? currentProfile.roles.filter(Boolean) : [currentRole];
+  const myMods  = Array.isArray(currentProfile.modules) ? currentProfile.modules
+    : (ROLES[currentRole]||{}).modules || [];
+
+  return tasks.filter(t => {
+    // 1. Tarea asignada explícitamente a este ROL (campo assignedToRole)
+    if(t.assignedToRole && myRoles.includes(t.assignedToRole)) return true;
+    // 2. Tarea asignada a esta PERSONA por nombre (owner)
+    if(t.owner && t.owner === me) return true;
+    // 3. Tarea sin asignación en módulo accesible → visible
+    if(!t.owner && !t.assignedToRole && myMods.includes(t.ctx)) return true;
+    // 4. Tarea con visibilityLevel='all' → pública
+    if(t.visibilityLevel === 'all') return true;
+    // 5. Bloque children → solo hijos
+    if(t.visibilityLevel === 'children' && (currentRole==='hijo1'||currentRole==='hijo2')) return true;
+    // 6. Bloque club → solo roles Club Patio
+    if(t.visibilityLevel === 'club' && ['publicista','disenador','disenador_pub','soporte_app'].includes(currentRole)) return true;
+    return false;
+  });
+}
+
+function updateFilterBadge(){
+  let badge=document.getElementById('myTasksBadge');
+  if(EXECUTIVE_ROLES.includes(currentRole)||currentRole==='director'){
+    if(badge) badge.remove(); return; // ejecutivos no necesitan el badge
+  }
+  if(currentRole==='pending'){if(badge)badge.remove();return;}
+  if(!badge){
+    const sortBar=document.querySelector('.sort-bar');
+    if(sortBar){
+      badge=document.createElement('span');badge.id='myTasksBadge';badge.className='filter-me-badge';
+      sortBar.appendChild(badge);
+    }
+  }
+  if(badge) badge.textContent='👤 Vista táctica aislada';
 }
 
 function updateFilterBadge(){
@@ -7596,6 +7660,134 @@ function seedDirectorCoreTasks(){
   if(added>0){ saveTasks(); renderTasks(); }
 }
 window.seedDirectorCoreTasks=seedDirectorCoreTasks;
+
+// ═══════════════ JSON MAESTRO DE TAREAS (GOBERNANZA) ═══════════════
+// Cada tarea tiene: visibilityLevel + assignedToRole para control de acceso
+
+const MASTER_TASKS_JSON = [
+  // ── BLOQUE EJECUTIVO (Director, Mamá, Coord. Bazar) ──
+  {
+    text:'📊 Supervisión de Presupuesto Mensual', ctx:'club', prio:'p1', freq:'unica',
+    time:'09:00', dur:60, visibilityLevel:'executive', assignedToRole:'director',
+    tags:['ejecutivo','presupuesto']
+  },
+  {
+    text:'✅ Revisión y Aprobación de Permisos Familiares', ctx:'casa', prio:'p1', freq:'semanal',
+    time:'10:00', dur:30, visibilityLevel:'executive', assignedToRole:'director',
+    tags:['ejecutivo','familia']
+  },
+  {
+    text:'📅 Planificación Semanal Bazar y Tienda', ctx:'bazar', prio:'p2', freq:'semanal',
+    time:'09:00', dur:45, visibilityLevel:'executive', assignedToRole:'mama',
+    tags:['ejecutivo','bazar','tienda']
+  },
+  {
+    text:'📋 Revisión de Nómina de Inscritos Bazar', ctx:'bazar', prio:'p1', freq:'semanal',
+    time:'09:00', dur:20, visibilityLevel:'executive', assignedToRole:'coordinadora_bazares',
+    tags:['ejecutivo','bazar']
+  },
+  {
+    text:'💰 Validación de Arriendos Tienda', ctx:'tienda', prio:'p1', freq:'unica',
+    time:'11:00', dur:45, visibilityLevel:'executive', assignedToRole:'coordinadora_tienda',
+    tags:['ejecutivo','tienda']
+  },
+
+  // ── BLOQUE HIJOS (Solo visible para hijo1 e hijo2) ──
+  {
+    text:'🏠 Orden de habitaciones y espacios personales', ctx:'casa', prio:'p3', freq:'semanal',
+    time:'16:00', dur:20, visibilityLevel:'children', assignedToRole:'hijo1',
+    tags:['hijos','hogar']
+  },
+  {
+    text:'📚 Estudio de materias del colegio', ctx:'casa', prio:'p2', freq:'diaria',
+    time:'19:00', dur:45, visibilityLevel:'children', assignedToRole:'hijo1',
+    tags:['hijos','estudio']
+  },
+  {
+    text:'💭 Check-in emocional semanal', ctx:'casa', prio:'p2', freq:'semanal',
+    time:'20:00', dur:10, visibilityLevel:'children', assignedToRole:'hijo1',
+    tags:['hijos','bienestar']
+  },
+  {
+    text:'🏠 Orden de habitaciones y espacios personales', ctx:'casa', prio:'p3', freq:'semanal',
+    time:'16:00', dur:20, visibilityLevel:'children', assignedToRole:'hijo2',
+    tags:['hijos','hogar']
+  },
+  {
+    text:'📚 Estudio de materias del colegio', ctx:'casa', prio:'p2', freq:'diaria',
+    time:'19:00', dur:45, visibilityLevel:'children', assignedToRole:'hijo2',
+    tags:['hijos','estudio']
+  },
+  {
+    text:'💭 Check-in emocional semanal', ctx:'casa', prio:'p2', freq:'semanal',
+    time:'20:00', dur:10, visibilityLevel:'children', assignedToRole:'hijo2',
+    tags:['hijos','bienestar']
+  },
+
+  // ── BLOQUE CLUB PATIO (Publicista, Diseñador, Soporte) ──
+  {
+    text:'🎨 Gestión de piezas gráficas semanales (3 piezas min)', ctx:'club', prio:'p1', freq:'semanal',
+    time:'10:00', dur:180, visibilityLevel:'club', assignedToRole:'disenador',
+    tags:['club','diseño']
+  },
+  {
+    text:'💻 Soporte técnico de plataforma web', ctx:'club', prio:'p2', freq:'semanal',
+    time:'11:00', dur:60, visibilityLevel:'club', assignedToRole:'soporte_app',
+    tags:['club','soporte']
+  },
+  {
+    text:'📊 Optimización de embudos y conversión suscripciones', ctx:'club', prio:'p2', freq:'semanal',
+    time:'14:00', dur:90, visibilityLevel:'club', assignedToRole:'publicista',
+    tags:['club','marketing']
+  },
+  {
+    text:'🎨 Diseño piezas Diseñador/Publicista', ctx:'club', prio:'p2', freq:'semanal',
+    time:'10:00', dur:120, visibilityLevel:'club', assignedToRole:'disenador_pub',
+    tags:['club','diseño','marketing']
+  },
+  {
+    text:'🛠️ Revisión semanal estado aplicaciones Club Patio', ctx:'club', prio:'p2', freq:'semanal',
+    time:'09:30', dur:30, visibilityLevel:'club', assignedToRole:'soporte_app',
+    tags:['club','soporte','tech']
+  },
+];
+
+function applyMasterTasks(){
+  const me   = currentProfile.displayName||'';
+  const today= new Date().toISOString().split('T')[0];
+  const d=o=>{const x=new Date();x.setDate(x.getDate()+o);return x.toISOString().split('T')[0];};
+  let added=0;
+
+  MASTER_TASKS_JSON.forEach((t,i)=>{
+    const src='master_'+t.assignedToRole+'_'+i;
+    if(tasks.some(x=>x.autoGenSource===src&&!x.done)) return;
+
+    // Solo inyectar tareas visibles para el rol actual
+    const isMyTask =
+      t.assignedToRole === currentRole ||
+      (Array.isArray(currentProfile.roles)&&currentProfile.roles.includes(t.assignedToRole)) ||
+      EXECUTIVE_ROLES.includes(currentRole) || currentRole==='director';
+
+    if(!isMyTask) return;
+
+    tasks.push({
+      id:uid(), text:t.text, ctx:t.ctx, prio:t.prio, freq:t.freq||'unica',
+      deadline: t.freq==='diaria'?today:d(i%4),
+      time:t.time, dur:t.dur, done:false, ts:Date.now()-i*1000,
+      owner: t.assignedToRole===currentRole||
+             (Array.isArray(currentProfile.roles)&&currentProfile.roles.includes(t.assignedToRole))
+             ? me : t.assignedToRole,
+      assignedToRole:  t.assignedToRole,
+      visibilityLevel: t.visibilityLevel,
+      tags:            t.tags||[],
+      autoGenerated:true, autoGenSource:src
+    });
+    added++;
+  });
+
+  if(added>0){ saveTasks(); renderTasks(); console.log('[MasterTasks] Añadidas:',added); }
+}
+window.applyMasterTasks=applyMasterTasks;
 
 // ═══════════════ TAREAS PREDETERMINADAS POR ROL ═══════════════
 const ROLE_SEED_TASKS = {

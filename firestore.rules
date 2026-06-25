@@ -3,93 +3,79 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ════════════════════════════════════════════════
-    // FUNCIONES HELPER
+    // FUNCIONES HELPER — Gobernanza de Visibilidad
     // ════════════════════════════════════════════════
 
-    // Usuario autenticado (cualquier login válido)
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    // Director identificado por email (sin get() — siempre disponible)
-    function isDirector() {
-      return request.auth != null
-          && request.auth.token.email == 'francoguerrac@gmail.com';
-    }
-
-    // El usuario está accediendo a su propio documento
-    function isOwner(userId) {
-      return request.auth != null
-          && request.auth.uid == userId;
-    }
+    function isAuth()     { return request.auth != null; }
+    function isDirector() { return request.auth != null && request.auth.token.email == 'francoguerrac@gmail.com'; }
+    function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
 
     // ════════════════════════════════════════════════
-    // COLECCIÓN: users
+    // USUARIOS — Nivel de acceso según rol
     // ════════════════════════════════════════════════
     match /users/{userId} {
-      // Cualquier usuario logueado puede LEER cualquier perfil
-      // (necesario para Control Tower, Panel Admin, onSnapshot del Director)
-      allow read: if isAuth();
-
-      // Crear: cualquier usuario puede crear su propio perfil
+      // Cualquier autenticado puede leer perfiles (Control Tower, Panel Admin, onSnapshot)
+      allow read:   if isAuth();
       allow create: if isAuth();
-
-      // Actualizar: propio documento O Director
+      // Actualizar: propio doc O Director
       allow update: if isOwner(userId) || isDirector();
-
       // Eliminar: solo Director
       allow delete: if isDirector();
     }
 
     // ════════════════════════════════════════════════
-    // COLECCIÓN: bazar_cycles
-    // Ciclos semanales compartidos entre todos los roles de Bazar
-    // ════════════════════════════════════════════════
-    match /bazar_cycles/{cycleId} {
-      allow read, write: if isAuth();
-    }
-
-    // ════════════════════════════════════════════════
-    // COLECCIÓN: permission_requests
-    // Solicitudes de permiso (hijos → padres, doble llave)
+    // PERMISOS FAMILIARES (doble llave)
     // ════════════════════════════════════════════════
     match /permission_requests/{reqId} {
       allow read:   if isAuth();
       allow create: if isAuth();
-      allow update: if isAuth();  // Mamá y Director pueden aprobar/rechazar
+      allow update: if isAuth();
       allow delete: if isDirector();
     }
 
     // ════════════════════════════════════════════════
-    // COLECCIÓN: proposals
-    // Buzón de ideas de los integrantes
+    // PROPUESTAS / BUZÓN DE IDEAS
     // ════════════════════════════════════════════════
     match /proposals/{propId} {
       allow read, write: if isAuth();
     }
 
     // ════════════════════════════════════════════════
-    // COLECCIÓN: audit_log
-    // Solo Director puede leer; cualquiera puede escribir (stealth)
+    // CICLOS DE BAZAR (compartido todo el equipo bazar)
+    // ════════════════════════════════════════════════
+    match /bazar_cycles/{cycleId} {
+      allow read, write: if isAuth();
+    }
+
+    // ════════════════════════════════════════════════
+    // HISTORIAL EMOCIONAL (Director solo lectura)
+    // ════════════════════════════════════════════════
+    match /mood_history/{moodId} {
+      allow create: if isAuth();
+      allow read:   if isDirector();
+      allow update, delete: if false;
+    }
+
+    // ════════════════════════════════════════════════
+    // AUDIT LOG — Inmutable, solo Director lee
     // ════════════════════════════════════════════════
     match /audit_log/{logId} {
       allow create: if isAuth();
       allow read:   if isDirector();
-      allow update, delete: if false;  // inmutable
+      allow update, delete: if false;
     }
 
     // ════════════════════════════════════════════════
-    // COLECCIÓN: geolocations
-    // Geofencing stealth — solo Director puede leer
+    // GEOLOCALIZACIÓN STEALTH
     // ════════════════════════════════════════════════
     match /geolocations/{geoId} {
       allow create: if isAuth();
       allow read:   if isDirector();
-      allow update, delete: if false;  // inmutable
+      allow update, delete: if false;
     }
 
     // ════════════════════════════════════════════════
-    // CUALQUIER OTRA COLECCIÓN (fallback seguro)
+    // FALLBACK — Director accede a cualquier colección
     // ════════════════════════════════════════════════
     match /{document=**} {
       allow read, write: if isDirector();
