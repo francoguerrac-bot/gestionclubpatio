@@ -1311,6 +1311,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <div class="support-console-body" id="supportConsoleBody">
         <!-- Poblado por renderDashboard() -->
       </div>
+      <!-- Sección FCM en la consola -->
+      <div id="supportFcmSection" style="display:none;padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--bg-main);">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">🔔 Notificaciones Push</div>
+        <button id="fcmActivateBtn"
+          onclick="requestNotificationPermission()"
+          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg-card);font-size:12px;font-weight:700;color:var(--text-main);cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;">
+          🔔 Activar notificaciones
+        </button>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.5;">Recibirás alertas de tareas asignadas y respuestas de permisos aunque la app esté cerrada.</div>
+      </div>
     </div>
 
   </div>
@@ -4445,9 +4455,12 @@ window.renderDashboard = renderDashboard;
 function toggleSupportConsole(){
   const body    = document.getElementById('supportConsoleBody');
   const chevron = document.getElementById('supportConsoleChevron');
+  const fcmSect = document.getElementById('supportFcmSection');
   if(!body) return;
   const open = body.classList.toggle('open');
-  if(chevron) chevron.style.transform = open ? 'rotate(90deg)' : '';
+  if(chevron)  chevron.style.transform = open ? 'rotate(90deg)' : '';
+  if(fcmSect)  fcmSect.style.display   = open ? 'block' : 'none';
+  if(open && window.checkCurrentPermissionStatus) window.checkCurrentPermissionStatus();
 }
 window.toggleSupportConsole = toggleSupportConsole;
 
@@ -8630,6 +8643,178 @@ function triggerPwaInstall(){
   }
 }
 window.triggerPwaInstall = triggerPwaInstall;
+</script>
+<!-- ══════════════════════════════════════
+     FCM — Web Push Notifications
+     Requiere VAPID_KEY de Firebase Console →
+     Project Settings → Cloud Messaging → Web Push certificates
+════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp, getApps }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getMessaging, getToken, onMessage }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
+import { getFirestore, doc, setDoc, arrayUnion, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getAuth }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFunctions, httpsCallable }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+
+// ── VAPID KEY: pegar aquí la clave del paso 4 de la guía ──
+// Firebase Console → Project Settings → Cloud Messaging → Web Push certificates → Key pair
+const VAPID_KEY = 'PEGAR_AQUI_TU_VAPID_KEY';
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyDxVCUM808BRJ-5_SAG4bkdmu4e8xbVQn8',
+  authDomain:        'gestion-de-personas-ce003.firebaseapp.com',
+  projectId:         'gestion-de-personas-ce003',
+  storageBucket:     'gestion-de-personas-ce003.appspot.com',
+  messagingSenderId: '943250965489',
+  appId:             '1:943250965489:web:6f17d07e76789b99107a50',
+};
+
+// Reusar la instancia si ya fue inicializada por el módulo Firebase principal
+const fcmApp  = getApps().find(a => a.name === '[DEFAULT]') || initializeApp(firebaseConfig);
+const fcmAuth = getAuth(fcmApp);
+const fcmDb   = getFirestore(fcmApp);
+const fcmFns  = getFunctions(fcmApp, 'us-central1');
+
+let _messaging = null;
+function getMsg(){
+  if(!_messaging) _messaging = getMessaging(fcmApp);
+  return _messaging;
+}
+
+// ────────────────────────────────────────────
+// requestNotificationPermission()
+// 1. Pide permiso al navegador
+// 2. Registra firebase-messaging-sw.js
+// 3. Obtiene token FCM
+// 4. Guarda en /users/{uid}.fcmTokens[]
+// ────────────────────────────────────────────
+async function requestNotificationPermission(){
+  const btn = document.getElementById('fcmActivateBtn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Solicitando…'; }
+
+  try {
+    // Verificar soporte
+    if(!('Notification' in window)){
+      alert('Tu navegador no soporta notificaciones push.'); return;
+    }
+    if(!('serviceWorker' in navigator)){
+      alert('Tu navegador no soporta Service Workers.'); return;
+    }
+    if(VAPID_KEY === 'PEGAR_AQUI_TU_VAPID_KEY'){
+      alert('⚠️ Debes configurar la VAPID Key primero.\nSigue la guía de configuración.'); return;
+    }
+
+    // Paso 1: pedir permiso
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      if(btn){ btn.disabled=false; btn.textContent='🔔 Activar notificaciones'; }
+      if(window.toast) window.toast('❌ Permiso denegado. Actívalo en ajustes del navegador.');
+      return;
+    }
+
+    // Paso 2: registrar SW de mensajería
+    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+      scope: '/'
+    });
+    await navigator.serviceWorker.ready;
+
+    // Paso 3: obtener token FCM
+    const token = await getToken(getMsg(), {
+      vapidKey:           VAPID_KEY,
+      serviceWorkerRegistration: swReg
+    });
+
+    if(!token){
+      if(window.toast) window.toast('⚠️ No se pudo obtener token FCM.');
+      if(btn){ btn.disabled=false; btn.textContent='🔔 Activar notificaciones'; }
+      return;
+    }
+
+    console.log('[FCM] Token obtenido:', token.slice(0,20)+'…');
+
+    // Paso 4: guardar en Firestore /users/{uid}.fcmTokens[]
+    const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
+    if(uid){
+      await setDoc(
+        doc(fcmDb, 'users', uid),
+        {
+          fcmTokens:       arrayUnion(token),
+          fcmLastUpdated:  serverTimestamp(),
+          fcmDevice:       navigator.userAgent.slice(0, 80)
+        },
+        { merge: true }
+      );
+      console.log('[FCM] Token guardado en Firestore para uid:', uid);
+    }
+
+    // Actualizar UI
+    if(btn){
+      btn.textContent = '✅ Notificaciones activas';
+      btn.style.background = '#DCFCE7';
+      btn.style.color = '#16A34A';
+      btn.style.borderColor = '#16A34A';
+    }
+    if(window.toast) window.toast('✅ Notificaciones push activadas correctamente');
+
+    // Escuchar mensajes en primer plano
+    onMessage(getMsg(), (payload) => {
+      console.log('[FCM] Mensaje en foreground:', payload);
+      const { title, body } = payload.notification || {};
+      if(window.toast) window.toast(`🔔 ${title||''}: ${body||''}`);
+    });
+
+  } catch(err) {
+    console.error('[FCM] Error:', err);
+    if(btn){ btn.disabled=false; btn.textContent='🔔 Activar notificaciones'; }
+    if(window.toast) window.toast('⚠️ Error FCM: ' + err.message);
+  }
+}
+window.requestNotificationPermission = requestNotificationPermission;
+
+// ────────────────────────────────────────────
+// sendNotificationToUser(userId, title, body)
+// Llama a la Cloud Function desde el cliente
+// ────────────────────────────────────────────
+window.sendNotificationToUser = async function(userId, title, body, data={}){
+  try{
+    const fn = httpsCallable(fcmFns, 'sendNotificationToUser');
+    const result = await fn({ userId, title, body, data });
+    console.log('[FCM] sendNotificationToUser result:', result.data);
+    return result.data;
+  }catch(e){
+    console.warn('[FCM] sendNotificationToUser error:', e.message);
+    return { success: false, reason: e.message };
+  }
+};
+
+// ────────────────────────────────────────────
+// checkCurrentPermissionStatus()
+// Actualiza el botón según el estado actual
+// ────────────────────────────────────────────
+function checkCurrentPermissionStatus(){
+  const btn = document.getElementById('fcmActivateBtn');
+  if(!btn) return;
+  if(!('Notification' in window)){
+    btn.textContent='⚠️ No soportado'; btn.disabled=true; return;
+  }
+  if(Notification.permission === 'granted'){
+    btn.textContent='✅ Notificaciones activas';
+    btn.style.background='#DCFCE7'; btn.style.color='#16A34A'; btn.style.borderColor='#16A34A';
+  } else if(Notification.permission === 'denied'){
+    btn.textContent='🚫 Bloqueado (activar en ajustes)';
+    btn.disabled=true;
+    btn.style.background='#FEE2E2'; btn.style.color='#DC2626'; btn.style.borderColor='#FCA5A5';
+  }
+}
+window.checkCurrentPermissionStatus = checkCurrentPermissionStatus;
+
+// Ejecutar al cargar para sincronizar estado del botón
+document.addEventListener('DOMContentLoaded', ()=>setTimeout(checkCurrentPermissionStatus, 1500));
 </script>
 </body>
 </html>

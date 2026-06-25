@@ -15,6 +15,14 @@
       ]
     },
     {
+      "source": "/firebase-messaging-sw.js",
+      "headers": [
+        { "key": "Cache-Control",               "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Service-Worker-Allowed",      "value": "/" },
+        { "key": "Content-Type",                "value": "application/javascript" }
+      ]
+    },
+    {
       "source": "/index.html",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
