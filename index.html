@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Gestión de Equipos Club Patio</title>
+<title>Gestión de Equipos · Patio Curauma</title>
 
 <!-- ── CACHE BUSTER ── -->
 <script>
@@ -646,6 +646,36 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .role-cb-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--sage-dim);color:var(--primary-blue);display:flex;align-items:center;gap:4px;}
 /* ── VISIBLE TASKS FILTER BADGE ── */
 .filter-me-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--sage-dim);color:var(--primary-blue);margin-left:8px;}
+/* ── DASHBOARD PRINCIPAL ── */
+.dash-wrap{padding:14px;display:flex;flex-direction:column;gap:12px;}
+.dash-hero{background:linear-gradient(135deg,#1E2D3D 0%,#2D4A2E 100%);border-radius:18px;padding:20px;color:#fff;position:relative;overflow:hidden;}
+.dash-hero::before{content:'';position:absolute;top:-20px;right:-20px;width:120px;height:120px;background:rgba(255,255,255,.05);border-radius:50%;}
+.dash-hero::after {content:'';position:absolute;bottom:-30px;left:30px;width:80px;height:80px;background:rgba(255,255,255,.04);border-radius:50%;}
+.dash-greeting{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.55);margin-bottom:4px;}
+.dash-name{font-size:22px;font-weight:800;line-height:1.2;margin-bottom:2px;}
+.dash-role-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);margin-top:8px;}
+.dash-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.dash-kpi{background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:12px 10px;text-align:center;transition:transform .15s;}
+.dash-kpi:active{transform:scale(.96);}
+.dash-kpi-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;line-height:1;}
+.dash-kpi-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-top:3px;}
+.dash-section-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin:4px 0 6px;}
+.dash-modules{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.dash-mod-btn{display:flex;align-items:center;gap:10px;padding:14px 12px;border-radius:14px;border:1.5px solid var(--border);background:var(--bg-card);cursor:pointer;text-align:left;font-family:'Inter',sans-serif;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+.dash-mod-btn:active{transform:scale(.97);}
+.dash-mod-icon{font-size:22px;flex-shrink:0;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.dash-mod-label{font-size:12px;font-weight:700;color:var(--text-main);line-height:1.2;}
+.dash-mod-sub{font-size:10px;color:var(--text-muted);margin-top:1px;}
+/* Consola de soporte (colapsable) */
+.support-console{border:1.5px solid var(--border);border-radius:14px;overflow:hidden;}
+.support-console-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;background:var(--bg-card);user-select:none;}
+.support-console-hdr:hover{background:var(--bg-main);}
+.support-console-hdr-title{font-size:11px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:7px;}
+.support-console-body{display:none;padding:12px 14px;background:var(--bg-main);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);line-height:1.8;border-top:1px solid var(--border);}
+.support-console-body.open{display:block;}
+.support-console-item{display:flex;gap:8px;}
+.sci-key{color:#6B7280;flex-shrink:0;min-width:80px;}
+.sci-val{color:var(--text-main);word-break:break-all;}
 /* ── PANEL FAMILIA (permisos + propuestas) ── */
 .fam-filter-bar{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
 .fam-filter-btn{flex-shrink:0;font-size:10px;font-weight:700;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg-main);color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
@@ -955,7 +985,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
         onerror="this.style.display='none';document.getElementById('loginFallbackEmoji').style.display='block'"
         style="width:110px;height:110px;object-fit:contain;margin:0 auto 12px;display:block;border-radius:50%;box-shadow:0 4px 20px rgba(91,192,190,.25);border:3px solid rgba(91,192,190,.2);">
       <span id="loginFallbackEmoji" style="font-size:48px;display:none;line-height:1;margin-bottom:8px;">🟢</span>
-      <div style="font-size:17px;font-weight:800;color:#2D3142;letter-spacing:-.01em;">Gestión de Equipos Club Patio</div>
+      <div style="font-size:17px;font-weight:800;color:#2D3142;letter-spacing:-.01em;">Gestión de Equipos · Patio Curauma</div>
       <div style="font-size:12px;color:#9095A0;margin-top:3px;" id="authSubtitle">Inicia sesión para continuar</div>
     </div>
     <input id="authEmail" type="email" autocomplete="email" placeholder="Correo electrónico"
@@ -1219,14 +1249,70 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
     <div class="top-name">
       <img src="./assets/Logo2.png" alt="CP" class="top-logo"
         onerror="this.style.display='none'">
-      <span class="sprint-dot"></span>Club Patio
+      <span class="sprint-dot"></span><span style="letter-spacing:-.01em;">Gestión de Equipos · Patio Curauma</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="top-date" id="topDate"></div>
-      <div id="roleBadge" class="role-badge" style="background:#2a2a2a;color:#888;cursor:pointer;" onclick="alert('Rol: '+currentRole+'\nEmail: '+(currentProfile&&currentProfile.email||'no auth')+'\nUID: '+(currentProfile&&currentProfile.uid||'?'))">⏳ —</div>
+      <div id="roleBadge" class="role-badge" style="background:#2a2a2a;color:#888;cursor:pointer;" onclick="showPage('dashboard')" title="Ver mi panel">⏳ —</div>
       <button id="logoutBtn" type="button" title="Cerrar sesión"
         style="background:none;border:1px solid #444;color:#bbb;font-size:10px;font-weight:600;padding:4px 9px;border-radius:7px;cursor:pointer;font-family:inherit;">Salir</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 0 · DASHBOARD
+════════════════════════════════════════ -->
+<div class="page" id="pg-dashboard">
+  <div class="dash-wrap">
+
+    <!-- Hero: usuario + rol -->
+    <div class="dash-hero" id="dashHero">
+      <div class="dash-greeting">Bienvenido/a de vuelta</div>
+      <div class="dash-name" id="dashName">—</div>
+      <div class="dash-role-pill" id="dashRolePill">⏳ Cargando…</div>
+    </div>
+
+    <!-- KPIs -->
+    <div>
+      <div class="dash-section-title">Resumen de tareas</div>
+      <div class="dash-kpis">
+        <div class="dash-kpi" onclick="showPage('tareas')">
+          <div class="dash-kpi-num" id="dashKpiTotal" style="color:var(--text-main);">—</div>
+          <div class="dash-kpi-lbl">Total</div>
+        </div>
+        <div class="dash-kpi" onclick="filterTasks('todo');showPage('tareas')">
+          <div class="dash-kpi-num" id="dashKpiPendientes" style="color:var(--accent-gold);">—</div>
+          <div class="dash-kpi-lbl">Pendientes</div>
+        </div>
+        <div class="dash-kpi" onclick="filterTasks('todo');showPage('tareas')">
+          <div class="dash-kpi-num" id="dashKpiUrgentes" style="color:var(--accent-coral);">—</div>
+          <div class="dash-kpi-lbl">Urgentes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Módulos de acceso rápido -->
+    <div>
+      <div class="dash-section-title">Acceso rápido</div>
+      <div class="dash-modules" id="dashModules">
+        <!-- Se genera dinámicamente según rol -->
+      </div>
+    </div>
+
+    <!-- Consola de Soporte (colapsable) -->
+    <div class="support-console" id="supportConsole">
+      <div class="support-console-hdr" onclick="toggleSupportConsole()">
+        <div class="support-console-hdr-title">
+          <span>🛠️</span><span>Consola de Soporte</span>
+        </div>
+        <span id="supportConsoleChevron" style="font-size:14px;color:var(--text-muted);transition:transform .2s;">▶</span>
+      </div>
+      <div class="support-console-body" id="supportConsoleBody">
+        <!-- Poblado por renderDashboard() -->
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2608,8 +2694,8 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['tareas','semana','club','personas','familia','coach','control','auditoria'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['tareas','semana','bazar','tienda','familia','coach'],canReadAll:false},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['dashboard','tareas','semana','club','personas','familia','coach','control','auditoria'], canReadAll:true,  canApprove:true},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['dashboard','tareas','semana','bazar','tienda','familia','coach'],canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
@@ -2643,6 +2729,7 @@ const NAV_META = {
   permisos:  {icon:'🔑', label:'Permisos'},
   auditoria: {icon:'🗂️', label:'Auditoría'},
   familia:   {icon:'🏠', label:'Familia'},
+  dashboard: {icon:'🏛️', label:'Panel'},
   admin:     {icon:'🛡️', label:'Admin DB'},
 };
 
@@ -2733,7 +2820,8 @@ function showPage(p){
   if(p==='equipo'){renderFamily();renderTeam();renderCheckins();}
   if(p==='coach'){renderScenarios();initMoodUI();if(!planOrder.length)refreshDayPlan();else renderDayPlan();}
   if(p==='control'){renderControlTower();}
-  if(p==='familia'){loadFamiliaPanel();}
+  if(p==='familia')  {loadFamiliaPanel();}
+  if(p==='dashboard'){renderDashboard();}
   if(p==='club')  {renderClubPage();}
   if(p==='bazar') {renderBazarPage();}
   if(p==='tienda'){renderTiendaPage();}
@@ -2756,7 +2844,7 @@ function mountRoleUI(role, profile){
   role    = role    || profile.role || 'pending';
 
   dbg('✅ mountRoleUI: rol=' + role + ' | email=' + (profile.email||'?'));
-  document.title = 'Club Patio · ' + role;
+  document.title = 'Gestión de Equipos · Patio Curauma — ' + (ROLES[role]||{label:role}).label;
 
   try {
   // ── Soporte multi-rol: leer array profile.roles ──
@@ -2787,8 +2875,8 @@ function mountRoleUI(role, profile){
 
   renderDynamicNav(currentRole);
 
-  // Show first page in role's nav
-  const first = rc.nav[0];
+  // Dashboard siempre es la primera pantalla tras login
+  const first = rc.nav.includes('dashboard') ? 'dashboard' : rc.nav[0];
   if(first) showPage(first);
 
   // Director loads org
@@ -4276,6 +4364,92 @@ function toast(msg){
   el.textContent=msg; el.classList.add('show');
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2300);
 }
+
+// ═══════════════ DASHBOARD PRINCIPAL ═══════════════
+
+function renderDashboard(){
+  const prof = currentProfile || window.currentProfile || {};
+  const role = currentRole    || window.currentRole    || 'pending';
+  const rc   = ROLES[role]    || ROLES.pending;
+
+  // ── Hero ──
+  const nameEl = document.getElementById('dashName');
+  const pillEl = document.getElementById('dashRolePill');
+  if(nameEl) nameEl.textContent = prof.displayName || prof.email || '—';
+  if(pillEl){
+    pillEl.textContent = (rc.emoji||'') + ' ' + rc.label;
+    pillEl.style.background = rc.color ? rc.color+'28' : 'rgba(255,255,255,.15)';
+    pillEl.style.color = '#fff';
+  }
+
+  // ── KPIs ──
+  const allT      = (typeof tasks!=='undefined' ? tasks : []);
+  const pending   = allT.filter(t=>!t.done);
+  const urgent    = pending.filter(t=>t.prio==='p1');
+  const visT      = getVisibleTasks ? getVisibleTasks() : allT;
+  const visPend   = visT.filter(t=>!t.done);
+  const visUrgent = visPend.filter(t=>t.prio==='p1');
+
+  const setKpi = (id, val, color) => {
+    const el = document.getElementById(id);
+    if(el){ el.textContent = val; if(color) el.style.color = color; }
+  };
+  setKpi('dashKpiTotal',      visT.length,       'var(--text-main)');
+  setKpi('dashKpiPendientes', visPend.length,     visPend.length  ? 'var(--accent-gold)'  : 'var(--text-muted)');
+  setKpi('dashKpiUrgentes',   visUrgent.length,   visUrgent.length? 'var(--accent-coral)' : 'var(--text-muted)');
+
+  // ── Módulos de acceso rápido ──
+  const container = document.getElementById('dashModules');
+  if(container){
+    const MODULE_META = {
+      tareas:    {icon:'📋', bg:'#DBEAFE', label:'Mis Tareas',      sub:'Ver y gestionar tareas'},
+      semana:    {icon:'📅', bg:'#FEF3C7', label:'Vista Semanal',   sub:'Planificación por días'},
+      club:      {icon:'🟢', bg:'#DCFCE7', label:'Club Patio',      sub:'KPIs, Kanban, equipo'},
+      bazar:     {icon:'🛍️', bg:'#EDE9FE', label:'Bazar',          sub:'Ciclo semanal'},
+      tienda:    {icon:'🏪', bg:'#CCFBF1', label:'Tienda',          sub:'Ventas y stock'},
+      personas:  {icon:'🫂', bg:'#FCE7F3', label:'Equipo',          sub:'Organigrama y roles'},
+      familia:   {icon:'🏠', bg:'#FEF3C7', label:'Familia',         sub:'Permisos y propuestas'},
+      coach:     {icon:'🧠', bg:'#EDE9FE', label:'Coach',           sub:'Plan del día y check-in'},
+      control:   {icon:'🎛️', bg:'#DBEAFE', label:'Control Tower',  sub:'Supervisión stealth'},
+      auditoria: {icon:'🗂️', bg:'#F1F5F9', label:'Auditoría',     sub:'Base de datos en vivo'},
+    };
+    const allRoles = Array.isArray(prof.roles)&&prof.roles.length ? prof.roles : [role];
+    const navItems = [...new Set(allRoles.flatMap(r=>(ROLES[r]||{}).nav||[]))].filter(p=>p!=='dashboard'&&p!=='mi-panel'&&p!=='permisos');
+    container.innerHTML = navItems.slice(0,8).map(page=>{
+      const m = MODULE_META[page] || {icon:'📄', bg:'#F1F5F9', label:page, sub:''};
+      return `<button class="dash-mod-btn" onclick="showPage('${page}')">
+        <div class="dash-mod-icon" style="background:${m.bg};">${m.icon}</div>
+        <div><div class="dash-mod-label">${m.label}</div><div class="dash-mod-sub">${m.sub}</div></div>
+      </button>`;
+    }).join('');
+  }
+
+  // ── Consola de Soporte (datos técnicos ocultos) ──
+  const body = document.getElementById('supportConsoleBody');
+  if(body){
+    const items = [
+      ['UID',     prof.uid    || '—'],
+      ['Email',   prof.email  || '—'],
+      ['Rol',     role],
+      ['Roles',   (prof.roles||[]).join(', ') || role],
+      ['Org',     prof.orgId  || 'curauma_001'],
+      ['Build',   localStorage.getItem('app-build') || '—'],
+      ['SW',      navigator.serviceWorker?.controller ? 'activo' : 'sin SW'],
+      ['Online',  navigator.onLine ? 'sí' : 'offline'],
+    ];
+    body.innerHTML = items.map(([k,v])=>`<div class="support-console-item"><span class="sci-key">${k}</span><span class="sci-val">${v}</span></div>`).join('');
+  }
+}
+window.renderDashboard = renderDashboard;
+
+function toggleSupportConsole(){
+  const body    = document.getElementById('supportConsoleBody');
+  const chevron = document.getElementById('supportConsoleChevron');
+  if(!body) return;
+  const open = body.classList.toggle('open');
+  if(chevron) chevron.style.transform = open ? 'rotate(90deg)' : '';
+}
+window.toggleSupportConsole = toggleSupportConsole;
 
 // ═══════════════ PANEL FAMILIA — Permisos + Propuestas ═══════════════
 
