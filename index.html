@@ -9009,22 +9009,35 @@ function _nfbSetState(state){
 }
 
 async function notifBannerActivate(){
+  if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)){
+    _nfbSetState('default');
+    if(window.toast) window.toast('⚠️ Notificaciones no disponibles en este navegador.');
+    return;
+  }
   _nfbSetState('loading');
   try{
     const perm = await Notification.requestPermission();
     if(perm === 'granted'){
       _nfbSetState('success');
-      // Delegar obtención del token al sistema FCM existente
-      setTimeout(()=>window.requestNotificationPermission&&window.requestNotificationPermission(), 400);
       localStorage.setItem('notif-banner-dismissed', Date.now().toString());
-    } else {
+      // Intentar obtener token FCM (puede fallar si VAPID no está configurada)
+      setTimeout(async()=>{
+        if(window.requestNotificationPermission){
+          await window.requestNotificationPermission();
+        }
+        window.renderNotificationCenter&&window.renderNotificationCenter();
+      }, 400);
+    } else if(perm === 'denied'){
       _nfbSetState('denied');
+    } else {
+      // 'default' — el usuario cerró el diálogo sin elegir
+      _nfbSetState('default');
     }
-    // Actualizar la tarjeta del dashboard
     window.renderNotificationCenter&&window.renderNotificationCenter();
   }catch(e){
-    console.error('[NotifBanner] Error:', e);
+    console.error('[NotifBanner] Error inesperado:', e.message);
     _nfbSetState('default');
+    if(window.toast) window.toast('⚠️ Error: ' + e.message);
   }
 }
 window.notifBannerActivate = notifBannerActivate;
@@ -9051,7 +9064,13 @@ import { getFunctions, httpsCallable }
 
 // ── VAPID KEY: pegar aquí la clave del paso 4 de la guía ──
 // Firebase Console → Project Settings → Cloud Messaging → Web Push certificates → Key pair
-const VAPID_KEY = 'PEGAR_AQUI_TU_VAPID_KEY';
+// ── VAPID KEY ──────────────────────────────────────────────────────────
+// Firebase Console → Project Settings → Cloud Messaging
+// → Web Push certificates → Clave pública (empieza con BN...)
+// ──────────────────────────────────────────────────────────────────────
+const VAPID_KEY = 'BN-VAPID-PENDIENTE';   // ← REEMPLAZAR con la clave real
+
+function _vapidConfigured(){ return VAPID_KEY && !VAPID_KEY.startsWith('BN-VAPID'); }
 
 const firebaseConfig = {
   apiKey:            'AIzaSyDxVCUM808BRJ-5_SAG4bkdmu4e8xbVQn8',
@@ -9090,17 +9109,41 @@ async function requestNotificationPermission(){
   const btn = document.getElementById('fcmActivateBtn');
   if(btn){ btn.disabled=true; btn.textContent='⏳ Solicitando…'; }
 
+  // Helper: muestra error inline sin bloquear la UI
+  function _fcmError(msg, resetBtn=true){
+    console.error('[FCM] ❌', msg);
+    if(resetBtn && btn){
+      btn.disabled=false;
+      btn.textContent='🔔 Activar notificaciones';
+      btn.className='nfb-cta nfb-cta-default';
+    }
+    if(window.toast) window.toast('⚠️ ' + msg);
+    // Actualizar tarjeta del dashboard con el motivo
+    const lbl=document.getElementById('fcmStatusLabel');
+    if(lbl) lbl.textContent=msg;
+    window.renderNotificationCenter&&window.renderNotificationCenter();
+  }
+
   try {
-    // Verificar soporte
+    // ── Verificaciones de soporte (sin alert, siempre recuperable) ──
     if(!('Notification' in window)){
-      console.error('[FCM] ❌ Notification API no disponible en este navegador.');
-      alert('Tu navegador no soporta notificaciones push.'); return;
+      console.error('[FCM] ❌ Notification API no disponible.');
+      _fcmError('Este navegador no soporta notificaciones push.');
+      return;
     }
     if(!('serviceWorker' in navigator)){
-      alert('Tu navegador no soporta Service Workers.'); return;
+      _fcmError('Service Workers no disponibles (requiere HTTPS).');
+      return;
     }
-    if(VAPID_KEY === 'PEGAR_AQUI_TU_VAPID_KEY'){
-      alert('⚠️ Debes configurar la VAPID Key primero.\nSigue la guía de configuración.'); return;
+    if(!('PushManager' in window)){
+      _fcmError('PushManager no disponible (actualiza el navegador).');
+      return;
+    }
+    // ── Validación VAPID: no bloquea, muestra estado "pendiente de configuración" ──
+    if(!_vapidConfigured()){
+      console.warn('[FCM] ⚠️ VAPID_KEY no configurada. Solicitar permiso igual para preparar el flujo.');
+      // El permiso del navegador SÍ se puede pedir sin VAPID — solo getToken falla después
+      // Continuamos para que el usuario conceda el permiso; el token fallará con mensaje claro
     }
 
     // PASO 1: Pedir permiso al navegador
@@ -9127,14 +9170,36 @@ async function requestNotificationPermission(){
 
     // PASO 3: Obtener token FCM
     console.log('[FCM] Paso 3: Obteniendo token con getToken()...');
-    const token = await getToken(getMsg(), {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: swReg
-    });
+    console.log('[FCM] VAPID configurada:', _vapidConfigured(), '| Key:', VAPID_KEY.slice(0,12)+'…');
+    let token = null;
+    try{
+      token = await getToken(getMsg(), {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: swReg
+      });
+    }catch(tokenErr){
+      const isVapidErr = tokenErr.message?.includes('applicationServerKey') ||
+                         tokenErr.message?.includes('VAPID') ||
+                         tokenErr.code === 'messaging/invalid-vapid-key';
+      if(isVapidErr || !_vapidConfigured()){
+        console.error('[FCM] ❌ Error de VAPID Key:', tokenErr.message);
+        // El permiso SÍ fue concedido — solo falta configurar la key
+        if(btn){
+          btn.disabled=false;
+          btn.textContent='⚙️ Configuración pendiente';
+          btn.style.cssText='width:100%;padding:12px;border-radius:10px;border:1.5px solid #FCD34D;background:#FEF3C7;font-size:13px;font-weight:700;color:#92400E;cursor:pointer;font-family:Inter,sans-serif;';
+        }
+        const lbl=document.getElementById('fcmStatusLabel');
+        if(lbl) lbl.innerHTML='Permiso concedido ✅ — falta configurar la VAPID Key en el código.';
+        if(window.toast) window.toast('✅ Permiso OK · Falta la VAPID Key');
+        console.warn('[FCM] 👉 Solución: Firebase Console → Project Settings → Cloud Messaging → Web Push certificates → Copiar "Clave pública" → Reemplazar VAPID_KEY en index.html');
+        return;
+      }
+      throw tokenErr; // otro error → catch principal
+    }
     if(!token){
-      console.error('[FCM] ❌ getToken() devolvió vacío. Verifica VAPID_KEY y que firebase-messaging-sw.js sea accesible.');
-      if(window.toast) window.toast('⚠️ No se pudo obtener token FCM. Verifica la consola.');
-      if(btn){ btn.disabled=false; btn.textContent='🔔 Activar notificaciones'; }
+      console.error('[FCM] ❌ getToken() devolvió vacío. Verifica VAPID_KEY y firebase-messaging-sw.js accesible.');
+      _fcmError('No se pudo obtener token FCM. Verifica la consola F12.', true);
       return;
     }
     console.log('[FCM] ✅ Token FCM obtenido:', token.slice(0,30)+'…');
