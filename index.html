@@ -1300,25 +1300,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       </div>
     </div>
 
-    <!-- Notificaciones Push -->
-    <div id="fcmCard" style="background:var(--bg-card);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <div style="font-size:24px;">🔔</div>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;color:var(--text-main);">Notificaciones Push</div>
-          <div id="fcmStatusLabel" style="font-size:11px;color:var(--text-muted);">Recibe alertas aunque la app esté cerrada</div>
-        </div>
-        <div id="fcmStatusDot" style="width:10px;height:10px;border-radius:50%;background:#D1D5DB;flex-shrink:0;"></div>
-      </div>
-      <button id="fcmActivateBtn"
-        onclick="window.checkPermissionStatus&&window.checkPermissionStatus('click')"
-        style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg-main);font-size:13px;font-weight:700;color:var(--text-main);cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;">
-        🔔 Activar notificaciones
-      </button>
-      <!-- Instrucciones de desbloqueo (ocultas por defecto) -->
-      <div id="fcmUnblockGuide" style="display:none;margin-top:10px;padding:10px 12px;background:#FEF3C7;border-radius:10px;border-left:3px solid #F59E0B;">
-        <div style="font-size:12px;font-weight:700;color:#92400E;margin-bottom:5px;">🔓 Cómo desbloquear</div>
-        <div id="fcmUnblockText" style="font-size:11px;color:#78350F;line-height:1.6;"></div>
+    <!-- ── Notification Center ── -->
+    <div id="fcmCard"></div>
+
+    <!-- Modal instrucciones desbloqueo -->
+    <div id="notifUnblockModal" style="display:none;position:fixed;inset:0;z-index:9980;background:rgba(0,0,0,.6);align-items:flex-end;justify-content:center;padding:0;" onclick="if(event.target===this)closeNotifUnblockModal()">
+      <div style="background:var(--bg-card);border-radius:22px 22px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;font-family:'Inter',sans-serif;animation:pwa-slide-in .35s cubic-bezier(.34,1.56,.64,1);">
+        <div style="width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 20px;"></div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:6px;">🔓 Desbloquear notificaciones</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px;line-height:1.5;">El navegador bloqueó los permisos. Sigue estos pasos para activarlos manualmente:</div>
+        <div id="notifUnblockSteps" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+        <button onclick="closeNotifUnblockModal()" style="width:100%;padding:13px;border:none;border-radius:12px;background:var(--text-main);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;">Entendido</button>
       </div>
     </div>
 
@@ -4472,11 +4464,11 @@ function renderDashboard(){
   }
 }
 window.renderDashboard = renderDashboard;
-// Sincronizar estado del botón FCM cada vez que se abre el dashboard
+// Notification Center se actualiza cada vez que se abre el dashboard
 const _origRenderDash = renderDashboard;
 renderDashboard = function(){
   _origRenderDash();
-  setTimeout(()=>window.checkCurrentPermissionStatus&&window.checkCurrentPermissionStatus(), 200);
+  setTimeout(renderNotificationCenter, 150);
 };
 window.renderDashboard = renderDashboard;
 
@@ -4488,6 +4480,152 @@ function toggleSupportConsole(){
   if(chevron) chevron.style.transform = open ? 'rotate(90deg)' : '';
 }
 window.toggleSupportConsole = toggleSupportConsole;
+
+// ═══════════════ NOTIFICATION CENTER ═══════════════
+
+/**
+ * getNotificationStatus()
+ * Semáforo de 3 estados + detección de soporte real.
+ * @returns { status, supported, reason }
+ */
+function getNotificationStatus(){
+  const supported = ('Notification' in window)
+                 && ('serviceWorker' in navigator)
+                 && ('PushManager' in window);
+  if(!supported){
+    return { status:'unsupported', supported:false, reason: _notifUnsupportedReason() };
+  }
+  return { status: Notification.permission, supported:true, reason:'' };
+}
+window.getNotificationStatus = getNotificationStatus;
+
+function _notifUnsupportedReason(){
+  if(!('Notification' in window))    return 'La API de Notificaciones no está disponible en este navegador.';
+  if(!('serviceWorker' in navigator))return 'Los Service Workers no están disponibles (requiere HTTPS).';
+  if(!('PushManager' in window))     return 'PushManager no disponible (navegador muy antiguo o iOS < 16.4).';
+  return 'Soporte insuficiente.';
+}
+
+/**
+ * renderNotificationCenter()
+ * Pinta el bloque fcmCard según el estado actual del semáforo.
+ * Llamar al abrir el dashboard y tras cualquier cambio de permiso.
+ */
+function renderNotificationCenter(){
+  const card = document.getElementById('fcmCard');
+  if(!card) return;
+
+  const { status, supported, reason } = getNotificationStatus();
+
+  // Variantes visuales por estado
+  const STATES = {
+    unsupported: {
+      border:'var(--border)', bg:'var(--bg-card)',
+      dot:'#D1D5DB', dotTitle:'No soportado',
+      label: reason || 'Este navegador no soporta notificaciones push.',
+      btn: { text:'⚠️ No disponible', style:'background:#F3F4F6;color:#9CA3AF;border-color:#E5E7EB;cursor:not-allowed;', disabled:true },
+      guide: null
+    },
+    default: {
+      border:'var(--border)', bg:'var(--bg-card)',
+      dot:'#D1D5DB', dotTitle:'Sin configurar',
+      label:'Activa las alertas para recibir avisos de tareas y permisos.',
+      btn: { text:'🔔 Recibir alertas de tareas', style:'background:linear-gradient(135deg,#1E2D3D,#2D4A3E);color:#fff;border-color:transparent;cursor:pointer;', disabled:false },
+      guide: null
+    },
+    granted: {
+      border:'#BBF7D0', bg:'#F0FDF4',
+      dot:'#22C55E', dotTitle:'Activas',
+      label:'Recibirás alertas aunque la app esté cerrada.',
+      btn: { text:'✅ Notificaciones activas', style:'background:#DCFCE7;color:#16A34A;border-color:#86EFAC;cursor:default;', disabled:true },
+      guide: null
+    },
+    denied: {
+      border:'#FCA5A5', bg:'#FFF5F5',
+      dot:'#EF4444', dotTitle:'Bloqueadas',
+      label:'Las notificaciones están bloqueadas por el navegador.',
+      btn: { text:'🚫 Bloqueadas · Toca para desbloquear', style:'background:#FEE2E2;color:#DC2626;border-color:#FCA5A5;cursor:pointer;', disabled:false },
+      guide: 'modal'
+    }
+  };
+
+  const v = STATES[status] || STATES.default;
+  const btnOnclick = status==='denied'
+    ? 'openNotifUnblockModal()'
+    : (status==='default' ? "window.checkPermissionStatus&&window.checkPermissionStatus('click')" : '');
+
+  card.style.cssText=`background:${v.bg};border:1.5px solid ${v.border};border-radius:14px;padding:14px 16px;transition:all .3s;`;
+  card.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="position:relative;font-size:24px;line-height:1;">🔔
+        <span style="position:absolute;bottom:-2px;right:-4px;width:10px;height:10px;border-radius:50%;background:${v.dot};border:2px solid ${v.bg};" title="${v.dotTitle}"></span>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-main);">Notificaciones Push</div>
+        <div id="fcmStatusLabel" style="font-size:11px;color:var(--text-muted);margin-top:1px;line-height:1.4;">${v.label}</div>
+      </div>
+    </div>
+    ${supported || status==='unsupported' ? `
+    <button id="fcmActivateBtn"
+      onclick="${btnOnclick}"
+      ${v.btn.disabled?'disabled':''}
+      style="width:100%;padding:12px;border-radius:10px;border:1.5px solid;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;transition:all .2s;${v.btn.style}">
+      ${v.btn.text}
+    </button>` : ''}
+    ${status==='denied'?`
+    <div style="margin-top:10px;padding:9px 12px;background:#FEF3C7;border-radius:9px;border-left:3px solid #F59E0B;font-size:11px;color:#78350F;line-height:1.6;">
+      <strong>Pasos rápidos:</strong> Toca el ícono 🔒 junto a la URL → Permisos → Notificaciones → Permitir → Recarga la app.
+    </div>`:''}
+  `;
+}
+window.renderNotificationCenter = renderNotificationCenter;
+
+// ── Modal de desbloqueo ──
+function openNotifUnblockModal(){
+  const modal = document.getElementById('notifUnblockModal');
+  const steps = document.getElementById('notifUnblockSteps');
+  if(!modal || !steps) return;
+
+  const isIOS     = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isAndroid = /Android/.test(navigator.userAgent);
+
+  const PLATFORM_STEPS = {
+    ios: [
+      ['📱','Abre <strong>Ajustes</strong> de tu iPhone/iPad'],
+      ['🌐','Desplázate hasta <strong>Safari</strong>'],
+      ['🔔','Toca <strong>Configuración de sitios web → Notificaciones</strong>'],
+      ['✅','Busca esta app y cambia a <strong>Permitir</strong>'],
+      ['🔄','Vuelve a la app y <strong>recarga</strong>'],
+    ],
+    android: [
+      ['🔒','Toca el ícono <strong>🔒 candado</strong> junto a la URL de la app'],
+      ['⚙️','Selecciona <strong>Permisos del sitio</strong>'],
+      ['🔔','Toca <strong>Notificaciones</strong>'],
+      ['✅','Cambia la opción a <strong>Permitir</strong>'],
+      ['🔄','<strong>Recarga</strong> la página'],
+    ],
+    desktop: [
+      ['🔒','Haz clic en el ícono <strong>🔒 ó ℹ️</strong> junto a la URL'],
+      ['⚙️','Selecciona <strong>Configuración del sitio</strong> o <strong>Permisos</strong>'],
+      ['🔔','Cambia <strong>Notificaciones</strong> a <strong>Permitir</strong>'],
+      ['🔄','<strong>Recarga</strong> la página (F5)'],
+    ]
+  };
+
+  const platform = isIOS ? 'ios' : isAndroid ? 'android' : 'desktop';
+  steps.innerHTML = PLATFORM_STEPS[platform].map(([icon, text], i)=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 12px;background:var(--bg-main);border-radius:10px;">
+      <div style="font-size:18px;flex-shrink:0;line-height:1.4;">${icon}</div>
+      <div style="font-size:12px;color:var(--text-main);line-height:1.6;"><strong style="color:var(--text-muted);font-size:10px;">Paso ${i+1}</strong><br>${text}</div>
+    </div>`).join('');
+
+  modal.style.display='flex';
+}
+window.openNotifUnblockModal  = openNotifUnblockModal;
+function closeNotifUnblockModal(){
+  const m=document.getElementById('notifUnblockModal'); if(m) m.style.display='none';
+}
+window.closeNotifUnblockModal = closeNotifUnblockModal;
 
 // ═══════════════ PANEL FAMILIA — Permisos + Propuestas ═══════════════
 
@@ -8984,12 +9122,19 @@ function checkPermissionStatus(trigger = 'auto'){
   }
 }
 window.checkPermissionStatus = checkPermissionStatus;
-// Alias para compatibilidad con código existente
 window.checkCurrentPermissionStatus = ()=>checkPermissionStatus('auto');
 
+// Al terminar requestNotificationPermission, re-render el centro
+const _origReqPerm = requestNotificationPermission;
+requestNotificationPermission = async function(){
+  await _origReqPerm();
+  window.renderNotificationCenter&&window.renderNotificationCenter();
+};
+window.requestNotificationPermission = requestNotificationPermission;
+
 // Sincronizar al cargar y al volver a la app
-document.addEventListener('DOMContentLoaded', ()=>setTimeout(()=>checkPermissionStatus('auto'), 1500));
-window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkPermissionStatus('auto'); });
+document.addEventListener('DOMContentLoaded', ()=>setTimeout(()=>window.renderNotificationCenter&&window.renderNotificationCenter(), 1800));
+window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.renderNotificationCenter&&window.renderNotificationCenter(); });
 </script>
 </body>
 </html>
