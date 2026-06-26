@@ -2634,19 +2634,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 <div class="toast" id="toast"></div>
 
 <!-- ── PWA INSTALL BANNER ── -->
-<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9990;background:linear-gradient(135deg,#1E2D3D,#2D4A3E);border-radius:16px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);width:calc(100% - 28px);max-width:380px;font-family:'Inter',sans-serif;border:1px solid rgba(91,192,190,.3);animation:pwa-slide-in .4s cubic-bezier(.34,1.56,.64,1);">
-  @keyframes pwa-slide-in{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-  <div style="display:flex;align-items:center;gap:12px;">
-    <img src="/assets/Logo2.png" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">
+<!-- ── PWA Install Banner (post-login, nunca sobre el login) ── -->
+<style>
+@keyframes pwa-slide-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pwa-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.pwa-banner{position:fixed;bottom:74px;left:12px;right:12px;z-index:9990;background:linear-gradient(135deg,#1E2D3D,#2D4A3E);border-radius:16px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.4);border:1px solid rgba(91,192,190,.3);font-family:'Inter',sans-serif;animation:pwa-slide-in .4s cubic-bezier(.34,1.56,.64,1);display:none;}
+.pwa-banner-row{display:flex;align-items:center;gap:12px;}
+.pwa-banner-logo{width:40px;height:40px;border-radius:10px;flex-shrink:0;object-fit:contain;}
+.pwa-banner-title{font-size:13px;font-weight:800;color:#fff;margin-bottom:1px;}
+.pwa-banner-sub{font-size:11px;color:rgba(255,255,255,.55);line-height:1.3;}
+.pwa-banner-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;}
+.pwa-banner-btn{width:100%;margin-top:10px;padding:11px;background:linear-gradient(135deg,#5BC0BE,#3D9B99);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;}
+</style>
+<div id="pwaInstallBanner" class="pwa-banner">
+  <div class="pwa-banner-row">
+    <img src="/assets/Logo2.png" class="pwa-banner-logo" onerror="this.style.display='none'">
     <div style="flex:1;min-width:0;">
-      <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px;">Club Patio · Instalar App</div>
-      <div style="font-size:11px;color:#9CA3AF;line-height:1.4;">Acceso directo desde tu pantalla de inicio</div>
+      <div class="pwa-banner-title">Gestión de Equipos · Instalar</div>
+      <div class="pwa-banner-sub">Acceso rápido desde tu pantalla de inicio</div>
     </div>
-    <button onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:none;border:none;color:#6B7280;font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;">×</button>
+    <button class="pwa-banner-close" onclick="dismissPwaBanner()">×</button>
   </div>
-  <button id="pwaInstallBtn" onclick="triggerPwaInstall()" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#5BC0BE,#7ECFCD);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.02em;">
-    📲 Descargar App
-  </button>
+  <button id="pwaInstallBtn" class="pwa-banner-btn" onclick="triggerPwaInstall()">📲 Instalar App</button>
 </div>
 
 <!-- ── PWA iOS INSTRUCTIONS MODAL ── -->
@@ -7838,6 +7847,8 @@ function initApp(cloudData, profile){
   }
   window._drainBootQueue&&window._drainBootQueue();
   window._hideLoading&&window._hideLoading();
+  // Onboarding post-login: banner PWA + solicitud de notificaciones
+  setTimeout(renderOnboarding, 800);
 }
 window.initApp = initApp;
 // bootApp llama a initApp (el head lo define primero como proxy)
@@ -8597,62 +8608,124 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
                   || window.navigator.standalone === true;
 
-// Android / Chrome: capturar el evento nativo de instalación
+// Android / Chrome: capturar el evento nativo — NO mostrar aún (esperamos post-login)
 window.addEventListener('beforeinstallprompt', (e)=>{
   e.preventDefault();
   pwaInstallEvent = e;
-  // Mostrar el banner después de 3 segundos si no está instalada
-  if(!isStandalone){
-    setTimeout(()=>{
-      document.getElementById('pwaInstallBanner').style.display='flex';
-    }, 3000);
-  }
+  console.log('[PWA] beforeinstallprompt capturado — banner diferido al Dashboard');
 });
 
-// Cuando el usuario instala la app, ocultar el banner
+// Cuando el usuario instala la app
 window.addEventListener('appinstalled', ()=>{
   console.log('[PWA] App instalada');
-  document.getElementById('pwaInstallBanner').style.display='none';
+  hidePwaBanner();
   pwaInstallEvent = null;
+  localStorage.setItem('pwa-installed', 'true');
   if(window.toast) window.toast('✅ ¡App instalada! Búscala en tu pantalla de inicio');
 });
 
-// iOS: mostrar instrucciones manuales si aún no está instalada
-if(isIOS && !isStandalone){
-  setTimeout(()=>{
-    document.getElementById('pwaInstallBanner').style.display='flex';
-    // Cambiar el botón para abrir instrucciones de iOS
-    const btn = document.getElementById('pwaInstallBtn');
-    if(btn){
-      btn.textContent='📲 Ver cómo instalar en iPhone';
-      btn.onclick = ()=>{
-        document.getElementById('pwaInstallBanner').style.display='none';
-        document.getElementById('pwaIosModal').style.display='flex';
-      };
+// ── Helpers banner PWA ──
+function showPwaBanner(){
+  const b=document.getElementById('pwaInstallBanner');
+  if(b) b.style.display='block';
+  if(isIOS){
+    const btn=document.getElementById('pwaInstallBtn');
+    if(btn){ btn.textContent='📲 Ver cómo instalar en iPhone';
+      btn.onclick=()=>{ hidePwaBanner(); document.getElementById('pwaIosModal').style.display='flex'; };
     }
-  }, 3000);
+  }
 }
+function hidePwaBanner(){
+  const b=document.getElementById('pwaInstallBanner'); if(b) b.style.display='none';
+}
+function dismissPwaBanner(){
+  hidePwaBanner();
+  localStorage.setItem('pwa-dismissed', Date.now().toString());
+}
+window.showPwaBanner=showPwaBanner; window.hidePwaBanner=hidePwaBanner; window.dismissPwaBanner=dismissPwaBanner;
 
 function triggerPwaInstall(){
   if(pwaInstallEvent){
-    // Android: disparar el diálogo nativo del navegador
     pwaInstallEvent.prompt();
     pwaInstallEvent.userChoice.then(choice=>{
-      console.log('[PWA] Respuesta del usuario:', choice.outcome);
-      if(choice.outcome === 'accepted'){
-        document.getElementById('pwaInstallBanner').style.display='none';
-      }
-      pwaInstallEvent = null;
+      if(choice.outcome==='accepted') hidePwaBanner();
+      pwaInstallEvent=null;
     });
   } else if(isIOS){
-    document.getElementById('pwaInstallBanner').style.display='none';
+    hidePwaBanner();
     document.getElementById('pwaIosModal').style.display='flex';
   } else {
-    // Fallback: mostrar instrucciones genéricas
-    if(window.toast) window.toast('Abre el menú del navegador y selecciona "Instalar app" o "Agregar a pantalla de inicio"');
+    if(window.toast) window.toast('Abre el menú del navegador → "Instalar app" o "Agregar a inicio"');
   }
 }
-window.triggerPwaInstall = triggerPwaInstall;
+window.triggerPwaInstall=triggerPwaInstall;
+
+// ────────────────────────────────────────────
+// renderOnboarding()
+// Ejecutar DESPUÉS del login (llamado desde initApp)
+// Gestiona en secuencia:
+//   1. Banner de instalación PWA (si no instalada y no descartada)
+//   2. Solicitud de notificaciones (si no concedidas y no pedidas)
+// ────────────────────────────────────────────
+function renderOnboarding(){
+  // No ejecutar si auth overlay sigue visible (aún en login)
+  const overlay=document.getElementById('authOverlay');
+  if(overlay && overlay.style.display!=='none') return;
+
+  const SEVEN_DAYS=7*24*60*60*1000;
+
+  // ── 1. Banner PWA ──
+  if(!isStandalone && !localStorage.getItem('pwa-installed')){
+    const dismissed=parseInt(localStorage.getItem('pwa-dismissed')||'0',10);
+    const expired=Date.now()-dismissed > SEVEN_DAYS;
+    if(expired && (pwaInstallEvent || isIOS)){
+      setTimeout(showPwaBanner, 2000);
+    }
+  }
+
+  // ── 2. Notificaciones push ──
+  if('Notification' in window && Notification.permission==='default'){
+    const notifAsked=localStorage.getItem('notif-asked');
+    const expired=!notifAsked || (Date.now()-parseInt(notifAsked,10) > SEVEN_DAYS);
+    if(expired){
+      setTimeout(showNotifPrompt, 4500); // después del banner PWA
+    }
+  }
+}
+window.renderOnboarding=renderOnboarding;
+
+// Modal suave de notificaciones
+function showNotifPrompt(){
+  // No mostrar si ya está concedido/denegado
+  if(!('Notification' in window) || Notification.permission!=='default') return;
+  // No mostrar si login aún visible
+  const overlay=document.getElementById('authOverlay');
+  if(overlay && overlay.style.display!=='none') return;
+
+  localStorage.setItem('notif-asked', Date.now().toString());
+
+  // Crear modal ligero
+  const id='notifPromptModal';
+  if(document.getElementById(id)) return;
+  const m=document.createElement('div');
+  m.id=id;
+  m.style.cssText='position:fixed;bottom:74px;left:12px;right:12px;z-index:9985;background:var(--bg-card,#fff);border:1.5px solid var(--border,#E5E7EB);border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);font-family:Inter,sans-serif;animation:pwa-slide-in .4s cubic-bezier(.34,1.56,.64,1);';
+  m.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <span style="font-size:26px;">🔔</span>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:800;color:var(--text-main,#1a1a1a);">¿Recibir avisos de tareas?</div>
+        <div style="font-size:11px;color:var(--text-muted,#6B7280);margin-top:1px;">Notificaciones cuando te asignen trabajo o respondan tus solicitudes</div>
+      </div>
+      <button onclick="document.getElementById('${id}').remove()" style="background:none;border:none;font-size:20px;color:var(--text-muted,#9CA3AF);cursor:pointer;padding:4px;line-height:1;">×</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('${id}').remove()" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid var(--border,#E5E7EB);background:none;font-size:12px;font-weight:700;color:var(--text-muted,#6B7280);cursor:pointer;font-family:inherit;">Ahora no</button>
+      <button onclick="window.requestNotificationPermission&&window.requestNotificationPermission();document.getElementById('${id}').remove();" style="flex:2;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#1E2D3D,#2D4A3E);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">✅ Sí, activar</button>
+    </div>`;
+  document.body.appendChild(m);
+}
+window.showNotifPrompt=showNotifPrompt;
 </script>
 <!-- ══════════════════════════════════════
      FCM — Web Push Notifications
