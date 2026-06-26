@@ -666,6 +666,58 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .dash-mod-icon{font-size:22px;flex-shrink:0;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
 .dash-mod-label{font-size:12px;font-weight:700;color:var(--text-main);line-height:1.2;}
 .dash-mod-sub{font-size:10px;color:var(--text-muted);margin-top:1px;}
+/* ── Notif Float Banner ── */
+@keyframes notif-banner-in {
+  from { opacity:0; transform:translateY(28px) scale(.97); }
+  to   { opacity:1; transform:translateY(0)    scale(1);   }
+}
+@keyframes notif-bell-ring {
+  0%,100%{ transform:rotate(0);   }
+  20%    { transform:rotate(-18deg); }
+  40%    { transform:rotate(18deg);  }
+  60%    { transform:rotate(-10deg); }
+  80%    { transform:rotate(10deg);  }
+}
+@keyframes notif-success-pop {
+  0%  { transform:scale(0); opacity:0; }
+  60% { transform:scale(1.25); }
+  100%{ transform:scale(1); opacity:1; }
+}
+.notif-float-banner{
+  position:fixed;
+  bottom:68px;   /* encima del bottom-nav (≈60px) */
+  left:12px; right:12px;
+  z-index:150;
+  background:linear-gradient(135deg,#1E2D3D 0%,#1a3a2a 100%);
+  border-radius:18px;
+  padding:16px 16px 14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.38), 0 2px 6px rgba(0,0,0,.2);
+  border:1px solid rgba(91,192,190,.25);
+  font-family:'Inter',sans-serif;
+  animation:notif-banner-in .45s cubic-bezier(.34,1.56,.64,1) both;
+  display:none;
+}
+.notif-float-banner.visible { display:block; }
+.nfb-top    { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.nfb-icon   { font-size:28px; flex-shrink:0; line-height:1; }
+.nfb-icon.ring { animation:notif-bell-ring .6s ease-in-out; }
+.nfb-title  { font-size:14px; font-weight:800; color:#fff; margin-bottom:2px; }
+.nfb-sub    { font-size:11px; color:rgba(255,255,255,.55); line-height:1.4; }
+.nfb-close  { background:none; border:none; color:rgba(255,255,255,.35); font-size:22px; cursor:pointer; padding:4px; line-height:1; margin-left:auto; flex-shrink:0; }
+.nfb-close:hover { color:rgba(255,255,255,.7); }
+.nfb-cta    { width:100%; padding:13px; border:none; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer; font-family:'Inter',sans-serif; letter-spacing:.01em; transition:all .2s; }
+.nfb-cta-default  { background:linear-gradient(135deg,#5BC0BE,#3da8a6); color:#fff; }
+.nfb-cta-default:active { transform:scale(.97); }
+.nfb-cta-loading  { background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); cursor:not-allowed; }
+.nfb-cta-success  { background:linear-gradient(135deg,#22C55E,#16A34A); color:#fff; }
+.nfb-cta-denied   { background:#DC2626; color:#fff; }
+/* Guía inline (modo denied) */
+.nfb-guide  { margin-top:12px; display:none; }
+.nfb-guide.visible { display:block; }
+.nfb-guide-step { display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; }
+.nfb-guide-num  { width:22px; height:22px; border-radius:50%; background:rgba(255,255,255,.15); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.nfb-guide-txt  { font-size:11px; color:rgba(255,255,255,.75); line-height:1.5; }
+.nfb-guide-txt strong { color:#fff; }
 /* Consola de soporte (colapsable) */
 .support-console{border:1.5px solid var(--border);border-radius:14px;overflow:hidden;}
 .support-console-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;background:var(--bg-card);user-select:none;}
@@ -2631,7 +2683,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 
 <div class="toast" id="toast"></div>
 
-<!-- ── PWA INSTALL BANNER ── -->
+<!-- ── NOTIF FLOAT BANNER ── -->
+<div id="notifFloatBanner" class="notif-float-banner" role="alertdialog" aria-label="Activar notificaciones">
+  <div class="nfb-top">
+    <div class="nfb-icon" id="nfbIcon">🔔</div>
+    <div style="flex:1;min-width:0;">
+      <div class="nfb-title" id="nfbTitle">Activa tus alertas</div>
+      <div class="nfb-sub"   id="nfbSub">Recibe recordatorios de tus tareas al instante</div>
+    </div>
+    <button class="nfb-close" onclick="dismissNotifBanner()" title="Cerrar">×</button>
+  </div>
+  <button id="nfbCta" class="nfb-cta nfb-cta-default" onclick="notifBannerActivate()">
+    Activar ahora
+  </button>
+  <!-- Modo guía (se muestra si el permiso es denegado) -->
+  <div class="nfb-guide" id="nfbGuide">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Cómo desbloquear</div>
+    <div class="nfb-guide-step"><div class="nfb-guide-num">1</div><div class="nfb-guide-txt" id="nfbStep1"></div></div>
+    <div class="nfb-guide-step"><div class="nfb-guide-num">2</div><div class="nfb-guide-txt" id="nfbStep2"></div></div>
+    <div class="nfb-guide-step"><div class="nfb-guide-num">3</div><div class="nfb-guide-txt" id="nfbStep3"></div></div>
+  </div>
+</div>
+
 <!-- ── PWA Install Banner (post-login, nunca sobre el login) ── -->
 <style>
 @keyframes pwa-slide-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -8827,49 +8900,137 @@ function renderOnboarding(){
     }
   }
 
-  // ── 2. Notificaciones push ──
-  if('Notification' in window && Notification.permission==='default'){
-    const notifAsked=localStorage.getItem('notif-asked');
-    const expired=!notifAsked || (Date.now()-parseInt(notifAsked,10) > SEVEN_DAYS);
-    if(expired){
-      setTimeout(showNotifPrompt, 4500); // después del banner PWA
+  // ── 2. Banner flotante de notificaciones ──
+  const ONE_DAY = 24*60*60*1000;
+  if('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window){
+    if(Notification.permission === 'default'){
+      const dismissed = parseInt(localStorage.getItem('notif-banner-dismissed')||'0',10);
+      if(Date.now() - dismissed > ONE_DAY){
+        setTimeout(showNotifFloatBanner, 3500);
+      }
     }
   }
 }
-window.renderOnboarding=renderOnboarding;
+window.renderOnboarding = renderOnboarding;
 
-// Modal suave de notificaciones
-function showNotifPrompt(){
-  // No mostrar si ya está concedido/denegado
-  if(!('Notification' in window) || Notification.permission!=='default') return;
-  // No mostrar si login aún visible
-  const overlay=document.getElementById('authOverlay');
-  if(overlay && overlay.style.display!=='none') return;
+// ── Banner flotante de notificaciones ──────────────────────────────
+const NOTIF_GUIDE = {
+  ios: [
+    'Abre <strong>Ajustes del iPhone</strong> → Safari',
+    'Toca <strong>Configuración de sitios web → Notificaciones</strong>',
+    'Busca esta app → cambia a <strong>Permitir</strong> y recarga',
+  ],
+  android: [
+    'Toca el ícono <strong>🔒</strong> junto a la URL del navegador',
+    'Selecciona <strong>Permisos del sitio → Notificaciones</strong>',
+    'Cambia a <strong>Permitir</strong> y recarga la app',
+  ],
+  desktop: [
+    'Haz clic en el ícono <strong>🔒</strong> junto a la URL',
+    'Ve a <strong>Configuración del sitio → Notificaciones</strong>',
+    'Cambia a <strong>Permitir</strong> y recarga la página (F5)',
+  ],
+};
 
-  localStorage.setItem('notif-asked', Date.now().toString());
-
-  // Crear modal ligero
-  const id='notifPromptModal';
-  if(document.getElementById(id)) return;
-  const m=document.createElement('div');
-  m.id=id;
-  m.style.cssText='position:fixed;bottom:74px;left:12px;right:12px;z-index:9985;background:var(--bg-card,#fff);border:1.5px solid var(--border,#E5E7EB);border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);font-family:Inter,sans-serif;animation:pwa-slide-in .4s cubic-bezier(.34,1.56,.64,1);';
-  m.innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <span style="font-size:26px;">🔔</span>
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:800;color:var(--text-main,#1a1a1a);">¿Recibir avisos de tareas?</div>
-        <div style="font-size:11px;color:var(--text-muted,#6B7280);margin-top:1px;">Notificaciones cuando te asignen trabajo o respondan tus solicitudes</div>
-      </div>
-      <button onclick="document.getElementById('${id}').remove()" style="background:none;border:none;font-size:20px;color:var(--text-muted,#9CA3AF);cursor:pointer;padding:4px;line-height:1;">×</button>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button onclick="document.getElementById('${id}').remove()" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid var(--border,#E5E7EB);background:none;font-size:12px;font-weight:700;color:var(--text-muted,#6B7280);cursor:pointer;font-family:inherit;">Ahora no</button>
-      <button onclick="window.requestNotificationPermission&&window.requestNotificationPermission();document.getElementById('${id}').remove();" style="flex:2;padding:10px;border-radius:9px;border:none;background:linear-gradient(135deg,#1E2D3D,#2D4A3E);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">✅ Sí, activar</button>
-    </div>`;
-  document.body.appendChild(m);
+function _notifPlatform(){
+  if(/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) return 'ios';
+  if(/Android/.test(navigator.userAgent)) return 'android';
+  return 'desktop';
 }
-window.showNotifPrompt=showNotifPrompt;
+
+function showNotifFloatBanner(){
+  // Guardar en ambos: login visible o ya aceptado
+  const overlay = document.getElementById('authOverlay');
+  if(overlay && overlay.style.display !== 'none') return;
+  if(!('Notification' in window) || Notification.permission !== 'default') return;
+
+  const banner = document.getElementById('notifFloatBanner');
+  if(!banner) return;
+
+  // Reset al estado default
+  _nfbSetState('default');
+  banner.classList.add('visible');
+}
+window.showNotifFloatBanner = showNotifFloatBanner;
+
+function hideNotifFloatBanner(){
+  const b = document.getElementById('notifFloatBanner');
+  if(b){ b.style.opacity='0'; b.style.transform='translateY(16px)';
+    setTimeout(()=>{ b.classList.remove('visible'); b.style.opacity=''; b.style.transform=''; }, 300); }
+}
+
+function dismissNotifBanner(){
+  localStorage.setItem('notif-banner-dismissed', Date.now().toString());
+  hideNotifFloatBanner();
+}
+window.dismissNotifBanner = dismissNotifBanner;
+
+function _nfbSetState(state){
+  const icon  = document.getElementById('nfbIcon');
+  const title = document.getElementById('nfbTitle');
+  const sub   = document.getElementById('nfbSub');
+  const cta   = document.getElementById('nfbCta');
+  const guide = document.getElementById('nfbGuide');
+  if(!cta) return;
+
+  if(state === 'default'){
+    if(icon)  { icon.textContent='🔔'; icon.className='nfb-icon'; }
+    if(title) title.textContent = 'Activa tus alertas';
+    if(sub)   sub.textContent   = 'Recibe recordatorios de tus tareas al instante';
+    cta.textContent='Activar ahora'; cta.className='nfb-cta nfb-cta-default'; cta.disabled=false;
+    if(guide) guide.classList.remove('visible');
+  }
+  else if(state === 'loading'){
+    cta.textContent='⏳ Solicitando…'; cta.className='nfb-cta nfb-cta-loading'; cta.disabled=true;
+    if(guide) guide.classList.remove('visible');
+  }
+  else if(state === 'success'){
+    if(icon)  { icon.textContent='🔔'; icon.className='nfb-icon ring'; }
+    if(title) title.textContent = '¡Listo! Notificaciones activas';
+    if(sub)   sub.textContent   = 'Recibirás alertas de tareas y permisos.';
+    cta.textContent='✅ Activadas correctamente'; cta.className='nfb-cta nfb-cta-success'; cta.disabled=true;
+    if(guide) guide.classList.remove('visible');
+    setTimeout(hideNotifFloatBanner, 2200);
+  }
+  else if(state === 'denied'){
+    if(icon)  icon.textContent='🔕';
+    if(title) title.textContent='Notificaciones bloqueadas';
+    if(sub)   sub.textContent  ='Sigue estos pasos para activarlas:';
+    cta.style.display='none';
+    if(guide){
+      const plat  = _notifPlatform();
+      const steps = NOTIF_GUIDE[plat];
+      ['nfbStep1','nfbStep2','nfbStep3'].forEach((id,i)=>{
+        const el=document.getElementById(id); if(el) el.innerHTML=steps[i]||'';
+      });
+      guide.classList.add('visible');
+    }
+  }
+}
+
+async function notifBannerActivate(){
+  _nfbSetState('loading');
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm === 'granted'){
+      _nfbSetState('success');
+      // Delegar obtención del token al sistema FCM existente
+      setTimeout(()=>window.requestNotificationPermission&&window.requestNotificationPermission(), 400);
+      localStorage.setItem('notif-banner-dismissed', Date.now().toString());
+    } else {
+      _nfbSetState('denied');
+    }
+    // Actualizar la tarjeta del dashboard
+    window.renderNotificationCenter&&window.renderNotificationCenter();
+  }catch(e){
+    console.error('[NotifBanner] Error:', e);
+    _nfbSetState('default');
+  }
+}
+window.notifBannerActivate = notifBannerActivate;
+
+// Alias de compatibilidad
+window.showNotifPrompt = showNotifFloatBanner;
 </script>
 <!-- ══════════════════════════════════════
      FCM — Web Push Notifications
