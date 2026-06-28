@@ -60,9 +60,10 @@ async function cleanInvalidTokens(uid, invalidTokens) {
 }
 
 // ── Construir payload FCM con alta prioridad para móvil ───────────────
-function buildMessage(token, title, body, data = {}, link = 'https://gestionclubpatio.vercel.app') {
+function buildMessage(token, title, body, data = {}, link = 'https://gestionclubpatio.vercel.app', uid = '') {
+  // uid en data.userId permite que el SW identifique al destinatario en los logs
   const strData = Object.fromEntries(
-    Object.entries({ ...data, link }).map(([k, v]) => [k, String(v)])
+    Object.entries({ ...data, link, userId: uid }).map(([k, v]) => [k, String(v)])
   );
 
   return {
@@ -129,7 +130,7 @@ function buildMessage(token, title, body, data = {}, link = 'https://gestionclub
 async function sendToTokens(uid, tokens, title, body, data = {}) {
   if (!tokens.length) return { sent: 0, failed: 0 };
 
-  const messages = tokens.map(t => buildMessage(t, title, body, data));
+  const messages = tokens.map(t => buildMessage(t, title, body, data, undefined, uid));
 
   // sendEachForMulticast acepta max 500 tokens — dividir si fuera necesario
   const results = [];

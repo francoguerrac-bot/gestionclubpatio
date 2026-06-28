@@ -23,32 +23,51 @@ const messaging = firebase.messaging();
 console.log('[FCM-SW] Messaging inicializado');
 
 // ── Log remoto a Firestore (diagnóstico móvil) ────────────────────────
-// Permite saber si el mensaje LLEGÓ al SW aunque el SO lo bloqueara
+// Escribe en DOS colecciones:
+//   /notification_logs  → filtrable por userId (para el Dashboard)
+//   /fcm_sw_logs        → log técnico completo (para el Director)
 async function logToFirestore(event, payload, extra = {}) {
-  const logEntry = {
+  const now      = new Date().toISOString();
+  const title    = payload?.notification?.title || payload?.data?.title || '';
+  const body     = payload?.notification?.body  || payload?.data?.body  || '';
+  const userId   = payload?.data?.userId || extra.userId || 'unknown';
+  const docId    = `${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+
+  // Colección 1: notification_logs (por usuario — Dashboard lo lee)
+  const userLog = {
     fields: {
+      status:    { stringValue: event === 'background_received' ? 'received'
+                              : event === 'notification_shown'   ? 'shown'
+                              : event === 'notification_error'   ? 'error'
+                              : event },
       event:     { stringValue: event },
-      ts:        { stringValue: new Date().toISOString() },
+      userId:    { stringValue: userId },
+      title:     { stringValue: title },
+      body:      { stringValue: body },
+      timestamp: { stringValue: now },
       swVersion: { stringValue: SW_VERSION },
-      userAgent: { stringValue: self.navigator?.userAgent || 'unknown' },
-      title:     { stringValue: (payload?.notification?.title || payload?.data?.title || '') },
-      body:      { stringValue: (payload?.notification?.body  || payload?.data?.body  || '') },
-      ...Object.fromEntries(
-        Object.entries(extra).map(([k,v]) => [k, { stringValue: String(v) }])
-      ),
+      platform:  { stringValue: /iPhone|iPad|iPod/.test(self.navigator?.userAgent||'') ? 'ios'
+                              : /Android/.test(self.navigator?.userAgent||'') ? 'android' : 'web' },
     }
   };
-  const docId = `${event}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-  try {
-    await fetch(`${FIRESTORE_URL}/fcm_sw_logs?documentId=${docId}`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(logEntry),
-    });
-    console.log(`[FCM-SW] Log Firestore OK → fcm_sw_logs/${docId}`);
-  } catch(e) {
-    console.warn('[FCM-SW] Log Firestore fallido (probablemente offline):', e.message);
-  }
+
+  // Colección 2: fcm_sw_logs (log técnico completo)
+  const techLog = {
+    fields: {
+      ...userLog.fields,
+      userAgent: { stringValue: self.navigator?.userAgent?.slice(0,120) || 'unknown' },
+      ...Object.fromEntries(Object.entries(extra).map(([k,v])=>[k,{stringValue:String(v)}])),
+    }
+  };
+
+  await Promise.allSettled([
+    fetch(`${FIRESTORE_URL}/notification_logs?documentId=nl_${docId}`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(userLog)
+    }).then(()=> console.log(`[FCM-SW] → notification_logs/nl_${docId}`)),
+    fetch(`${FIRESTORE_URL}/fcm_sw_logs?documentId=sw_${docId}`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(techLog)
+    }).then(()=> console.log(`[FCM-SW] → fcm_sw_logs/sw_${docId}`)),
+  ]);
 }
 
 // ── onBackgroundMessage: app cerrada o sin foco ───────────────────────

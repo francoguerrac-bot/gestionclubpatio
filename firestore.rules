@@ -148,11 +148,24 @@ service cloud.firestore {
     }
 
     // ════════════════════════════════════════════════════════
-    // /fcm_sw_logs — Logs del Service Worker (diagnóstico móvil)
-    // Escritura pública (SW no tiene auth), lectura solo Director
+    // /notification_logs — Log de entrega por usuario
+    // SW escribe sin auth; usuario lee solo sus propios logs
+    // ════════════════════════════════════════════════════════
+    match /notification_logs/{logId} {
+      allow create: if true;          // SW no tiene auth → escritura pública
+      allow read:   if isAuth() && (
+        // Cada usuario lee solo sus propios logs
+        resource.data.userId == request.auth.uid
+        || isDirector()               // Director lo ve todo
+      );
+      allow update, delete: if false; // inmutable
+    }
+
+    // ════════════════════════════════════════════════════════
+    // /fcm_sw_logs — Log técnico completo (solo Director)
     // ════════════════════════════════════════════════════════
     match /fcm_sw_logs/{logId} {
-      allow create: if true;          // SW escribe sin auth
+      allow create: if true;
       allow read:   if isDirector();
       allow update, delete: if false;
     }
