@@ -91,6 +91,24 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── /notification_logs — Log de entrega por usuario ──
+    // SW escribe sin auth; cada usuario lee solo sus propios logs
+    match /notification_logs/{logId} {
+      allow create: if true;
+      allow read:   if isAuth() && (
+        resource.data.userId == request.auth.uid || isDirector()
+      );
+      allow update, delete: if false;
+    }
+
+    // ── /fcm_sw_logs — Log técnico completo ──
+    // SW escribe sin auth; solo Director puede leer
+    match /fcm_sw_logs/{logId} {
+      allow create: if true;
+      allow read:   if isDirector();
+      allow update, delete: if false;
+    }
+
     // ── FALLBACK — Director accede a todo lo demás ──
     match /{document=**} {
       allow read, write: if isDirector();
