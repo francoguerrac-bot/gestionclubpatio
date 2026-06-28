@@ -1371,11 +1371,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       <div class="support-console-hdr" onclick="toggleSupportConsole()">
         <div class="support-console-hdr-title">
           <span>🛠️</span><span>Consola de Soporte</span>
+          <!-- Indicador de estado notificaciones (siempre visible) -->
+          <span id="dashNotifIndicator" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px;background:#F3F4F6;color:#9CA3AF;">⚪ —</span>
         </div>
         <span id="supportConsoleChevron" style="font-size:14px;color:var(--text-muted);transition:transform .2s;">▶</span>
       </div>
       <div class="support-console-body" id="supportConsoleBody">
         <!-- Poblado por renderDashboard() -->
+      </div>
+      <!-- Test Ping (visible cuando consola abierta) -->
+      <div id="dashPingSection" style="display:none;padding:10px 14px 14px;border-top:1px solid var(--border);background:var(--bg-main);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div id="dashNotifStatus" style="font-size:11px;color:var(--text-muted);line-height:1.4;flex:1;min-width:160px;">
+            Verificando...
+          </div>
+          <button id="dashPingBtn" onclick="sendTestPing()"
+            style="flex-shrink:0;padding:9px 16px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg-card);font-size:12px;font-weight:700;color:var(--text-main);cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .2s;">
+            🔔 Test Ping
+          </button>
+        </div>
       </div>
     </div>
 
@@ -4537,20 +4551,112 @@ function renderDashboard(){
   }
 }
 window.renderDashboard = renderDashboard;
+
+// ── Test Ping de Notificaciones ──────────────────────────────────────
+async function sendTestPing(){
+  const btn = document.getElementById('dashPingBtn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Enviando...'; }
+
+  const status = ('Notification' in window) ? Notification.permission : 'unsupported';
+
+  if(status !== 'granted'){
+    if(window.toast) window.toast('⚠️ Activa notificaciones primero en el Panel');
+    if(btn){ btn.disabled=false; btn.textContent='🔔 Test Ping'; }
+    return;
+  }
+
+  // Tier 1: notificación local inmediata (siempre funciona si permission=granted)
+  try{
+    const localNotif = new Notification('🔔 Gestión de Equipos · Test', {
+      body: '✅ Las notificaciones locales funcionan correctamente.',
+      icon: '/assets/Logo2.png',
+      badge: '/assets/Logo2.png',
+      tag: 'gpc-test-ping',
+    });
+    localNotif.onclick = () => { localNotif.close(); window.focus(); };
+    console.log('[Ping] Notificación local enviada');
+    if(window.toast) window.toast('🔔 Ping enviado — verifica la notificación');
+  }catch(e){
+    console.error('[Ping] Error notificación local:', e.message);
+  }
+
+  // Tier 2: FCM push real (requiere Functions desplegadas)
+  try{
+    if(window.sendNotificationToUser){
+      const uid = window.currentProfile?.uid || window.currentProfile?.uid;
+      if(uid){
+        const result = await window.sendNotificationToUser(uid,
+          '🔔 Test FCM — Gestión de Equipos',
+          'El sistema FCM está funcionando correctamente.'
+        );
+        console.log('[Ping] FCM result:', result);
+        if(result?.success){
+          if(window.toast) window.toast('✅ FCM push real también enviado');
+        }
+      }
+    }
+  }catch(e){
+    // Functions no deployadas — el ping local ya fue suficiente
+    console.log('[Ping] FCM callable no disponible (Functions no deployadas):', e.message);
+  }
+
+  if(btn){
+    btn.disabled=false;
+    btn.textContent='✅ Ping enviado';
+    setTimeout(()=>{ if(btn) btn.textContent='🔔 Test Ping'; }, 3000);
+  }
+}
+window.sendTestPing = sendTestPing;
+
 // Notification Center se actualiza cada vez que se abre el dashboard
 const _origRenderDash = renderDashboard;
 renderDashboard = function(){
   _origRenderDash();
   setTimeout(renderNotificationCenter, 150);
+  setTimeout(updateNotifIndicator, 200);
 };
 window.renderDashboard = renderDashboard;
+
+// Actualiza el chip indicador de estado (visible siempre en el header de la consola)
+function updateNotifIndicator(){
+  const chip   = document.getElementById('dashNotifIndicator');
+  const status = document.getElementById('dashNotifStatus');
+  const pingBtn= document.getElementById('dashPingBtn');
+  if(!chip) return;
+
+  if(!('Notification' in window)){
+    chip.textContent='⚠️ No soportado'; chip.style.background='#FEF3C7'; chip.style.color='#92400E';
+    if(status) status.textContent='Este navegador no soporta notificaciones push.';
+    if(pingBtn) pingBtn.style.display='none';
+    return;
+  }
+
+  const perm = Notification.permission;
+  if(perm === 'granted'){
+    chip.textContent='🟢 Activas'; chip.style.background='#DCFCE7'; chip.style.color='#16A34A';
+    if(status) status.innerHTML='<strong>Notificaciones Activas</strong> — el sistema puede enviarte alertas.';
+    if(pingBtn){ pingBtn.style.display=''; pingBtn.textContent='🔔 Test Ping'; pingBtn.disabled=false; }
+  } else if(perm === 'denied'){
+    chip.textContent='🔴 Bloqueadas'; chip.style.background='#FEE2E2'; chip.style.color='#DC2626';
+    if(status) status.textContent='Notificaciones bloqueadas. Actívalas desde ajustes del navegador.';
+    if(pingBtn){ pingBtn.style.display=''; pingBtn.textContent='🚫 Bloqueadas'; pingBtn.disabled=true; }
+  } else {
+    chip.textContent='⚪ Inactivas'; chip.style.background='#F3F4F6'; chip.style.color='#6B7280';
+    if(status) status.textContent='Notificaciones no activadas. Toca "Activar ahora" en el panel.';
+    if(pingBtn){ pingBtn.style.display=''; pingBtn.textContent='⚙️ Activar primero'; pingBtn.disabled=true; }
+  }
+}
+window.updateNotifIndicator = updateNotifIndicator;
 
 function toggleSupportConsole(){
   const body    = document.getElementById('supportConsoleBody');
   const chevron = document.getElementById('supportConsoleChevron');
+  const pingSection = document.getElementById('dashPingSection');
   if(!body) return;
   const open = body.classList.toggle('open');
   if(chevron) chevron.style.transform = open ? 'rotate(90deg)' : '';
+  if(pingSection) pingSection.style.display = open ? 'block' : 'none';
+  if(open) updateNotifIndicator();
 }
 window.toggleSupportConsole = toggleSupportConsole;
 
