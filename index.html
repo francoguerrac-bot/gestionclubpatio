@@ -8554,6 +8554,16 @@ window.loadAllProposals = async function(){
     return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);
   }catch(e){console.warn('loadAllProposals:',e.message);return[];}
 };
+// ── FCM Token helpers ──────────────────────────────────────────────────
+// Leer tokens FCM del usuario (campo fcmTokens[] en su doc)
+window.loadUserFCMTokens = async function(uid){
+  try{
+    const snap = await getDoc(doc(db,'users',uid));
+    if(!snap.exists()) return [];
+    return (snap.data().fcmTokens||[]).filter(Boolean);
+  }catch(e){ return []; }
+};
+
 // Actualizar estado de propuesta
 window.updateProposalStatus = async function(id,patch){
   await setDoc(doc(db,'proposals',id),patch,{merge:true});
@@ -8884,31 +8894,49 @@ window.triggerPwaInstall=triggerPwaInstall;
 //   1. Banner de instalación PWA (si no instalada y no descartada)
 //   2. Solicitud de notificaciones (si no concedidas y no pedidas)
 // ────────────────────────────────────────────
-function renderOnboarding(){
-  // No ejecutar si auth overlay sigue visible (aún en login)
+async function renderOnboarding(){
   const overlay=document.getElementById('authOverlay');
   if(overlay && overlay.style.display!=='none') return;
 
-  const SEVEN_DAYS=7*24*60*60*1000;
+  const SEVEN_DAYS = 7*24*60*60*1000;
+  const ONE_DAY    = 24*60*60*1000;
 
   // ── 1. Banner PWA ──
   if(!isStandalone && !localStorage.getItem('pwa-installed')){
     const dismissed=parseInt(localStorage.getItem('pwa-dismissed')||'0',10);
-    const expired=Date.now()-dismissed > SEVEN_DAYS;
-    if(expired && (pwaInstallEvent || isIOS)){
+    if(Date.now()-dismissed > SEVEN_DAYS && (pwaInstallEvent || isIOS)){
       setTimeout(showPwaBanner, 2000);
     }
   }
 
-  // ── 2. Banner flotante de notificaciones ──
-  const ONE_DAY = 24*60*60*1000;
-  if('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window){
-    if(Notification.permission === 'default'){
-      const dismissed = parseInt(localStorage.getItem('notif-banner-dismissed')||'0',10);
-      if(Date.now() - dismissed > ONE_DAY){
-        setTimeout(showNotifFloatBanner, 3500);
+  // ── 2. Notificaciones — verificar si el usuario YA tiene token ──
+  if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+  const perm = Notification.permission;
+
+  // Si ya denegó: no molestar
+  if(perm === 'denied') return;
+
+  // Si ya concedió: verificar si tiene token guardado en Firestore
+  if(perm === 'granted'){
+    const uid = window.currentProfile?.uid;
+    if(uid && window.loadUserFCMTokens){
+      const tokens = await window.loadUserFCMTokens(uid).catch(()=>[]);
+      if(!tokens.length){
+        // Tiene permiso pero no tiene token → obtenerlo silenciosamente
+        console.log('[FCM] Permiso concedido pero sin token — registrando silenciosamente...');
+        setTimeout(()=>window.requestNotificationPermission&&window.requestNotificationPermission(), 1500);
       }
     }
+    return;
+  }
+
+  // Si es 'default': mostrar banner si no fue descartado recientemente
+  const dismissed = parseInt(localStorage.getItem('notif-banner-dismissed')||'0',10);
+  if(Date.now()-dismissed > ONE_DAY){
+    // Mostrar inmediato si nunca vio el banner; delay si ya lo cerró antes
+    const delay = dismissed > 0 ? 4000 : 2000;
+    setTimeout(showNotifFloatBanner, delay);
   }
 }
 window.renderOnboarding = renderOnboarding;
@@ -9208,12 +9236,26 @@ async function requestNotificationPermission(){
     const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
     console.log('[FCM] Paso 4: Guardando token para uid =', uid || '(sin uid — usuario no autenticado aún)');
     if(uid){
+      // Guardar token en el doc principal (array)
       await setDoc(
         doc(fcmDb, 'users', uid),
-        { fcmTokens: arrayUnion(token), fcmLastUpdated: serverTimestamp(), fcmDevice: navigator.userAgent.slice(0,80) },
+        {
+          fcmTokens:      arrayUnion(token),
+          fcmLastUpdated: serverTimestamp(),
+          fcmDevice:      navigator.userAgent.slice(0,80),
+          fcmTopics:      ['all-users'],        // registro local de topics suscritos
+        },
         { merge: true }
       );
-      console.log('[FCM] ✅ Token guardado en Firestore /users/'+uid);
+      // También guardar en subcolección /users/{uid}/tokens/{tokenHash}
+      // Permite buscar por token y limpiar expirados individualmente
+      const tokenHash = token.slice(-20);       // últimos 20 chars como ID único
+      await setDoc(
+        doc(fcmDb, 'users', uid, 'tokens', tokenHash),
+        { token, device: navigator.userAgent.slice(0,80), createdAt: serverTimestamp() },
+        { merge: true }
+      );
+      console.log('[FCM] ✅ Token guardado en /users/'+uid+' + subcolección /tokens/'+tokenHash);
     } else {
       console.warn('[FCM] ⚠️ No hay UID disponible — token no guardado en Firestore todavía.');
     }
