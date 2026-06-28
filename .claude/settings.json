@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m 'fix: updateNavBadge null check — root cause of RBAC never activating *)",
+      "Bash(git commit -m 'fix: director tasks + owner options + reset button *)",
+      "Bash(git commit -m 'feat: dynamic MODULE_ASSIGNEES dict for task assignment selector *)",
+      "Bash(git commit -m 'feat: Weekly Planner \\(Semana en Curso\\) *)",
+      "Bash(git commit -m 'fix: remove debug panel + clean dbg\\(\\) calls for production *)",
+      "Bash(git commit -m 'feat: Weekly Planner refactored to 7-column time-blocking grid *)",
+      "Bash(git commit -m 'feat: Week Planner temporal navigation \\(-1 to +3 weeks\\) *)",
+      "Bash(git commit -m 'feat: User provisioning modal + WhatsApp contextual integration *)",
+      "Bash(git commit -m 'fix: createUserForDirector uses secondary Firestore context *)",
+      "Bash(git commit -m 'feat: UI/UX redesign — Club Patio Curauma corporate identity *)",
+      "Bash(git commit -m 'feat: Personal Dashboard + Permission System \\(Doble Llave\\) *)",
+      "Bash(git commit -m 'feat: zero-clutter filter + multi-role checkbox modal *)",
+      "Bash(git commit -m 'fix: WhatsApp link uses real phone only, no dummy data *)",
+      "Bash(git commit -m 'fix: auto-patch Carolina phone in Firestore on login *)",
+      "Bash(git commit -m 'fix: Director patches phone numbers on loadOrgData *)",
+      "Bash(grep -v \"//\\\\|profile&&\\\\|Array.is\\\\|flatMap\\\\|roles:\\\\|roles =\")",
+      "Bash(git commit -m 'fix: null-safe auth flow + robust mountRoleUI + personas panel *)"
+    ]
+  }
+}
