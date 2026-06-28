@@ -1,14 +1,17 @@
 {
-  "name": "Gestión de Equipos Club Patio Curauma",
-  "short_name": "Club Patio",
+  "name": "Gestión de Equipos · Patio Curauma",
+  "short_name": "Gestión Equipos",
   "description": "Sistema de gestión operativa del equipo Club Patio Curauma",
   "start_url": "/",
   "scope": "/",
+  "id": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait-primary",
-  "background_color": "#2D3142",
+  "background_color": "#1E2D3D",
   "theme_color": "#5BC0BE",
   "lang": "es-CL",
+  "dir": "ltr",
   "categories": ["productivity", "business"],
   "icons": [
     {
@@ -26,5 +29,9 @@
   ],
   "screenshots": [],
   "related_applications": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "handle_links": "preferred"
 }

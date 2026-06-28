@@ -1,12 +1,14 @@
-// firebase-messaging-sw.js — v3 (modular compat layer, robusto)
-// Inspeccionar en Chrome: DevTools → Application → Service Workers → firebase-messaging-sw.js
+// firebase-messaging-sw.js — v4 (alta prioridad + log Firestore)
+// Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION = '3.0.0';
+const SW_VERSION    = '4.0.0';
+const PROJECT_ID    = 'gestion-de-personas-ce003';
+const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-console.log(`[FCM-SW v${SW_VERSION}] Script cargado — scope: ${self.registration.scope}`);
+console.log(`[FCM-SW v${SW_VERSION}] Cargado — ${new Date().toISOString()} — scope: ${self.registration.scope}`);
 
 firebase.initializeApp({
   apiKey:            'AIzaSyDxVCUM808BRJ-5_SAG4bkdmu4e8xbVQn8',
@@ -18,97 +20,125 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
-console.log('[FCM-SW] Firebase messaging inicializado');
+console.log('[FCM-SW] Messaging inicializado');
 
-// ── Mensajes en BACKGROUND (app cerrada o sin foco) ──────────────────
-messaging.onBackgroundMessage(function(payload) {
-  console.log('[FCM-SW] ✅ onBackgroundMessage recibido:', JSON.stringify(payload));
+// ── Log remoto a Firestore (diagnóstico móvil) ────────────────────────
+// Permite saber si el mensaje LLEGÓ al SW aunque el SO lo bloqueara
+async function logToFirestore(event, payload, extra = {}) {
+  const logEntry = {
+    fields: {
+      event:     { stringValue: event },
+      ts:        { stringValue: new Date().toISOString() },
+      swVersion: { stringValue: SW_VERSION },
+      userAgent: { stringValue: self.navigator?.userAgent || 'unknown' },
+      title:     { stringValue: (payload?.notification?.title || payload?.data?.title || '') },
+      body:      { stringValue: (payload?.notification?.body  || payload?.data?.body  || '') },
+      ...Object.fromEntries(
+        Object.entries(extra).map(([k,v]) => [k, { stringValue: String(v) }])
+      ),
+    }
+  };
+  const docId = `${event}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  try {
+    await fetch(`${FIRESTORE_URL}/fcm_sw_logs?documentId=${docId}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(logEntry),
+    });
+    console.log(`[FCM-SW] Log Firestore OK → fcm_sw_logs/${docId}`);
+  } catch(e) {
+    console.warn('[FCM-SW] Log Firestore fallido (probablemente offline):', e.message);
+  }
+}
 
-  const notification = payload.notification || {};
-  const data         = payload.data         || {};
+// ── onBackgroundMessage: app cerrada o sin foco ───────────────────────
+messaging.onBackgroundMessage(async function(payload) {
+  const ts = new Date().toISOString();
+  console.log(`[FCM-SW ${ts}] ✅ onBackgroundMessage:`, JSON.stringify(payload));
 
-  const title   = notification.title || data.title || 'Gestión de Equipos · Patio Curauma';
-  const body    = notification.body  || data.body  || 'Tienes una novedad en la app.';
-  const icon    = notification.icon  || '/assets/Logo2.png';
-  const link    = data.link || payload.fcmOptions?.link || '/';
-  const tag     = data.tag  || 'gpc-' + Date.now();
+  // Log remoto — confirma que el mensaje llegó al SW
+  await logToFirestore('background_received', payload, {
+    notifFrom: 'onBackgroundMessage',
+    hasNotification: String(!!payload.notification),
+    hasData: String(!!payload.data),
+  });
+
+  const notif = payload.notification || {};
+  const data  = payload.data         || {};
+  const title = notif.title || data.title || 'Gestión de Equipos · Patio Curauma';
+  const body  = notif.body  || data.body  || 'Tienes una novedad en la app.';
+  const icon  = notif.icon  || '/assets/Logo2.png';
+  const link  = data.link   || payload.fcmOptions?.link || 'https://gestionclubpatio.vercel.app';
+  const tag   = data.tag    || `gpc-${Date.now()}`;
 
   const options = {
     body,
     icon,
-    badge:            '/assets/Logo2.png',
+    badge:              '/assets/Logo2.png',
     tag,
-    data:             { url: link, ...data },
-    vibrate:          [200, 100, 200],
+    data:               { url: link, ...data },
+    vibrate:            [200, 100, 200],
     requireInteraction: false,
-    silent:           false,
+    silent:             false,
+    timestamp:          Date.now(),
     actions: [
-      { action: 'open',   title: '📋 Abrir app' },
-      { action: 'close',  title: 'Ignorar'       },
+      { action: 'open',  title: '📋 Abrir app' },
+      { action: 'close', title: 'Ignorar'       },
     ],
   };
 
-  console.log('[FCM-SW] Mostrando notificación:', title, options);
-
   return self.registration.showNotification(title, options)
-    .then(() => console.log('[FCM-SW] ✅ Notificación mostrada correctamente'))
-    .catch(err => console.error('[FCM-SW] ❌ Error mostrando notificación:', err));
+    .then(async () => {
+      console.log('[FCM-SW] ✅ Notificación mostrada:', title);
+      await logToFirestore('notification_shown', payload, { title, tag });
+    })
+    .catch(async (err) => {
+      console.error('[FCM-SW] ❌ Error mostrando notificación:', err.message);
+      await logToFirestore('notification_error', payload, { error: err.message });
+    });
+});
+
+// ── Push raw (fallback — detecta si llega pero onBackgroundMessage no dispara) ──
+self.addEventListener('push', async function(event) {
+  const ts = new Date().toISOString();
+  console.log(`[FCM-SW ${ts}] push raw recibido`);
+
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+    console.log('[FCM-SW] push data:', JSON.stringify(payload));
+  } catch(e) {
+    console.warn('[FCM-SW] push data no es JSON:', event.data?.text?.());
+  }
+
+  // Solo logueamos — onBackgroundMessage de Firebase maneja el show
+  // Si ves este log pero NO 'background_received', hay un bug en la inicialización
+  await logToFirestore('push_raw', payload, { note: 'fallback_handler' });
 });
 
 // ── Click en la notificación ──────────────────────────────────────────
 self.addEventListener('notificationclick', function(event) {
-  console.log('[FCM-SW] notificationclick — action:', event.action, '| data:', JSON.stringify(event.notification.data));
+  const action = event.action;
+  const url    = event.notification.data?.url || 'https://gestionclubpatio.vercel.app';
+  console.log('[FCM-SW] notificationclick — action:', action, '| url:', url);
+
   event.notification.close();
-
-  if (event.action === 'close') return;
-
-  const targetUrl = event.notification.data?.url || '/';
-  console.log('[FCM-SW] Abriendo URL:', targetUrl);
+  if (action === 'close') return;
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      // Intentar enfocar ventana existente
-      for (const client of clientList) {
-        if ('focus' in client) {
-          console.log('[FCM-SW] Enfocando cliente existente');
-          return client.focus();
-        }
-      }
-      // Abrir nueva ventana
-      if (clients.openWindow) {
-        console.log('[FCM-SW] Abriendo nueva ventana');
-        return clients.openWindow(targetUrl);
-      }
+    clients.matchAll({ type:'window', includeUncontrolled:true }).then(list => {
+      const existing = list.find(c => c.url.includes('gestionclubpatio.vercel.app') && 'focus' in c);
+      if (existing) { console.log('[FCM-SW] Enfocando ventana existente'); return existing.focus(); }
+      console.log('[FCM-SW] Abriendo nueva ventana:', url);
+      return clients.openWindow ? clients.openWindow(url) : null;
     })
   );
 });
 
-// ── Notificación cerrada ──────────────────────────────────────────────
-self.addEventListener('notificationclose', function(event) {
-  console.log('[FCM-SW] Notificación cerrada por el usuario. tag:', event.notification.tag);
-});
+self.addEventListener('notificationclose', e =>
+  console.log('[FCM-SW] Notificación cerrada — tag:', e.notification.tag)
+);
 
-// ── Ciclo de vida del SW (para debugging) ────────────────────────────
-self.addEventListener('install', function(event) {
-  console.log(`[FCM-SW v${SW_VERSION}] install — forzando activación`);
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', function(event) {
-  console.log(`[FCM-SW v${SW_VERSION}] activate — tomando control de clientes`);
-  event.waitUntil(self.clients.claim());
-});
-
-// ── Push raw (fallback si onBackgroundMessage no dispara) ─────────────
-self.addEventListener('push', function(event) {
-  console.log('[FCM-SW] push event raw recibido');
-  if (!event.data) { console.warn('[FCM-SW] push sin datos'); return; }
-  try {
-    const payload = event.data.json();
-    console.log('[FCM-SW] push data:', JSON.stringify(payload));
-    // onBackgroundMessage de Firebase debería manejar esto,
-    // pero si no dispara, lo procesamos aquí como fallback
-  } catch(e) {
-    console.warn('[FCM-SW] push data no es JSON:', event.data.text());
-  }
-});
+// ── Ciclo de vida ─────────────────────────────────────────────────────
+self.addEventListener('install',  e => { console.log(`[FCM-SW v${SW_VERSION}] install`); self.skipWaiting(); });
+self.addEventListener('activate', e => { console.log(`[FCM-SW v${SW_VERSION}] activate`); e.waitUntil(self.clients.claim()); });

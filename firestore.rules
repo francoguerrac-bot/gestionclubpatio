@@ -148,6 +148,16 @@ service cloud.firestore {
     }
 
     // ════════════════════════════════════════════════════════
+    // /fcm_sw_logs — Logs del Service Worker (diagnóstico móvil)
+    // Escritura pública (SW no tiene auth), lectura solo Director
+    // ════════════════════════════════════════════════════════
+    match /fcm_sw_logs/{logId} {
+      allow create: if true;          // SW escribe sin auth
+      allow read:   if isDirector();
+      allow update, delete: if false;
+    }
+
+    // ════════════════════════════════════════════════════════
     // FALLBACK — Director accede a todo
     // ════════════════════════════════════════════════════════
     match /{document=**} {
