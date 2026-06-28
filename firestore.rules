@@ -2,32 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ════════════════════════════════════════════════════════
-    // ARQUITECTURA DE VISIBILIDAD (dos capas):
-    //
-    // COMITÉ EJECUTIVO (visión total):
-    //   Director · Mamá · Coordinadora Bazar · Coordinadora Tienda
-    //
-    // EJECUCIÓN TÁCTICA (vista aislada — solo sus tareas):
-    //   Publicista · Diseñador/a · Diseñador/Publicista
-    //   Staff Eventos · Staff Montaje · Soporte Aplicaciones
-    //   Logística · Vendedor/a · Encargado Web · Hijo 1 · Hijo 2
-    //
-    // CAPA 1 (Frontend/Query): where('assignedToRole','==',rol)
-    //   → Solo descarga documentos del rol del usuario
-    // CAPA 2 (Firestore Rules): assignedToUid == auth.uid
-    //   → Bloquea acceso directo a documentos ajenos
-    //
-    // NOTA: request.auth.token.role NO existe sin Admin SDK.
-    //   Usamos assignedToUid que sí está disponible en reglas.
-    // ════════════════════════════════════════════════════════
-
     function isAuth()     { return request.auth != null; }
     function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
+
     function isDirector() {
       return request.auth != null
           && request.auth.token.email == 'francoguerrac@gmail.com';
     }
+
     function isExecutive() {
       return request.auth != null && (
         request.auth.token.email == 'francoguerrac@gmail.com'       ||
@@ -39,48 +21,32 @@ service cloud.firestore {
       );
     }
 
-    // ════════════════════════════════════════════════════════
-    // /tasks — Colección de tareas con aislamiento real
-    //
-    // CÓMO FUNCIONA LA SEGURIDAD EN DOS CAPAS:
-    // Capa 1 (Query): Frontend hace where('assignedToRole','==',role)
-    //   → Solo devuelve documentos del rol del usuario
-    // Capa 2 (Rules): Si alguien intenta leer un doc directamente,
-    //   las reglas verifican assignedToUid == su UID
-    // ════════════════════════════════════════════════════════
+    // ── /users/{userId}/tokens — Subcolección de tokens FCM ──
+    match /users/{userId}/tokens/{tokenId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── /tasks ──
     match /tasks/{taskId} {
-
-      // COMITÉ EJECUTIVO: acceso total (sin restricciones)
       allow read, write: if isExecutive();
-
-      // USUARIOS AUTENTICADOS: leer solo tareas propias
-      // (por UID — consistente con el campo assignedToUid del frontend)
       allow read: if isAuth() && (
-        resource.data.assignedToUid == request.auth.uid   // asignada a este usuario
-        || resource.data.assignedToUid == null             // sin UID asignado = compartida
-        || resource.data.assignedToUid == ''               // legacy: campo vacío
+        resource.data.assignedToUid == request.auth.uid
+        || resource.data.assignedToUid == null
+        || resource.data.assignedToUid == ''
       );
-
-      // Crear: cualquier autenticado puede crear tareas en su org
       allow create: if isAuth()
         && request.resource.data.orgId == 'curauma_001'
         && request.resource.data.assignedToUid == request.auth.uid;
-
-      // Actualizar: solo el dueño de la tarea o ejecutivos
       allow update: if isAuth() && (
         resource.data.assignedToUid == request.auth.uid
         || resource.data.assignedToUid == null
         || resource.data.assignedToUid == ''
       );
-
-      // Eliminar: dueño o ejecutivos
       allow delete: if isExecutive()
         || (isAuth() && resource.data.assignedToUid == request.auth.uid);
     }
 
-    // ════════════════════════════════════════════════════════
-    // /users — Perfiles
-    // ════════════════════════════════════════════════════════
+    // ── /users ──
     match /users/{userId} {
       allow read:   if isAuth();
       allow create: if isAuth();
@@ -88,91 +54,44 @@ service cloud.firestore {
       allow delete: if isDirector();
     }
 
-    // ════════════════════════════════════════════════════════
-    // /permission_requests
-    // ════════════════════════════════════════════════════════
+    // ── /permission_requests ──
     match /permission_requests/{reqId} {
       allow read, create, update: if isAuth();
       allow delete: if isDirector();
     }
 
-    // ════════════════════════════════════════════════════════
-    // /proposals
-    // ════════════════════════════════════════════════════════
-    match /proposals/{propId} {
-      allow read, write: if isAuth();
-    }
+    match /proposals/{propId}     { allow read, write: if isAuth(); }
+    match /bazar_cycles/{cycleId} { allow read, write: if isAuth(); }
 
-    // ════════════════════════════════════════════════════════
-    // /bazar_cycles
-    // ════════════════════════════════════════════════════════
-    match /bazar_cycles/{cycleId} {
-      allow read, write: if isAuth();
-    }
-
-    // ════════════════════════════════════════════════════════
-    // /mood_history — Solo Director lee
-    // ════════════════════════════════════════════════════════
+    // ── /mood_history ──
     match /mood_history/{moodId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════════════════════
-    // /audit_log — Inmutable
-    // ════════════════════════════════════════════════════════
+    // ── /audit_log ──
     match /audit_log/{logId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════════════════════
-    // /activity_logs — Historial de intervenciones familiares
-    // Escribe cualquier auth; lee solo ejecutivos
-    // ════════════════════════════════════════════════════════
+    // ── /activity_logs ──
     match /activity_logs/{logId} {
       allow create: if isAuth();
       allow read:   if isExecutive();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════════════════════
-    // /geolocations — Stealth
-    // ════════════════════════════════════════════════════════
+    // ── /geolocations ──
     match /geolocations/{geoId} {
       allow create: if isAuth();
       allow read:   if isDirector();
       allow update, delete: if false;
     }
 
-    // ════════════════════════════════════════════════════════
-    // /notification_logs — Log de entrega por usuario
-    // SW escribe sin auth; usuario lee solo sus propios logs
-    // ════════════════════════════════════════════════════════
-    match /notification_logs/{logId} {
-      allow create: if true;          // SW no tiene auth → escritura pública
-      allow read:   if isAuth() && (
-        // Cada usuario lee solo sus propios logs
-        resource.data.userId == request.auth.uid
-        || isDirector()               // Director lo ve todo
-      );
-      allow update, delete: if false; // inmutable
-    }
-
-    // ════════════════════════════════════════════════════════
-    // /fcm_sw_logs — Log técnico completo (solo Director)
-    // ════════════════════════════════════════════════════════
-    match /fcm_sw_logs/{logId} {
-      allow create: if true;
-      allow read:   if isDirector();
-      allow update, delete: if false;
-    }
-
-    // ════════════════════════════════════════════════════════
-    // FALLBACK — Director accede a todo
-    // ════════════════════════════════════════════════════════
+    // ── FALLBACK — Director accede a todo lo demás ──
     match /{document=**} {
       allow read, write: if isDirector();
     }
