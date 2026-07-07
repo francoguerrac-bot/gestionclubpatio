@@ -1,20 +1,6 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/send-notification.js", "use": "@vercel/node"   },
-    { "src": "index.html",               "use": "@vercel/static" },
-    { "src": "sw.js",                    "use": "@vercel/static" },
-    { "src": "firebase-messaging-sw.js", "use": "@vercel/static" },
-    { "src": "manifest.json",            "use": "@vercel/static" },
-    { "src": "assets/**",                "use": "@vercel/static" }
-  ],
   "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
-      ]
-    },
     {
       "source": "/sw.js",
       "headers": [
@@ -43,14 +29,7 @@
       ]
     }
   ],
-  "routes": [
-    { "src": "/api/(.*)",                  "dest": "/api/$1"                   },
-    { "src": "/sw.js",                     "dest": "/sw.js"                    },
-    { "src": "/firebase-messaging-sw.js",  "dest": "/firebase-messaging-sw.js" },
-    { "src": "/manifest.json",             "dest": "/manifest.json"            },
-    { "src": "/assets/(.*)",               "dest": "/assets/$1"                },
-    { "src": "/(.*\\.png)",                "dest": "/$1"                       },
-    { "src": "/(.*\\.jpg)",                "dest": "/$1"                       },
-    { "src": "/(.*)",                      "dest": "/index.html"               }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
