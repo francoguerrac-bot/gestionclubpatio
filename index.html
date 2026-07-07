@@ -9612,5 +9612,14 @@ window.requestNotificationPermission = requestNotificationPermission;
 document.addEventListener('DOMContentLoaded', ()=>setTimeout(()=>window.renderNotificationCenter&&window.renderNotificationCenter(), 1800));
 window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.renderNotificationCenter&&window.renderNotificationCenter(); });
 </script>
+
+<!-- ═══ TASK SERVICE · Fase 1: Firestore Tasks ═══
+     Este módulo expone window.TaskService con CRUD y migración.
+     Para migrar las tareas de localStorage a Firestore, ejecuta en la consola del navegador:
+       await TaskService.migrateLocalStorageToFirestore()
+     Para sincronizar los datos de Firestore al array global (después de migrar):
+       await TaskService.syncToGlobal()
+-->
+<script type="module" src="tasks.js"></script>
 </body>
 </html>

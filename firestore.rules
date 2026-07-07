@@ -27,21 +27,34 @@ service cloud.firestore {
     }
 
     // ── /tasks ──
+    // Esquema v2: assignedToUid (UID real) + createdByUid + status + dueDate
     match /tasks/{taskId} {
+      // Ejecutivos leen y escriben todo
       allow read, write: if isExecutive();
+
+      // Usuarios regulares: leen sus tareas asignadas o las que crearon
       allow read: if isAuth() && (
         resource.data.assignedToUid == request.auth.uid
-        || resource.data.assignedToUid == null
-        || resource.data.assignedToUid == ''
+        || resource.data.createdByUid == request.auth.uid
       );
+
+      // Crear: autenticado + orgId correcto + createdByUid propio
+      // El Director puede asignar a cualquiera; usuarios normales solo a sí mismos
       allow create: if isAuth()
         && request.resource.data.orgId == 'curauma_001'
-        && request.resource.data.assignedToUid == request.auth.uid;
+        && request.resource.data.createdByUid == request.auth.uid
+        && (
+          isDirector()
+          || request.resource.data.assignedToUid == request.auth.uid
+        );
+
+      // Actualizar: el asignado o el creador pueden modificar
       allow update: if isAuth() && (
         resource.data.assignedToUid == request.auth.uid
-        || resource.data.assignedToUid == null
-        || resource.data.assignedToUid == ''
+        || resource.data.createdByUid == request.auth.uid
       );
+
+      // Eliminar: ejecutivos o el asignado
       allow delete: if isExecutive()
         || (isAuth() && resource.data.assignedToUid == request.auth.uid);
     }
