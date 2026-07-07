@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-06-v10';
+  var B='2026-07-07-v11';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -8723,16 +8723,17 @@ window.loadAllProposals = async function(){
 // ── Notification logs (leer /notification_logs filtrado por userId) ───
 window.loadNotifLogs = async function(uid, limit = 10){
   try{
-    const { collection:c2, getDocs:gd2, query:q2, where:w2, orderBy:ob2, limit:lim2 } =
+    const { collection:c2, getDocs:gd2, query:q2, where:w2, limit:lim2 } =
       await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
     const snap = await gd2(
       q2(c2(db,'notification_logs'),
         w2('userId','==',uid),
-        ob2('timestamp','desc'),
-        lim2(limit)
+        lim2(50)
       )
     );
-    return snap.docs.map(d=>({id:d.id,...d.data()}));
+    const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    docs.sort((a,b)=> (b.timestamp||'') > (a.timestamp||'') ? 1 : -1);
+    return docs.slice(0, limit);
   }catch(e){
     console.warn('loadNotifLogs:',e.message);
     return [];
