@@ -18,6 +18,51 @@ let _cachedAccessToken = null;
 let _tokenExpiresAt    = 0;
 
 // ─────────────────────────────────────────────────────────────────────────
+// Sanitizador de clave PEM — robusto ante cualquier formato de Vercel
+//
+// Maneja todos los casos de copia/pegado:
+//   · \\n literales (lo más común en Vercel env vars)
+//   · Una sola línea sin saltos
+//   · Con o sin comillas envolventes
+//   · Saltos \r\n de Windows
+//   · Base64 sin el wrapping de 64 chars que exige OpenSSL 3.x (Node 20)
+// ─────────────────────────────────────────────────────────────────────────
+function sanitizePEM(raw) {
+  if (!raw) throw new Error('FIREBASE_PRIVATE_KEY no está configurada en las variables de entorno de Vercel.');
+
+  // 1. Convertir \\n literales a saltos de línea reales
+  let key = raw.replace(/\\n/g, '\n');
+
+  // 2. Normalizar line endings (Windows → Unix)
+  key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // 3. Quitar comillas envolventes (si el usuario las incluyó al pegar)
+  key = key.replace(/^['"]|['"]$/g, '').trim();
+
+  // 4. Extraer partes del PEM con regex flexible (ignora espacios extra)
+  const match = key.match(/-----BEGIN ([A-Z ]+)-----\s*([\s\S]+?)\s*-----END ([A-Z ]+)-----/);
+
+  if (!match) {
+    // Log diagnóstico sin exponer la key completa
+    const preview = key.slice(0, 40).replace(/\n/g, '↵');
+    throw new Error(
+      `FIREBASE_PRIVATE_KEY no tiene formato PEM válido. ` +
+      `Inicio detectado: "${preview}...". ` +
+      `Debe comenzar con -----BEGIN PRIVATE KEY----- y terminar con -----END PRIVATE KEY-----.`
+    );
+  }
+
+  const type      = match[1].trim();
+  const body      = match[2].trim();
+  // 5. Eliminar todo espacio del cuerpo y re-envolver en líneas de 64 chars
+  //    (OpenSSL 3.x / Node 20 es estricto con el wrapping del PEM base64)
+  const cleanB64  = body.replace(/\s+/g, '');
+  const wrapped   = (cleanB64.match(/.{1,64}/g) || []).join('\n');
+
+  return `-----BEGIN ${type}-----\n${wrapped}\n-----END ${type}-----\n`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // JWT + OAuth2 para autenticar el Service Account con Google
 // ─────────────────────────────────────────────────────────────────────────
 function buildJWT(clientEmail, privateKeyPem) {
@@ -43,11 +88,28 @@ async function getGoogleAccessToken() {
     return _cachedAccessToken;
   }
 
-  const email  = process.env.FIREBASE_CLIENT_EMAIL;
-  // Restaurar saltos de línea reales; quitar comillas si el usuario las incluyó al pegar
-  const rawKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n').replace(/^"|"$/g, '');
+  const email = process.env.FIREBASE_CLIENT_EMAIL;
 
-  const jwt  = buildJWT(email, rawKey);
+  // Sanitizar y validar la clave antes de usarla
+  let privateKey;
+  try {
+    privateKey = sanitizePEM(process.env.FIREBASE_PRIVATE_KEY);
+  } catch (e) {
+    throw new Error('[PEM] ' + e.message);
+  }
+
+  // Firmar el JWT — el error 1E08010C ocurre aquí si el PEM sigue malformado
+  let jwt;
+  try {
+    jwt = buildJWT(email, privateKey);
+  } catch (e) {
+    throw new Error(
+      `[JWT] Error firmando con la clave privada (${e.message}). ` +
+      `Asegúrate de que la clave sea PKCS#8 RSA (BEGIN PRIVATE KEY, no BEGIN RSA PRIVATE KEY). ` +
+      `Genera una nueva clave en Firebase Console → Cuentas de servicio si el problema persiste.`
+    );
+  }
+
   const resp = await fetch('https://oauth2.googleapis.com/token', {
     method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
