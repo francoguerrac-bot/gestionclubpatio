@@ -9492,7 +9492,15 @@ window.sendNotificationToUser = async function(userId, title, body, data={}){
       },
       body: JSON.stringify({ userId, title, body, data }),
     });
-    const result = await resp.json();
+    // Parsear respuesta de forma segura — la función puede devolver HTML si crashea
+    const text = await resp.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch(_) {
+      const preview = text.slice(0, 120).replace(/<[^>]+>/g, '').trim();
+      result = { success: false, error: `HTTP ${resp.status}: ${preview}` };
+    }
     console.log('[FCM] sendNotificationToUser result:', result);
     return result;
   }catch(e){
