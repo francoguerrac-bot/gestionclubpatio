@@ -4591,24 +4591,32 @@ async function sendTestPing(){
     console.error('[Ping] Error notificación local:', e.message);
   }
 
-  // Tier 2: FCM push real (requiere Functions desplegadas)
+  // Tier 2: FCM push real via /api/send-notification (Vercel serverless)
   try{
-    if(window.sendNotificationToUser){
-      const uid = window.currentProfile?.uid || window.currentProfile?.uid;
-      if(uid){
-        const result = await window.sendNotificationToUser(uid,
-          '🔔 Test FCM — Gestión de Equipos',
-          'El sistema FCM está funcionando correctamente.'
-        );
-        console.log('[Ping] FCM result:', result);
-        if(result?.success){
-          if(window.toast) window.toast('✅ FCM push real también enviado');
-        }
+    const uid = window.currentProfile?.uid;
+    if(uid && window.sendNotificationToUser){
+      const result = await window.sendNotificationToUser(uid,
+        '🔔 Test Push — Gestión de Equipos',
+        'El sistema de notificaciones push está funcionando ✅'
+      );
+      console.log('[Ping] FCM result:', result);
+      const status = document.getElementById('dashNotifStatus');
+      if(result?.success){
+        if(window.toast) window.toast(`✅ Push real enviado (${result.sent} token/s)`);
+        if(status) status.innerHTML=`<strong style="color:#16A34A">✅ Push enviado</strong> — revisa "Log de entrega" en 5 seg.`;
+        // Refrescar logs después de que el SW procese el push
+        setTimeout(()=>{ if(window.renderNotifLogs) window.renderNotifLogs(); }, 5000);
+      } else {
+        const motivo = result?.reason || result?.error || 'error desconocido';
+        if(window.toast) window.toast('⚠️ Push no enviado: ' + motivo);
+        if(status) status.innerHTML=`<span style="color:#EF4444">⚠️ ${motivo}</span>`;
       }
+    } else if(!uid){
+      console.warn('[Ping] Sin uid — no se puede enviar FCM push');
     }
   }catch(e){
-    // Functions no deployadas — el ping local ya fue suficiente
-    console.log('[Ping] FCM callable no disponible (Functions no deployadas):', e.message);
+    console.warn('[Ping] Error enviando push:', e.message);
+    if(window.toast) window.toast('⚠️ Error push: ' + e.message);
   }
 
   if(btn){
@@ -9465,14 +9473,28 @@ window.requestNotificationPermission = requestNotificationPermission;
 
 // ────────────────────────────────────────────
 // sendNotificationToUser(userId, title, body)
-// Llama a la Cloud Function desde el cliente
+// Llama a /api/send-notification (Vercel serverless) con el ID token
+// del usuario actual para autenticación.
 // ────────────────────────────────────────────
 window.sendNotificationToUser = async function(userId, title, body, data={}){
   try{
-    const fn = httpsCallable(fcmFns, 'sendNotificationToUser');
-    const result = await fn({ userId, title, body, data });
-    console.log('[FCM] sendNotificationToUser result:', result.data);
-    return result.data;
+    const user = fcmAuth.currentUser;
+    if(!user){
+      console.warn('[FCM] sendNotificationToUser: no hay usuario autenticado');
+      return { success: false, reason: 'No autenticado' };
+    }
+    const idToken = await user.getIdToken();
+    const resp = await fetch('/api/send-notification', {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ userId, title, body, data }),
+    });
+    const result = await resp.json();
+    console.log('[FCM] sendNotificationToUser result:', result);
+    return result;
   }catch(e){
     console.warn('[FCM] sendNotificationToUser error:', e.message);
     return { success: false, reason: e.message };

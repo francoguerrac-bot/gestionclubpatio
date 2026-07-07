@@ -1,0 +1,11 @@
+{
+  "name": "gestionclubpatio",
+  "private": true,
+  "description": "Gestión de Equipos Club Patio Curauma — PWA + Vercel API",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
