@@ -1,93 +1,122 @@
 // api/send-notification.js — Vercel Serverless Function
 // CERO dependencias externas: solo Node.js 20 built-ins (crypto.webcrypto + fetch global)
 //
-// Variables de entorno requeridas (Vercel → Settings → Environment Variables):
-//   FIREBASE_PROJECT_ID   → gestion-de-personas-ce003
-//   FIREBASE_CLIENT_EMAIL → firebase-adminsdk-...@....iam.gserviceaccount.com
-//   FIREBASE_PRIVATE_KEY  → -----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n
+// Variable de entorno recomendada (Vercel → Settings → Environment Variables):
+//
+//   FIREBASE_SERVICE_ACCOUNT_B64
+//     → Base64 del archivo JSON completo del Service Account.
+//     → Genera el valor con este comando en PowerShell (en la carpeta del JSON):
+//         node -e "process.stdout.write(require('fs').readFileSync('NOMBRE_ARCHIVO.json').toString('base64'))"
+//     → Copia la salida y pégala como valor de FIREBASE_SERVICE_ACCOUNT_B64 en Vercel.
+//
+// (Alternativa legacy — problemática con copy-paste):
+//   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
 
 'use strict';
 
-const PROJECT_ID     = process.env.FIREBASE_PROJECT_ID || 'gestion-de-personas-ce003';
 const APP_URL        = 'https://gestionclubpatio.vercel.app';
 const WEB_API_KEY    = 'AIzaSyDxVCUM808BRJ-5_SAG4bkdmu4e8xbVQn8';
 const DIRECTOR_EMAIL = 'francoguerrac@gmail.com';
 
-// Acceso a WebCrypto (Node.js 18+)
+// Acceso a WebCrypto (Node.js 18+ built-in)
 const { subtle } = globalThis.crypto;
 
 // Cache del access token entre requests (misma Lambda instance)
 let _cachedAccessToken = null;
 let _tokenExpiresAt    = 0;
+let _projectId         = null;
 
 // ─────────────────────────────────────────────────────────────────────────
-// Extraer el cuerpo DER (base64 limpio) desde la FIREBASE_PRIVATE_KEY
+// Cargar credenciales del Service Account
 //
-// Maneja todos los formatos que puede generar Vercel al guardar env vars:
-//   · \\n literales  →  saltos reales
-//   · Comillas envolventes
-//   · \r\n de Windows
-//   · Base64 en una sola línea o con wrapping incorrecto
+// Prioridad 1: FIREBASE_SERVICE_ACCOUNT_B64 (base64 del JSON completo)
+//   → JSON.parse maneja todos los \n correctamente — sin problemas de formato
+//
+// Prioridad 2: FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY (legacy)
+//   → Propenso a corrupción por copy-paste; usar solo como fallback
 // ─────────────────────────────────────────────────────────────────────────
-function extractDERFromPEM(rawEnvValue) {
-  if (!rawEnvValue) {
-    throw new Error('FIREBASE_PRIVATE_KEY no está configurada en Vercel → Settings → Environment Variables.');
+function loadCredentials() {
+  // ── Prioridad 1: JSON completo en base64 ──────────────────────────────
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_B64) {
+    let json;
+    try {
+      const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+      json = JSON.parse(decoded);
+    } catch (e) {
+      throw new Error(
+        'FIREBASE_SERVICE_ACCOUNT_B64 no es JSON válido en base64: ' + e.message +
+        '. Regenera el valor con: node -e "process.stdout.write(require(\'fs\').readFileSync(\'SERVICE_ACCOUNT.json\').toString(\'base64\'))"'
+      );
+    }
+    if (!json.private_key || !json.client_email || !json.project_id) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_B64 no contiene los campos requeridos (private_key, client_email, project_id).');
+    }
+    // JSON.parse convierte \n → saltos reales — la clave ya está en formato correcto
+    return {
+      projectId:   json.project_id,
+      clientEmail: json.client_email,
+      privateKey:  json.private_key,  // string PEM con newlines reales
+    };
   }
 
-  // Paso 1: convertir \\n literales → saltos de línea reales
-  let key = rawEnvValue.replace(/\\n/g, '\n');
+  // ── Prioridad 2: variables individuales (legacy) ──────────────────────
+  const projectId   = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const rawKey      = process.env.FIREBASE_PRIVATE_KEY;
 
-  // Paso 2: normalizar line endings (Windows → Unix)
-  key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-  // Paso 3: quitar comillas envolventes (si el usuario las incluyó al pegar)
-  key = key.replace(/^['"]|['"]$/g, '').trim();
-
-  // Paso 4: extraer el cuerpo base64 entre los markers PEM
-  const match = key.match(/-----BEGIN ([A-Z ]+)-----\s*([\s\S]+?)\s*-----END ([A-Z ]+)-----/);
-  if (!match) {
-    const preview = key.slice(0, 50).replace(/\n/g, '↵');
+  if (!projectId || !clientEmail || !rawKey) {
     throw new Error(
-      `Formato PEM inválido. Primeros 50 chars recibidos: "${preview}". ` +
-      `La clave debe comenzar con -----BEGIN PRIVATE KEY----- y terminar con -----END PRIVATE KEY-----.`
+      'Configura FIREBASE_SERVICE_ACCOUNT_B64 en Vercel → Settings → Environment Variables. ' +
+      'Instrucciones: node -e "process.stdout.write(require(\'fs\').readFileSync(\'SERVICE_ACCOUNT.json\').toString(\'base64\'))"'
     );
   }
 
-  // Paso 5: devolver el base64 limpio (sin espacios ni saltos) — DER puro
-  return match[2].replace(/\s+/g, '');
+  // Sanitizar la clave en caso de que use el método legacy
+  let key = rawKey
+    .replace(/\\n/g, '\n')    // \\n literal → salto real
+    .replace(/\r\n/g, '\n')   // Windows → Unix
+    .replace(/\r/g, '\n')
+    .replace(/^['"]|['"]$/g, '') // comillas envolventes
+    .trim();
+
+  return { projectId, clientEmail, privateKey: key };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Construir y firmar el JWT usando WebCrypto SubtleCrypto
-//
-// Por qué SubtleCrypto en lugar de crypto.createSign():
-//   · importKey('pkcs8') importa el DER directamente — sin pasar por el
-//     decoder PEM de OpenSSL 3.x que causa el error 1E08010C
-//   · RSASSA-PKCS1-v1_5 + SHA-256 = RS256 (estándar JWT de Google)
+// Extraer bytes DER desde un string PEM (con newlines reales)
 // ─────────────────────────────────────────────────────────────────────────
-async function buildJWT(clientEmail, keyBase64) {
-  // Convertir base64 → bytes DER (estructura binaria de la clave PKCS#8)
-  const derBytes   = Uint8Array.from(Buffer.from(keyBase64, 'base64'));
+function pemToDER(pemString) {
+  const match = pemString.match(/-----BEGIN ([A-Z ]+)-----\s*([\s\S]+?)\s*-----END ([A-Z ]+)-----/);
+  if (!match) {
+    const preview = pemString.slice(0, 60).replace(/\n/g, '↵');
+    throw new Error(`PEM inválido. Inicio: "${preview}". Debe comenzar con -----BEGIN PRIVATE KEY-----.`);
+  }
+  const cleanBase64 = match[2].replace(/\s+/g, '');
+  return Buffer.from(cleanBase64, 'base64');
+}
 
-  // Importar como clave RSA PKCS#8 para firmar con SHA-256
+// ─────────────────────────────────────────────────────────────────────────
+// Firmar JWT con WebCrypto SubtleCrypto (importKey PKCS#8 DER directo)
+// ─────────────────────────────────────────────────────────────────────────
+async function buildJWT(clientEmail, pemString) {
+  const derBytes = pemToDER(pemString);
+
   let privateKey;
   try {
     privateKey = await subtle.importKey(
       'pkcs8',
       derBytes,
       { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      false,    // no exportable
+      false,
       ['sign']
     );
   } catch (e) {
     throw new Error(
-      `importKey falló: ${e.message}. ` +
-      `La clave debe ser RSA PKCS#8 (BEGIN PRIVATE KEY). ` +
-      `Si el error persiste, genera una nueva clave en Firebase Console → Cuentas de servicio.`
+      `subtle.importKey falló: ${e.message}. ` +
+      `Usa FIREBASE_SERVICE_ACCOUNT_B64 en lugar de FIREBASE_PRIVATE_KEY para evitar problemas de formato.`
     );
   }
 
-  // Construir header y payload del JWT
   const now     = Math.floor(Date.now() / 1000);
   const header  = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
   const payload = Buffer.from(JSON.stringify({
@@ -101,39 +130,33 @@ async function buildJWT(clientEmail, keyBase64) {
 
   const message   = `${header}.${payload}`;
   const sigBuffer = await subtle.sign('RSASSA-PKCS1-v1_5', privateKey, Buffer.from(message));
-  const signature = Buffer.from(sigBuffer).toString('base64url');
-
-  return `${message}.${signature}`;
+  return `${message}.${Buffer.from(sigBuffer).toString('base64url')}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 // Obtener access token de Google OAuth2 (con cache)
 // ─────────────────────────────────────────────────────────────────────────
 async function getGoogleAccessToken() {
-  // Reutilizar token si sigue vigente (rota 1 min antes de expirar)
   if (_cachedAccessToken && Date.now() < _tokenExpiresAt - 60_000) {
     return _cachedAccessToken;
   }
 
-  const email = process.env.FIREBASE_CLIENT_EMAIL;
-  if (!email) throw new Error('FIREBASE_CLIENT_EMAIL no configurada.');
-
-  // Extraer DER de la clave y firmar el JWT
-  let keyBase64;
+  let creds;
   try {
-    keyBase64 = extractDERFromPEM(process.env.FIREBASE_PRIVATE_KEY);
+    creds = loadCredentials();
   } catch (e) {
-    throw new Error('[PEM] ' + e.message);
+    throw new Error('[Config] ' + e.message);
   }
+
+  _projectId = creds.projectId; // guardar para usarlo en las llamadas a Firestore/FCM
 
   let jwt;
   try {
-    jwt = await buildJWT(email, keyBase64);
+    jwt = await buildJWT(creds.clientEmail, creds.privateKey);
   } catch (e) {
     throw new Error('[JWT] ' + e.message);
   }
 
-  // Intercambiar JWT por access token
   const resp = await fetch('https://oauth2.googleapis.com/token', {
     method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -142,7 +165,7 @@ async function getGoogleAccessToken() {
   const data = await resp.json();
 
   if (!data.access_token) {
-    throw new Error(`[OAuth2] ${data.error}: ${data.error_description || 'sin descripción'}`);
+    throw new Error(`[OAuth2] ${data.error}: ${data.error_description || ''}`);
   }
 
   _cachedAccessToken = data.access_token;
@@ -151,17 +174,18 @@ async function getGoogleAccessToken() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Verificar Firebase ID token del usuario (Identity Toolkit REST API)
+// Verificar Firebase ID token (Identity Toolkit REST API)
 // ─────────────────────────────────────────────────────────────────────────
 async function verifyFirebaseIdToken(idToken) {
-  const url  = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${WEB_API_KEY}`;
-  const resp = await fetch(url, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ idToken }),
-  });
+  const resp = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${WEB_API_KEY}`,
+    {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ idToken }),
+    }
+  );
   const data = await resp.json();
-
   if (data.error || !data.users?.[0]) {
     throw new Error(data.error?.message || 'Token de sesión inválido o expirado');
   }
@@ -172,16 +196,15 @@ async function verifyFirebaseIdToken(idToken) {
 // Leer tokens FCM del usuario (Firestore REST API)
 // ─────────────────────────────────────────────────────────────────────────
 async function getFCMTokensForUser(uid, accessToken) {
-  const BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-  const headers = { Authorization: `Bearer ${accessToken}` };
+  const projectId = _projectId || process.env.FIREBASE_PROJECT_ID || 'gestion-de-personas-ce003';
+  const BASE      = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+  const headers   = { Authorization: `Bearer ${accessToken}` };
 
-  // Documento principal: users/{uid}.fcmTokens[]
   const docResp = await fetch(`${BASE}/users/${encodeURIComponent(uid)}`, { headers });
   const doc     = await docResp.json();
   const fromDoc = (doc.fields?.fcmTokens?.arrayValue?.values || [])
     .map(v => v.stringValue).filter(Boolean);
 
-  // Subcolección: users/{uid}/tokens/
   const subResp = await fetch(`${BASE}/users/${encodeURIComponent(uid)}/tokens`, { headers });
   const subData = await subResp.json();
   const fromSub = (subData.documents || [])
@@ -191,7 +214,7 @@ async function getFCMTokensForUser(uid, accessToken) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Construir mensaje FCM con alta prioridad (Android + iOS + Web)
+// Construir mensaje FCM
 // ─────────────────────────────────────────────────────────────────────────
 function buildFCMMessage(token, title, body, extraData, uid) {
   const strData = Object.fromEntries(
@@ -227,12 +250,15 @@ function buildFCMMessage(token, title, body, extraData, uid) {
 // Enviar un mensaje FCM (REST API v1)
 // ─────────────────────────────────────────────────────────────────────────
 async function sendOneFCM(token, title, body, data, uid, accessToken) {
-  const url  = `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`;
-  const resp = await fetch(url, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-    body:    JSON.stringify({ message: buildFCMMessage(token, title, body, data, uid) }),
-  });
+  const projectId = _projectId || process.env.FIREBASE_PROJECT_ID || 'gestion-de-personas-ce003';
+  const resp      = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+    {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body:    JSON.stringify({ message: buildFCMMessage(token, title, body, data, uid) }),
+    }
+  );
   return resp.json();
 }
 
@@ -240,27 +266,28 @@ async function sendOneFCM(token, title, body, data, uid, accessToken) {
 // HANDLER PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────
 module.exports = async (req, res) => {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST')   return res.status(405).json({ error: 'Método no permitido' });
 
-  // ── 1. Verificar variables de entorno ──
-  const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env;
-  if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+  // ── 1. Verificar que hay alguna configuración de credenciales ──
+  const hasB64    = !!process.env.FIREBASE_SERVICE_ACCOUNT_B64;
+  const hasLegacy = !!(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
+  if (!hasB64 && !hasLegacy) {
     return res.status(503).json({
       success: false,
-      error:   'Variables de entorno faltantes. Configura FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en Vercel → Settings → Environment Variables.',
+      error:   'Configura FIREBASE_SERVICE_ACCOUNT_B64 en Vercel → Settings → Environment Variables.',
+      hint:    'Comando: node -e "process.stdout.write(require(\'fs\').readFileSync(\'SERVICE_ACCOUNT.json\').toString(\'base64\'))"',
     });
   }
 
-  // ── 2. Autenticar al llamador ──
+  // ── 2. Verificar Firebase ID token del llamador ──
   const authHeader = req.headers.authorization || '';
   const idToken    = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!idToken) {
-    return res.status(401).json({ error: 'Falta header Authorization: Bearer <firebase-id-token>' });
+    return res.status(401).json({ error: 'Falta header: Authorization: Bearer <firebase-id-token>' });
   }
 
   let caller;
@@ -287,7 +314,7 @@ module.exports = async (req, res) => {
     accessToken = await getGoogleAccessToken();
   } catch (e) {
     console.error('[API] Auth error:', e.message);
-    return res.status(500).json({ success: false, error: 'Error de autenticación con Google: ' + e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 
   // ── 6. Leer tokens FCM del destinatario ──
@@ -302,7 +329,7 @@ module.exports = async (req, res) => {
   if (!tokens.length) {
     return res.status(200).json({
       success: false,
-      reason:  'Sin tokens FCM: el usuario debe activar las notificaciones en la app (Panel → Notificaciones Push → Activar).',
+      reason:  'Sin tokens FCM: activa las notificaciones en la app primero.',
     });
   }
 
