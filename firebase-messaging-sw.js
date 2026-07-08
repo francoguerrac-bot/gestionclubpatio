@@ -1,7 +1,8 @@
-// firebase-messaging-sw.js — v4 (alta prioridad + log Firestore)
+// firebase-messaging-sw.js — v5 (deep links + postMessage)
 // Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION    = '4.0.0';
+const SW_VERSION    = '5.0.0';
+const APP_ORIGIN    = 'https://gestionclubpatio.vercel.app';
 const PROJECT_ID    = 'gestion-de-personas-ce003';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
@@ -90,6 +91,16 @@ messaging.onBackgroundMessage(async function(payload) {
   const link  = data.link   || payload.fcmOptions?.link || 'https://gestionclubpatio.vercel.app';
   const tag   = data.tag    || `gpc-${Date.now()}`;
 
+  // Etiqueta del botón acción según tipo
+  const notifType = data.type || '';
+  let openLabel = '🔔 Abrir app';
+  if (data.taskId || notifType.startsWith('task') || notifType.startsWith('sprint')) openLabel = '📋 Ver tarea';
+  else if (notifType.startsWith('permission')) openLabel = '🔑 Ver permiso';
+  else if (notifType.startsWith('kanban'))     openLabel = '📌 Ver tablero';
+  else if (notifType === 'proposal_submitted') openLabel = '💡 Ver propuesta';
+  else if (notifType === 'tienda_toggle' || notifType === 'emprendedor_added') openLabel = '🏪 Ver tienda';
+  else if (notifType === 'role_assigned')      openLabel = '🎉 Ingresar';
+
   const options = {
     body,
     icon,
@@ -97,12 +108,12 @@ messaging.onBackgroundMessage(async function(payload) {
     tag,
     data:               { url: link, ...data },
     vibrate:            [200, 100, 200],
-    requireInteraction: false,
+    requireInteraction: notifType.startsWith('permission') || notifType === 'task_assigned',
     silent:             false,
     timestamp:          Date.now(),
     actions: [
-      { action: 'open',  title: '📋 Abrir app' },
-      { action: 'close', title: 'Ignorar'       },
+      { action: 'open',  title: openLabel },
+      { action: 'close', title: '✕ Ignorar' },
     ],
   };
 
@@ -137,19 +148,35 @@ self.addEventListener('push', async function(event) {
 
 // ── Click en la notificación ──────────────────────────────────────────
 self.addEventListener('notificationclick', function(event) {
-  const action = event.action;
-  const url    = event.notification.data?.url || 'https://gestionclubpatio.vercel.app';
-  console.log('[FCM-SW] notificationclick — action:', action, '| url:', url);
+  const action  = event.action;
+  const notifData = event.notification.data || {};
+  const deepUrl   = notifData.gpc_link || notifData.url || APP_ORIGIN;
 
+  console.log('[FCM-SW] notificationclick — action:', action, '| deepUrl:', deepUrl, '| type:', notifData.type);
   event.notification.close();
   if (action === 'close') return;
 
   event.waitUntil(
-    clients.matchAll({ type:'window', includeUncontrolled:true }).then(list => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       const existing = list.find(c => c.url.includes('gestionclubpatio.vercel.app') && 'focus' in c);
-      if (existing) { console.log('[FCM-SW] Enfocando ventana existente'); return existing.focus(); }
-      console.log('[FCM-SW] Abriendo nueva ventana:', url);
-      return clients.openWindow ? clients.openWindow(url) : null;
+
+      if (existing) {
+        // App ya abierta: enfocar Y enviar mensaje de navegación
+        console.log('[FCM-SW] App abierta — postMessage GPC_NAVIGATE + focus');
+        existing.postMessage({
+          type:     'GPC_NAVIGATE',
+          notifType: notifData.type || '',
+          taskId:   notifData.taskId   || '',
+          reqId:    notifData.reqId    || '',
+          cardId:   notifData.cardId   || '',
+          deepUrl,
+        });
+        return existing.focus();
+      }
+
+      // App cerrada: abrir con deep link URL
+      console.log('[FCM-SW] App cerrada — openWindow:', deepUrl);
+      return clients.openWindow ? clients.openWindow(deepUrl) : null;
     })
   );
 });

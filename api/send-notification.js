@@ -214,11 +214,49 @@ async function getFCMTokensForUser(uid, accessToken) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Generar URL de deep link según el tipo de notificación
+// ─────────────────────────────────────────────────────────────────────────
+function buildDeepLink(extraData) {
+  const type = extraData.type || '';
+  // Tareas: abrir directo a la tarea específica
+  if (extraData.taskId) {
+    return `${APP_URL}?gpc=task&id=${extraData.taskId}`;
+  }
+  // Permisos familiares
+  if (['permission_requested','permission_approved','permission_rejected','permission_needs_signature'].includes(type)) {
+    return `${APP_URL}?gpc=permisos`;
+  }
+  // Kanban
+  if (['kanban_approved','kanban_rejected','kanban_approval_needed'].includes(type)) {
+    return `${APP_URL}?gpc=club`;
+  }
+  // Propuestas
+  if (type === 'proposal_submitted') return `${APP_URL}?gpc=familia`;
+  // Tienda
+  if (type === 'tienda_toggle' || type === 'emprendedor_added') return `${APP_URL}?gpc=tienda`;
+  // Bazar
+  if (type === 'bazar_checklist') return `${APP_URL}?gpc=bazar`;
+  return APP_URL;
+}
+
+// Texto de acción según tipo
+function buildActionLabel(extraData) {
+  const type = extraData.type || '';
+  if (extraData.taskId || type.startsWith('task') || type.startsWith('sprint')) return '📋 Ver tarea';
+  if (type.startsWith('permission')) return '🔑 Ver permiso';
+  if (type.startsWith('kanban'))    return '📌 Ver tablero';
+  if (type === 'proposal_submitted') return '💡 Ver propuesta';
+  if (type.startsWith('tienda') || type === 'emprendedor_added') return '🏪 Ver tienda';
+  return '🔔 Abrir app';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Construir mensaje FCM
 // ─────────────────────────────────────────────────────────────────────────
 function buildFCMMessage(token, title, body, extraData, uid) {
+  const deepLink = buildDeepLink(extraData);
   const strData = Object.fromEntries(
-    Object.entries({ ...extraData, userId: uid, link: APP_URL })
+    Object.entries({ ...extraData, userId: uid, link: deepLink, gpc_link: deepLink })
       .map(([k, v]) => [k, String(v)])
   );
   return {
@@ -239,7 +277,7 @@ function buildFCMMessage(token, title, body, extraData, uid) {
     webpush: {
       headers: { Urgency: 'high', TTL: '86400' },
       notification: { title, body, icon: '/assets/Logo2.png', badge: '/assets/Logo2.png', vibrate: [200, 100, 200] },
-      fcmOptions: { link: APP_URL },
+      fcmOptions: { link: deepLink },
       data: strData,
     },
     data: strData,

@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-07-v12';
+  var B='2026-07-07-v13';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -3527,6 +3527,7 @@ function mkCard(t,today){
   const freqTag=finfo.label?`<span class="tag tag-freq">${finfo.label}</span>`:'';
   const ownerTag=t.owner?`<span class="tag tag-owner">👤 ${t.owner}</span>`:'';
   card.className=`task-card ${ctx.cardClass}${t.done?' done':''}${isOv&&!t.done?' overdue':''}`;
+  card.id = 'task-' + t.id;
   card.innerHTML=`
     <div class="task-check ${t.done?'checked':''}" onclick="toggleDone('${t.id}')">${t.done?'✓':''}</div>
     <div class="task-body">
@@ -8321,6 +8322,12 @@ function initApp(cloudData, profile){
   window._hideLoading&&window._hideLoading();
   // Onboarding post-login: banner PWA + solicitud de notificaciones
   setTimeout(renderOnboarding, 800);
+  // Deep link pendiente (notificación → app cerrada → re-abierta)
+  if (window._pendingDeepLink) {
+    const dl = window._pendingDeepLink;
+    window._pendingDeepLink = null;
+    setTimeout(() => window._handleNotifDeepLink(dl), 1000);
+  }
 }
 window.initApp = initApp;
 // bootApp llama a initApp (el head lo define primero como proxy)
@@ -9558,11 +9565,15 @@ async function requestNotificationPermission(){
     checkPermissionStatus('auto');
     if(window.toast) window.toast('✅ Notificaciones push activadas');
 
-    // Escuchar mensajes en primer plano
+    // Escuchar mensajes en primer plano — mostrar banner clicable
     onMessage(getMsg(), (payload) => {
       console.log('[FCM] Mensaje en foreground:', payload);
-      const { title, body } = payload.notification || {};
-      if(window.toast) window.toast(`🔔 ${title||''}: ${body||''}`);
+      const notif  = payload.notification || {};
+      const data   = payload.data         || {};
+      const title  = notif.title || data.title || '🔔 Nueva notificación';
+      const body   = notif.body  || data.body  || '';
+      // Banner flotante con botón de acción
+      _showForegroundBanner(title, body, data);
     });
 
   } catch(err) {
@@ -9581,6 +9592,101 @@ async function requestNotificationPermission(){
 window.requestNotificationPermission = requestNotificationPermission;
 
 // ────────────────────────────────────────────
+// ── GPC Deep Link Handler ────────────────────────────────────────────────
+// Mapea tipo de notificación → acción de navegación en la app
+window._handleNotifDeepLink = function(msg) {
+  const type   = msg.notifType || msg.type || '';
+  const taskId = msg.taskId || '';
+  const url    = msg.deepUrl || '';
+
+  // Extraer parámetros de URL si viene por apertura de ventana
+  const params = new URLSearchParams(url.split('?')[1] || '');
+  const gpc    = params.get('gpc') || '';
+  const urlId  = params.get('id')  || '';
+
+  const finalTaskId = taskId || (gpc === 'task' ? urlId : '');
+
+  if (finalTaskId || gpc === 'task' || type.startsWith('task') || type.startsWith('sprint')) {
+    if(window.showPage) window.showPage('tareas');
+    if(finalTaskId) setTimeout(() => window._highlightTask(finalTaskId), 600);
+    return;
+  }
+  if (gpc === 'permisos' || type.startsWith('permission')) {
+    if(window.showPage) window.showPage('permisos');
+    return;
+  }
+  if (gpc === 'club' || type.startsWith('kanban')) {
+    if(window.showPage) window.showPage('club');
+    return;
+  }
+  if (gpc === 'familia' || type === 'proposal_submitted') {
+    if(window.showPage) window.showPage('familia');
+    return;
+  }
+  if (gpc === 'tienda' || type === 'tienda_toggle' || type === 'emprendedor_added') {
+    if(window.showPage) window.showPage('tienda');
+    return;
+  }
+  if (gpc === 'bazar') {
+    if(window.showPage) window.showPage('bazar');
+    return;
+  }
+};
+
+// Resalta y hace scroll a una tarjeta de tarea por su ID
+window._highlightTask = function(taskId) {
+  const el = document.getElementById('task-' + taskId);
+  if (!el) {
+    // Si la tarea no está visible puede estar filtrada: limpiar filtros y reintentar
+    if(window.filterTasks) filterTasks('todo');
+    setTimeout(() => {
+      const el2 = document.getElementById('task-' + taskId);
+      if (!el2) return;
+      el2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      _pulseTask(el2);
+    }, 400);
+    return;
+  }
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  _pulseTask(el);
+};
+
+function _pulseTask(el) {
+  el.style.transition = 'box-shadow 0.3s, outline 0.3s';
+  el.style.outline    = '2.5px solid #3B82F6';
+  el.style.boxShadow  = '0 0 0 5px rgba(59,130,246,0.2)';
+  setTimeout(() => { el.style.outline = ''; el.style.boxShadow = ''; }, 2800);
+}
+
+// Leer ?gpc= de la URL al cargar (app cerrada → abierta desde notificación)
+window._pendingDeepLink = null;
+(function _readDeepLinkUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const gpc  = params.get('gpc');
+  const id   = params.get('id');
+  if (!gpc) return;
+  // Limpiar URL sin recargar
+  try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+  window._pendingDeepLink = { gpc, id };
+  console.log('[GPC] Deep link al arranque:', gpc, id);
+})();
+
+// Listener de mensajes desde el SW (app abierta — notificationclick)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(event) {
+    const msg = event.data;
+    if (!msg || msg.type !== 'GPC_NAVIGATE') return;
+    console.log('[GPC] SW postMessage recibido:', msg);
+    // Si todavía no hay auth, poner en cola
+    if (!window.currentProfile || !window.currentProfile.uid) {
+      window._pendingDeepLink = msg;
+      return;
+    }
+    window._handleNotifDeepLink(msg);
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────
+
 // ── GPC Notification Helpers ─────────────────────────────────────────────
 // _notifyByRole(roles[], title, body, data)
 //   Envía push a todos los orgMembers con rol en el array. Fire-and-forget.
@@ -9635,6 +9741,73 @@ window._checkDailyDeadlines = function() {
       );
     }
   }
+};
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── Banner flotante para notificaciones en foreground ────────────────────
+// Muestra un banner en la esquina superior con título, cuerpo y botón de acción.
+window._showForegroundBanner = function(title, body, data) {
+  // Eliminar banner anterior si existe
+  const old = document.getElementById('gpc-notif-banner');
+  if (old) old.remove();
+
+  const type = data.type || '';
+  let actionLabel = '→ Ver';
+  if (data.taskId || type.startsWith('task') || type.startsWith('sprint')) actionLabel = '→ Ver tarea';
+  else if (type.startsWith('permission')) actionLabel = '→ Ver permiso';
+  else if (type.startsWith('kanban'))     actionLabel = '→ Ver tablero';
+  else if (type === 'proposal_submitted') actionLabel = '→ Ver propuesta';
+  else if (type === 'tienda_toggle' || type === 'emprendedor_added') actionLabel = '→ Ver tienda';
+
+  const banner = document.createElement('div');
+  banner.id = 'gpc-notif-banner';
+  banner.style.cssText = [
+    'position:fixed','top:14px','right:14px','z-index:9999',
+    'background:#1E293B','border:1px solid #334155','border-radius:12px',
+    'padding:12px 14px','max-width:320px','width:calc(100vw - 28px)',
+    'box-shadow:0 8px 32px rgba(0,0,0,.45)','cursor:pointer',
+    'animation:gpc-slide-in .3s ease','font-family:system-ui,sans-serif',
+  ].join(';');
+
+  banner.innerHTML = `
+    <style>
+      @keyframes gpc-slide-in{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}
+      @keyframes gpc-slide-out{to{opacity:0;transform:translateY(-18px)}}
+    </style>
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:20px;line-height:1">🔔</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#F1F5F9;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+        <div style="font-size:11.5px;color:#94A3B8;line-height:1.4">${body.slice(0,100)}</div>
+      </div>
+      <button onclick="document.getElementById('gpc-notif-banner').remove()" style="background:none;border:none;color:#64748B;font-size:18px;cursor:pointer;line-height:1;padding:0 2px">×</button>
+    </div>
+    <div style="margin-top:8px;display:flex;justify-content:flex-end">
+      <button id="gpc-notif-action" style="background:#3B82F6;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">${actionLabel}</button>
+    </div>
+  `;
+
+  document.body.appendChild(banner);
+
+  // Clic en el botón de acción → navegar
+  banner.querySelector('#gpc-notif-action').onclick = function(e) {
+    e.stopPropagation();
+    banner.remove();
+    window._handleNotifDeepLink({ notifType: type, ...data });
+  };
+
+  // Clic en el banner completo → navegar
+  banner.onclick = function() {
+    banner.remove();
+    window._handleNotifDeepLink({ notifType: type, ...data });
+  };
+
+  // Auto-cerrar en 7 segundos
+  setTimeout(() => {
+    if (!document.getElementById('gpc-notif-banner')) return;
+    banner.style.animation = 'gpc-slide-out .3s ease forwards';
+    setTimeout(() => banner.remove(), 300);
+  }, 7000);
 };
 // ─────────────────────────────────────────────────────────────────────────
 
