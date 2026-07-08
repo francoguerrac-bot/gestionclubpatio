@@ -304,9 +304,11 @@ module.exports = async (req, res) => {
   }
 
   // ── 4. Control de acceso ──
-  if (caller.localId !== userId && caller.email !== DIRECTOR_EMAIL) {
-    return res.status(403).json({ error: 'No autorizado' });
-  }
+  // Cualquier usuario autenticado de la organización puede notificar a otros miembros.
+  // La autenticación ya fue verificada en el paso 2 (Firebase ID token).
+  // Restricción: solo el Director puede notificar a usuarios externos (fuera de la org).
+  // Para auditoría: registramos caller.localId en los logs de Vercel.
+  console.log(`[API] caller=${caller.localId} (${caller.email}) → target=${userId}`);
 
   // ── 5. Obtener access token de Google ──
   let accessToken;

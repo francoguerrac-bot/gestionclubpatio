@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-07-v11';
+  var B='2026-07-07-v12';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -3075,6 +3075,14 @@ function renderCtPendingAlert(){
   const el = document.getElementById('ctPendingAlert'); if(!el) return;
   const pendUsers = (window.orgMembers||[]).filter(m=>m.role==='pending');
   if(!pendUsers.length){ el.innerHTML=''; return; }
+  // Push: notificar al Director una vez al día
+  if(pendUsers.length && window.sendNotificationToUser && currentProfile && currentProfile.uid){
+    const pendKey = 'gpc_pending_notif_'+new Date().toISOString().slice(0,10);
+    if(!localStorage.getItem(pendKey)){
+      localStorage.setItem(pendKey,'1');
+      window.sendNotificationToUser(currentProfile.uid, '👤 '+(pendUsers.length > 1 ? pendUsers.length+' cuentas pendientes' : 'Cuenta pendiente de rol'), (pendUsers.map(m=>m.displayName||m.email)).join(', ')+' esperan activación.', {type:'pending_users', count:String(pendUsers.length)});
+    }
+  }
   el.innerHTML = `<div class="ct-pending-box">
     <div class="ct-pending-title">⏳ ${pendUsers.length} cuenta${pendUsers.length>1?'s':''} esperando activación</div>
     ${pendUsers.map(m=>`
@@ -3286,11 +3294,33 @@ function addTask(){
   saveTasks(); input.value=''; ownerSel.value=''; input.focus();
   renderTasks();
   toast(ownerVal?'✅ Asignada a '+ownerVal:'✅ Tarea anotada');
+  // Push: notificar al asignado
+  if (ownerVal && window._notifyByName) {
+    const prio = document.getElementById('metaPrio').value;
+    const dead = document.getElementById('metaDate').value;
+    const bodyTxt = text.slice(0,80) + (dead ? ' · vence '+dead : '');
+    window._notifyByName(ownerVal, '📋 Nueva tarea asignada', bodyTxt, {type:'task_assigned'});
+  }
+  // Push: tarea p1 sin asignar → avisar al Director
+  if (!ownerVal && document.getElementById('metaPrio').value === 'p1' && currentRole !== 'director' && window._notifyByRole) {
+    window._notifyByRole(['director'], '📌 Tarea urgente sin asignar', '"'+text.slice(0,60)+'" es URGENTE y no tiene responsable.', {type:'task_unassigned_urgent'});
+  }
 }
 function toggleDone(id){
   const t=tasks.find(t=>t.id===id);
   if(!t)return; t.done=!t.done; saveTasks(); renderTasks();
-  if(t.done) toast('✓ '+t.text.slice(0,28)+(t.text.length>28?'…':''));
+  if(t.done){
+    toast('✓ '+t.text.slice(0,28)+(t.text.length>28?'…':''));
+    // Push: notificar al Director (solo si no es el Director quien lo marca)
+    if(currentRole !== 'director' && window._notifyByRole){
+      const who = currentProfile.displayName || currentRole;
+      window._notifyByRole(['director'], '✅ Tarea completada', who+': "'+t.text.slice(0,60)+'"', {type:'task_done'});
+    }
+    // Push: si todas las tareas del sprint están completas → avisar Director
+    if(sprintTasks.length && sprintTasks.every(s=>s.done) && window._notifyByRole){
+      window._notifyByRole(['director'], '🏆 ¡Sprint completado!', 'Todas las tareas del sprint están listas.', {type:'sprint_complete'});
+    }
+  }
 }
 function deleteTask(id){
   tasks=tasks.filter(t=>t.id!==id); saveTasks(); renderTasks(); toast('🗑️ Eliminada');
@@ -3543,6 +3573,10 @@ function addToSprint(){
   const next=pending[0];
   sprintTasks.push({id:uid(),text:next.text,owner:'Carolina',prio:next.prio,done:false});
   saveSprint(); renderSprint(); toast('⚡ Agregada al sprint');
+  // Push: notificar al asignado de la tarea original
+  if(next.owner && next.owner !== (currentProfile.displayName||'') && window._notifyByName){
+    window._notifyByName(next.owner, '⚡ Tarea en tu sprint', '"'+next.text.slice(0,70)+'" fue añadida a tu sprint de esta semana.', {type:'sprint_added'});
+  }
 }
 
 // ═══════════════ MATRIX ═══════════════
@@ -4429,6 +4463,12 @@ function saveMoodHistory(){
   saveMoodHistoryStore();
   renderMoodHistory();
   toast('📊 Evaluación guardada en historial');
+  // Push: si el score es bajo (<40%) notificar al Director y Mamá
+  if(window._lastMoodProfile && window._lastMoodProfile.pct < 40 && window._notifyByRole){
+    const who = currentProfile.displayName || 'Miembro del equipo';
+    const score = window._lastMoodProfile.pct || 0;
+    window._notifyByRole(['director','mama'], '💛 Estado emocional bajo — '+who, who+' registró score de '+score+'%: '+window._lastMoodProfile.name+'. Considera hacer un check-in.', {type:'mood_low', score: String(score)});
+  }
 }
 
 function resetMood(){
@@ -5847,6 +5887,11 @@ function addEmprendedor(){
   window.cloudSet&&window.cloudSet('emprendedores',emprendedores);
   renderEmpTable(); renderMesChecklist();
   toast('🏪 Emprendedor/a agregado');
+  // Push: notificar al Director y Coord. Tienda
+  if(window._notifyByRole){
+    const targetRoles = ['director','coordinadora_tienda'].filter(r => r !== currentRole);
+    if(targetRoles.length) window._notifyByRole(targetRoles, '🏪 Nuevo emprendedor registrado', nombre+(categoria?' ('+categoria+')':'')+' fue agregado al sistema de tienda.', {type:'emprendedor_added'});
+  }
 }
 window.addEmprendedor=addEmprendedor;
 
@@ -5929,6 +5974,11 @@ function toggleTienda(){
   renderVendedorPanel();
   toast(tiendaAbierta?'🏪 Tienda abierta':'✅ Tienda cerrada');
   writeAuditEntry(event,{emoji:tiendaAbierta?'🏪':'🔴'});
+  // Push: notificar al Director (solo si no es él mismo quien lo hace)
+  if(currentRole !== 'director' && window._notifyByRole){
+    const who = currentProfile.displayName || currentRole;
+    window._notifyByRole(['director'], tiendaAbierta ? '🏪 Tienda abierta' : '🔴 Tienda cerrada', who+' cambió el estado de la tienda.', {type:'tienda_toggle', state: tiendaAbierta ? 'open' : 'closed'});
+  }
 }
 window.toggleTienda=toggleTienda;
 
@@ -6149,10 +6199,16 @@ function editKpi(key){
   if(newVal===null)return;
   const n=parseInt(newVal);
   if(isNaN(n)||n<0)return;
+  const prevVal = k.value || 0;
   window.clubKPIs[key]={...k,value:n};
   window.cloudSet&&window.cloudSet('kpis',window.clubKPIs);
   renderKpiDashboard();
   toast('📊 KPI actualizado');
+  // Push: meta alcanzada (cruza el target hacia arriba)
+  const target = parseInt(k.target) || 0;
+  if(target > 0 && n >= target && prevVal < target && window.sendNotificationToUser && currentProfile.uid){
+    window.sendNotificationToUser(currentProfile.uid, '🎯 ¡Meta KPI alcanzada!', '"'+k.label+'" llegó a '+n+' (meta: '+target+').', {type:'kpi_goal_reached', key});
+  }
 }
 window.editKpi=editKpi;
 
@@ -6252,6 +6308,11 @@ function sendToApproval(cardId){
   renderKanbanBoard(containerId, card.boardKey);
   toast('📤 Enviado al Director para aprobación');
   writeAuditEntry('kanban_sent_approval',{emoji:'📤',boardKey:card.boardKey,title:card.title});
+  // Push: notificar al Director
+  if(window._notifyByRole){
+    const who = currentProfile.displayName || currentRole;
+    window._notifyByRole(['director'], '👁️ Tarjeta pendiente de revisión', who+': "'+card.title.slice(0,60)+'" en tablero '+card.boardKey+'.', {type:'kanban_approval_needed', cardId});
+  }
 }
 window.sendToApproval=sendToApproval;
 
@@ -6630,6 +6691,11 @@ function submitHijoMood(){
   const mood=[entry,...(Array.isArray(window.moodHistory)?window.moodHistory:[])].slice(0,12);
   window.cloudSet&&window.cloudSet('mood',mood);
   writeAuditEntry('hijo_mood_checkin',{emoji:resp.emoji,profileKey:hmoodAnswers[0]});
+  // Push: si el ánimo es "mal" o "estresado" → notificar Director y Mamá
+  if(['mal','estresado'].includes(hmoodAnswers[0]) && window._notifyByRole){
+    const hijoName = currentProfile.displayName || (ROLES[currentRole]||{}).label || 'Tu hijo/a';
+    window._notifyByRole(['director','mama'], '💛 Check-in emocional: '+hijoName, hijoName+' reportó: "'+hmoodAnswers[0]+'". Puede necesitar apoyo hoy.', {type:'hijo_mood_alert', mood:hmoodAnswers[0]});
+  }
 }
 function closeHijoMood(){
   localStorage.setItem(HMOOD_WEEK_KEY(),'1');
@@ -6931,6 +6997,11 @@ function submitProposal(){
   renderMyProposals();
   toast('💡 Propuesta enviada al Director');
   writeAuditEntry&&writeAuditEntry('proposal_submitted',{emoji:'💡',titulo});
+  // Push: notificar al Director
+  if(window._notifyByRole){
+    const who = currentProfile.displayName || currentRole;
+    window._notifyByRole(['director'], '💡 Nueva propuesta recibida', who+': "'+titulo.slice(0,60)+'"'+(modulo?' ['+modulo+']':''), {type:'proposal_submitted'});
+  }
 }
 window.submitProposal=submitProposal;
 
@@ -6994,6 +7065,10 @@ async function submitPermissionRequest(){
     s.style.display='block'; s.textContent='✅ Solicitud enviada. Mamá y Papá recibirán la notificación.';
     toast('🔑 Permiso solicitado — esperando firmas');
     writeAuditEntry&&writeAuditEntry('permission_requested',{emoji:'🔑',motivo,fecha});
+    // Push: notificar Director y Mamá
+    if(window._notifyByRole){
+      window._notifyByRole(['director','mama'], '🔑 Permiso solicitado', req.requesterName+': "'+motivo.slice(0,50)+'" el '+fecha, {type:'permission_requested', reqId:req.id});
+    }
     setTimeout(()=>{ closePermissionModal(); renderMyPermissions(); },2500);
   }catch(e){
     const err=document.getElementById('permError');err.style.display='block';err.textContent='Error: '+e.message;
@@ -7088,6 +7163,14 @@ async function approvePermission(reqId){
     });
     toast(p.status==='approved'?'✅ ¡APROBADO! Ambas firmas completas.':'✅ Firma registrada. Falta la otra.');
     writeAuditEntry&&writeAuditEntry('permission_approved',{emoji:'✅',reqId,role:currentRole,status:p.status});
+    // Push: si ambas firmas → notificar al hijo. Si solo una → notificar al otro padre.
+    if(p.status==='approved' && p.requesterId && window.sendNotificationToUser){
+      window.sendNotificationToUser(p.requesterId, '✅ ¡Permiso aprobado!', '¡Tu permiso para "'+p.motivo+'" el '+p.fecha+' fue aprobado por Mamá y Papá!', {type:'permission_approved', reqId});
+    } else if(p.status !== 'approved' && window._notifyByRole){
+      const otherRole = isMama ? 'director' : 'mama';
+      const who = isMama ? 'Mamá' : 'Papá';
+      window._notifyByRole([otherRole], '✍️ Permiso: falta tu firma', who+' firmó "'+p.motivo+'". Falta tu aprobación.', {type:'permission_needs_signature', reqId});
+    }
     renderPermissionsCenter();
   }catch(e){toast('⚠️ Error al guardar: '+e.message);}
 }
@@ -7101,6 +7184,10 @@ async function rejectPermission(reqId){
     await window.updatePermissionRequest(reqId,{status:'rejected',rejectedBy:currentRole,rejectedAt:p.rejectedAt,updatedAt:new Date().toISOString()});
     toast('❌ Permiso rechazado.');
     writeAuditEntry&&writeAuditEntry('permission_rejected',{emoji:'❌',reqId,role:currentRole});
+    // Push: notificar al hijo que lo solicitó
+    if(p.requesterId && window.sendNotificationToUser){
+      window.sendNotificationToUser(p.requesterId, '❌ Permiso rechazado', 'Tu solicitud para "'+p.motivo+'" fue rechazada. Habla con tu familia.', {type:'permission_rejected', reqId});
+    }
     renderPermissionsCenter();
   }catch(e){toast('⚠️ Error: '+e.message);}
 }
@@ -8191,6 +8278,8 @@ function initApp(cloudData, profile){
   applyCloudData(cloudData||{});
   init();
   try{ checkDeadlines(); }catch(e){}
+  // Push deadlines (delay para que Firebase auth esté lista)
+  setTimeout(()=>{ try{ window._checkDailyDeadlines&&window._checkDailyDeadlines(); }catch(e){} }, 4000);
   var role = currentRole;
   mountRoleUI(role, safeProfile);
   if(role !== 'pending'){
@@ -8553,6 +8642,16 @@ window.assignRoleDirect = async function(uid, role){
     document.getElementById('userMgmtDrawer').style.display='none';
     if(window.toast) window.toast('✅ Rol asignado correctamente');
     window.writeAuditEntry&&window.writeAuditEntry('role_assigned',{emoji:'🔑',targetUid:uid,role});
+    // Push: bienvenida al nuevo miembro
+    if(window.sendNotificationToUser){
+      const rc2 = (window.ROLES||{})[role]||{};
+      window.sendNotificationToUser(uid, '🎉 ¡Bienvenido/a al equipo!', 'Tu rol es '+rc2.label+'. Ya puedes acceder al sistema Patio Curauma.', {type:'role_assigned', role});
+    }
+    // Push: notificar al Director si hay más usuarios pendientes
+    const stillPending = (window.orgMembers||[]).filter(m => m && m.role === 'pending' && m.uid !== uid);
+    if(stillPending.length > 0 && window.sendNotificationToUser && currentProfile.uid){
+      window.sendNotificationToUser(currentProfile.uid, '👤 '+stillPending.length+' cuenta(s) pendientes', stillPending.length+' usuario(s) aún sin rol asignado.', {type:'pending_users', count: String(stillPending.length)});
+    }
   }catch(e){ if(window.toast)window.toast('⚠️ Error al asignar rol'); console.error(e); }
 };
 
@@ -8577,6 +8676,15 @@ window.dirApproveCard = async function(cardId, ownerUid, approved, note=''){
     await window.loadOrgData();
     if(window.toast) window.toast(approved ? '✅ Tarjeta aprobada' : '✗ Tarjeta rechazada');
     window.writeAuditEntry&&window.writeAuditEntry('kanban_approval',{emoji:approved?'✅':'✗',cardId,approved,ownerUid});
+    // Push: notificar al propietario de la tarjeta
+    if(window.sendNotificationToUser && ownerUid){
+      const cardTitle = (card.title||'').slice(0,60);
+      if(approved){
+        window.sendNotificationToUser(ownerUid, '✅ Tarjeta Kanban aprobada', '"'+cardTitle+'" fue aprobada por el Director.', {type:'kanban_approved', cardId});
+      } else {
+        window.sendNotificationToUser(ownerUid, '🔄 Tarjeta devuelta para revisión', '"'+cardTitle+'": '+(note||'Revisa el feedback del Director.'), {type:'kanban_rejected', cardId});
+      }
+    }
   }catch(e){ console.error('dirApproveCard:',e); if(window.toast) window.toast('⚠️ Error al procesar aprobación'); }
 };
 
@@ -9473,6 +9581,63 @@ async function requestNotificationPermission(){
 window.requestNotificationPermission = requestNotificationPermission;
 
 // ────────────────────────────────────────────
+// ── GPC Notification Helpers ─────────────────────────────────────────────
+// _notifyByRole(roles[], title, body, data)
+//   Envía push a todos los orgMembers con rol en el array. Fire-and-forget.
+window._notifyByRole = async function(roles, title, body, data={}) {
+  if (!window.sendNotificationToUser) return;
+  const members = (window.orgMembers || []).filter(m => m && m.uid && roles.includes(m.role));
+  await Promise.allSettled(members.map(m =>
+    window.sendNotificationToUser(m.uid, title, body, data)
+  ));
+};
+
+// _notifyByName(displayName, title, body, data)
+//   Envía push al miembro que tenga ese displayName en orgMembers.
+window._notifyByName = async function(name, title, body, data={}) {
+  if (!name || !window.sendNotificationToUser) return;
+  const member = (window.orgMembers || []).find(m => m && m.displayName === name && m.uid);
+  if (member) await window.sendNotificationToUser(member.uid, title, body, data);
+};
+
+// _checkDailyDeadlines()
+//   Verifica tareas con deadline=hoy y vencidas. Envía push una vez al día.
+window._checkDailyDeadlines = function() {
+  if (!window.sendNotificationToUser || !window.currentProfile || !window.currentProfile.uid) return;
+  const todayKey = 'gpc_due_push_' + new Date().toISOString().slice(0,10) + '_' + window.currentProfile.uid;
+  if (localStorage.getItem(todayKey)) return;
+  localStorage.setItem(todayKey, '1');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const myTasks = (window.tasks || tasks || []).filter(t => !t.done && t.deadline);
+  const dueToday = myTasks.filter(t => new Date(t.deadline+'T00:00:00').getTime() === today.getTime());
+  const overdue  = myTasks.filter(t => new Date(t.deadline+'T00:00:00') < today);
+  if (dueToday.length) {
+    window.sendNotificationToUser(
+      window.currentProfile.uid,
+      '⚠️ ' + dueToday.length + ' tarea' + (dueToday.length > 1 ? 's vencen' : ' vence') + ' hoy',
+      dueToday.slice(0,3).map(t => t.text.slice(0,28)).join(' · '),
+      { type: 'task_due_today' }
+    );
+  }
+  if (overdue.length) {
+    window.sendNotificationToUser(
+      window.currentProfile.uid,
+      '🚨 ' + overdue.length + ' tarea' + (overdue.length > 1 ? 's vencidas' : ' vencida'),
+      overdue.slice(0,2).map(t => t.text.slice(0,30)).join(' · '),
+      { type: 'task_overdue', count: String(overdue.length) }
+    );
+    if (window.currentRole !== 'director') {
+      window._notifyByRole && window._notifyByRole(
+        ['director'],
+        '🚨 Tareas vencidas — ' + (window.currentProfile.displayName || window.currentRole),
+        overdue.length + ' tarea(s) sin completar.',
+        { type: 'task_overdue_team' }
+      );
+    }
+  }
+};
+// ─────────────────────────────────────────────────────────────────────────
+
 // sendNotificationToUser(userId, title, body)
 // Llama a /api/send-notification (Vercel serverless) con el ID token
 // del usuario actual para autenticación.
