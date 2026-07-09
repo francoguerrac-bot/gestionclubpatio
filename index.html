@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-07-v13';
+  var B='2026-07-09-v14';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -4856,6 +4856,11 @@ function renderNotificationCenter(){
     <div style="margin-top:10px;padding:9px 12px;background:#FEF3C7;border-radius:9px;border-left:3px solid #F59E0B;font-size:11px;color:#78350F;line-height:1.6;">
       <strong>Pasos rápidos:</strong> Toca el ícono 🔒 junto a la URL → Permisos → Notificaciones → Permitir → Recarga la app.
     </div>`:''}
+    ${status==='granted' && (window.currentRole==='director'||window.currentRole==='programador') ?`
+    <button onclick="window.testDirectorNotifications&&window.testDirectorNotifications()"
+      style="margin-top:8px;width:100%;padding:10px;border-radius:10px;border:1.5px solid #BFDBFE;background:#EFF6FF;font-size:12px;font-weight:700;color:#1D4ED8;cursor:pointer;font-family:'Inter',sans-serif;">
+      🧪 Probar todas las notificaciones
+    </button>`:''}
   `;
 }
 window.renderNotificationCenter = renderNotificationCenter;
@@ -9218,8 +9223,13 @@ async function renderOnboarding(){
   // Si ya denegó: no molestar
   if(perm === 'denied') return;
 
-  // Si ya concedió: verificar si tiene token guardado en Firestore
+  // Si ya concedió: registrar foreground handler + verificar token
   if(perm === 'granted'){
+    // BUG FIX: onMessage solo se registra dentro de requestNotificationPermission,
+    // pero si el permiso ya existía de una sesión anterior, nunca se llama.
+    // _initFCMForeground() lo registra una sola vez en cualquier caso.
+    setTimeout(()=>window._initFCMForeground&&window._initFCMForeground(), 500);
+
     const uid = window.currentProfile?.uid;
     if(uid && window.loadUserFCMTokens){
       const tokens = await window.loadUserFCMTokens(uid).catch(()=>[]);
@@ -9565,16 +9575,8 @@ async function requestNotificationPermission(){
     checkPermissionStatus('auto');
     if(window.toast) window.toast('✅ Notificaciones push activadas');
 
-    // Escuchar mensajes en primer plano — mostrar banner clicable
-    onMessage(getMsg(), (payload) => {
-      console.log('[FCM] Mensaje en foreground:', payload);
-      const notif  = payload.notification || {};
-      const data   = payload.data         || {};
-      const title  = notif.title || data.title || '🔔 Nueva notificación';
-      const body   = notif.body  || data.body  || '';
-      // Banner flotante con botón de acción
-      _showForegroundBanner(title, body, data);
-    });
+    // Registrar escucha en foreground (si no fue registrada ya)
+    _initFCMForeground();
 
   } catch(err) {
     console.error('[FCM] ── ERROR en requestNotificationPermission() ──');
@@ -9847,6 +9849,108 @@ window.sendNotificationToUser = async function(userId, title, body, data={}){
     return { success: false, reason: e.message };
   }
 };
+
+// ────────────────────────────────────────────
+// ── Registrar onMessage una sola vez (foreground) ─────────────────────────
+let _fcmForegroundRegistered = false;
+function _initFCMForeground(){
+  if(_fcmForegroundRegistered) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  try{
+    onMessage(getMsg(), (payload) => {
+      console.log('[FCM] Mensaje en foreground:', payload);
+      const notif = payload.notification || {};
+      const data  = payload.data         || {};
+      const title = notif.title || data.title || '🔔 Nueva notificación';
+      const body  = notif.body  || data.body  || '';
+      _showForegroundBanner(title, body, data);
+    });
+    _fcmForegroundRegistered = true;
+    console.log('[FCM] ✅ onMessage foreground registrado');
+  }catch(e){ console.warn('[FCM] onMessage foreground error:', e.message); }
+}
+window._initFCMForeground = _initFCMForeground;
+
+// ── Diagnóstico FCM completo (ejecutar desde consola) ─────────────────────
+window.diagnoseFCM = async function(){
+  console.group('🔍 GPC FCM Diagnostic');
+  const uid = window.currentProfile?.uid || fcmAuth.currentUser?.uid || '(sin uid)';
+  const perm = ('Notification' in window) ? Notification.permission : 'no-support';
+  const swOk = 'serviceWorker' in navigator;
+  console.log('UID:', uid);
+  console.log('Notification.permission:', perm);
+  console.log('ServiceWorker soportado:', swOk);
+  console.log('orgMembers cargados:', (window.orgMembers||[]).length);
+  const director = (window.orgMembers||[]).find(m=>m.role==='director');
+  console.log('Director en orgMembers:', director ? `${director.displayName} (${director.uid})` : 'NO ENCONTRADO');
+
+  if(swOk){
+    const regs = await navigator.serviceWorker.getRegistrations();
+    console.log('SW registrations:', regs.map(r=>r.scope));
+  }
+
+  // Probar la API con un push a mí mismo
+  if(uid && uid !== '(sin uid)' && window.sendNotificationToUser){
+    console.log('Enviando push de prueba a', uid, '...');
+    const r = await window.sendNotificationToUser(uid, '🔍 Test FCM', 'Si ves esto, ¡el sistema funciona!', {type:'test'});
+    console.log('Resultado:', r);
+    if(r.success) console.log('✅ Push enviado correctamente');
+    else console.warn('❌ Push fallido:', r.reason || r.error);
+  }
+  console.groupEnd();
+};
+
+// ── Test masivo: todas las notificaciones posibles para Director ───────────
+window.testDirectorNotifications = async function(){
+  const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
+  if(!uid){ alert('Debes estar autenticado para enviar notificaciones.'); return; }
+  if(!window.sendNotificationToUser){ alert('sendNotificationToUser no disponible aún.'); return; }
+
+  const notifs = [
+    { title:'📋 Nueva tarea asignada', body:'Tarea: "Revisar presupuesto Q3" te fue asignada.',      data:{type:'task_assigned',   taskId:'test-task-001'} },
+    { title:'✅ Tarea completada',      body:'"Diseño banner" fue completada por Valentina.',          data:{type:'task_completed',  taskId:'test-task-002'} },
+    { title:'⏰ Tarea vence hoy',       body:'"Informe mensual" vence hoy. ¡Última oportunidad!',     data:{type:'task_due_today',  taskId:'test-task-003'} },
+    { title:'🚨 Tarea vencida',         body:'"Reporte KPI" lleva 2 días vencida sin completar.',     data:{type:'task_overdue',    taskId:'test-task-004'} },
+    { title:'📌 Tarea urgente P1',      body:'Nueva tarea urgente sin dueño necesita atención.',      data:{type:'task_urgent_unassigned'} },
+    { title:'⚡ Tarea en tu sprint',    body:'"Landing page" fue añadida a tu sprint activo.',        data:{type:'sprint_task_added', taskId:'test-task-005'} },
+    { title:'🏆 ¡Sprint completado!',   body:'¡Todas las tareas del sprint fueron completadas!',      data:{type:'sprint_complete'} },
+    { title:'🔑 Permiso solicitado',    body:'Sebastián solicita permiso para salida el viernes.',    data:{type:'permission_requested', reqId:'req-001'} },
+    { title:'✅ Permiso aprobado',      body:'Tu permiso para "salida el viernes" fue aprobado.',     data:{type:'permission_approved',  reqId:'req-002'} },
+    { title:'❌ Permiso rechazado',     body:'Tu permiso para "fiesta" fue rechazado por Papá.',      data:{type:'permission_rejected',  reqId:'req-003'} },
+    { title:'✍️ Permiso requiere firma',body:'El permiso de Valentina necesita tu firma también.',    data:{type:'permission_needs_signature', reqId:'req-004'} },
+    { title:'📌 Kanban: aprobación',    body:'"Rediseño logo" de Valentina espera tu aprobación.',   data:{type:'kanban_approval_needed', cardId:'card-001'} },
+    { title:'✅ Kanban aprobada',       body:'Tu tarjeta "Rediseño logo" fue aprobada por Director.', data:{type:'kanban_approved',  cardId:'card-002'} },
+    { title:'🔄 Kanban devuelta',       body:'"Propuesta web" fue devuelta con feedback.',            data:{type:'kanban_rejected',  cardId:'card-003'} },
+    { title:'💡 Propuesta enviada',     body:'Nuevo punto en tabla familiar necesita tu voto.',       data:{type:'proposal_submitted'} },
+    { title:'😔 Ánimo bajo en el equipo',body:'El ánimo del equipo bajó al 30%. Considera reunión.',  data:{type:'mood_low'} },
+    { title:'😰 Hijo necesita apoyo',   body:'Sebastián reportó "estresado" en su diario.',           data:{type:'mood_bad_hijo'} },
+    { title:'🏪 Estado tienda cambiado',body:'La tienda fue abierta/cerrada por un miembro.',         data:{type:'tienda_toggle'} },
+    { title:'🛍️ Nuevo emprendedor',    body:'"Papelería Creativa" fue agregado a la tienda.',        data:{type:'emprendedor_added'} },
+    { title:'🎯 Meta KPI alcanzada',    body:'"Ventas mensuales" superó la meta de 100 unidades.',   data:{type:'kpi_goal_reached'} },
+    { title:'👤 Cuenta pendiente',      body:'2 usuarios esperan que les asignes un rol.',            data:{type:'pending_users', count:'2'} },
+    { title:'🎉 ¡Bienvenido al equipo!',body:'Tu rol de Director fue asignado. Ya tienes acceso.',   data:{type:'role_assigned', role:'director'} },
+  ];
+
+  console.log(`[FCM TEST] Enviando ${notifs.length} notificaciones al Director (uid=${uid})...`);
+  if(window.toast) window.toast(`Enviando ${notifs.length} notificaciones de prueba...`);
+
+  let ok = 0, fail = 0;
+  for(let i = 0; i < notifs.length; i++){
+    const n = notifs[i];
+    try{
+      const r = await window.sendNotificationToUser(uid, n.title, n.body, n.data);
+      if(r && r.success){ ok++; console.log(`✅ [${i+1}/${notifs.length}] ${n.title}`); }
+      else{ fail++; console.warn(`❌ [${i+1}/${notifs.length}] ${n.title}:`, r?.reason||r?.error||'sin respuesta'); }
+    }catch(e){ fail++; console.error(`❌ [${i+1}/${notifs.length}] ${n.title}:`, e.message); }
+    // Pequeña pausa entre envíos para no saturar la API
+    await new Promise(res=>setTimeout(res,400));
+  }
+  const msg = `Test completado: ${ok} enviadas, ${fail} fallidas`;
+  console.log(`[FCM TEST] ${msg}`);
+  if(window.toast) window.toast(ok > 0 ? `✅ ${msg}` : `❌ ${msg}`);
+  return { ok, fail, total: notifs.length };
+};
+window.testDirNotifs = window.testDirectorNotifications; // alias corto
 
 // ────────────────────────────────────────────
 // checkPermissionStatus(trigger)
