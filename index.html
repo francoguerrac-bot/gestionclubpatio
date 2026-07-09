@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-09-v14';
+  var B='2026-07-09-v15';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -4857,9 +4857,13 @@ function renderNotificationCenter(){
       <strong>Pasos rápidos:</strong> Toca el ícono 🔒 junto a la URL → Permisos → Notificaciones → Permitir → Recarga la app.
     </div>`:''}
     ${status==='granted' && (window.currentRole==='director'||window.currentRole==='programador') ?`
-    <button onclick="window.testDirectorNotifications&&window.testDirectorNotifications()"
+    <button onclick="window.testPushBackground&&window.testPushBackground(15)"
       style="margin-top:8px;width:100%;padding:10px;border-radius:10px;border:1.5px solid #BFDBFE;background:#EFF6FF;font-size:12px;font-weight:700;color:#1D4ED8;cursor:pointer;font-family:'Inter',sans-serif;">
-      🧪 Probar todas las notificaciones
+      📱 Probar en SO (15s para cerrar la app)
+    </button>
+    <button onclick="window.testDirectorNotifications&&window.testDirectorNotifications()"
+      style="margin-top:6px;width:100%;padding:10px;border-radius:10px;border:1.5px solid #DDD6FE;background:#F5F3FF;font-size:12px;font-weight:700;color:#6D28D9;cursor:pointer;font-family:'Inter',sans-serif;">
+      🧪 Probar todas las notificaciones (22)
     </button>`:''}
   `;
 }
@@ -9857,16 +9861,46 @@ function _initFCMForeground(){
   if(_fcmForegroundRegistered) return;
   if(!('Notification' in window) || Notification.permission !== 'granted') return;
   try{
-    onMessage(getMsg(), (payload) => {
+    onMessage(getMsg(), async (payload) => {
       console.log('[FCM] Mensaje en foreground:', payload);
       const notif = payload.notification || {};
       const data  = payload.data         || {};
       const title = notif.title || data.title || '🔔 Nueva notificación';
       const body  = notif.body  || data.body  || '';
+
+      // 1. Banner en pantalla (feedback inmediato mientras la app está abierta)
       _showForegroundBanner(title, body, data);
+
+      // 2. Notificación del SO via SW — aparece en la bandeja del teléfono
+      //    incluso cuando la app está en primer plano (tab activo)
+      if('serviceWorker' in navigator){
+        try{
+          const reg = await navigator.serviceWorker.ready;
+          const notifType = data.type || '';
+          let openLabel = '🔔 Abrir app';
+          if(data.taskId || notifType.startsWith('task') || notifType.startsWith('sprint')) openLabel = '📋 Ver tarea';
+          else if(notifType.startsWith('permission')) openLabel = '🔑 Ver permiso';
+          else if(notifType.startsWith('kanban'))     openLabel = '📌 Ver tablero';
+          const deepUrl = data.gpc_link || data.link || 'https://gestionclubpatio.vercel.app';
+          await reg.showNotification(title, {
+            body,
+            icon:    '/assets/Logo2.png',
+            badge:   '/assets/Logo2.png',
+            vibrate: [200, 100, 200],
+            tag:     `gpc-fg-${Date.now()}`,
+            requireInteraction: notifType.startsWith('permission') || notifType === 'task_assigned',
+            data:    { ...data, url: deepUrl },
+            actions: [
+              { action: 'open',  title: openLabel },
+              { action: 'close', title: '✕ Ignorar' },
+            ],
+          });
+          console.log('[FCM] ✅ Notificación SO mostrada:', title);
+        }catch(swErr){ console.warn('[FCM] SW showNotification error:', swErr.message); }
+      }
     });
     _fcmForegroundRegistered = true;
-    console.log('[FCM] ✅ onMessage foreground registrado');
+    console.log('[FCM] ✅ onMessage foreground registrado (banner + SO)');
   }catch(e){ console.warn('[FCM] onMessage foreground error:', e.message); }
 }
 window._initFCMForeground = _initFCMForeground;
@@ -9942,8 +9976,8 @@ window.testDirectorNotifications = async function(){
       if(r && r.success){ ok++; console.log(`✅ [${i+1}/${notifs.length}] ${n.title}`); }
       else{ fail++; console.warn(`❌ [${i+1}/${notifs.length}] ${n.title}:`, r?.reason||r?.error||'sin respuesta'); }
     }catch(e){ fail++; console.error(`❌ [${i+1}/${notifs.length}] ${n.title}:`, e.message); }
-    // Pequeña pausa entre envíos para no saturar la API
-    await new Promise(res=>setTimeout(res,400));
+    // 1.5s entre envíos — Android descarta notificaciones en ráfaga rápida
+    await new Promise(res=>setTimeout(res,1500));
   }
   const msg = `Test completado: ${ok} enviadas, ${fail} fallidas`;
   console.log(`[FCM TEST] ${msg}`);
@@ -9951,6 +9985,38 @@ window.testDirectorNotifications = async function(){
   return { ok, fail, total: notifs.length };
 };
 window.testDirNotifs = window.testDirectorNotifications; // alias corto
+
+// ── Test unitario con delay: cierra la app y llega como notificación del SO ──
+window.testPushBackground = async function(delaySec=15){
+  const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
+  if(!uid){ alert('Debes estar autenticado.'); return; }
+  if(!window.sendNotificationToUser){ alert('sendNotificationToUser no disponible aún.'); return; }
+
+  // Cuenta regresiva visible
+  let remaining = delaySec;
+  const interval = setInterval(()=>{
+    remaining--;
+    if(window.toast) window.toast(`⏳ Cierra o minimiza la app... ${remaining}s`);
+    if(remaining <= 0) clearInterval(interval);
+  }, 1000);
+
+  if(window.toast) window.toast(`⏳ Tienes ${delaySec}s para cerrar/minimizar la app. La notificación llegará después.`);
+  console.log(`[FCM TEST BG] Esperando ${delaySec}s antes de enviar...`);
+
+  await new Promise(res=>setTimeout(res, delaySec * 1000));
+  clearInterval(interval);
+
+  const r = await window.sendNotificationToUser(
+    uid,
+    '📋 Test background OK',
+    'Si ves esto en la bandeja del SO, ¡las notificaciones funcionan correctamente!',
+    { type:'task_assigned', taskId:'test-bg-001' }
+  );
+  console.log('[FCM TEST BG] Resultado:', r);
+  if(r?.success) console.log('[FCM TEST BG] ✅ Push enviado — debería aparecer como notificación del sistema');
+  else console.warn('[FCM TEST BG] ❌', r?.reason||r?.error);
+};
+window.testBG = window.testPushBackground; // alias corto
 
 // ────────────────────────────────────────────
 // checkPermissionStatus(trigger)
