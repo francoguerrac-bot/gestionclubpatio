@@ -3344,6 +3344,21 @@ function addTask(){
   renderTasks();
   toast(assignedToName ? '✅ Asignada a ' + assignedToName.split(' ')[0] : '✅ Tarea anotada');
 
+  // Puente legacy→TaskService: escribe en /tasks para que el cron de recordatorios la encuentre.
+  // Solo si hay fecha de vencimiento (sin fecha el cron no dispararía recordatorio).
+  if (dead && window.TaskService) {
+    window.TaskService.addTask({
+      title:          text,
+      assignedToUid:  assignedToUid  || null,
+      assignedToName: assignedToName || '',
+      dueDate:        new Date(dead + 'T12:00:00'),
+      prio,
+      ctx:            document.getElementById('metaCtx').value,
+      done:           false,
+      reminderSent:   false,
+    }).catch(e => console.warn('[addTask] TaskService bridge:', e.message));
+  }
+
   // Push: notificar via UID real — sin _notifyByName, sin búsqueda por texto
   if (assignedToUid && window.sendNotificationToUser) {
     const bodyTxt = text.slice(0, 80) + (dead ? ' · vence ' + dead : '');
@@ -3633,9 +3648,16 @@ function addToSprint(){
   const next=pending[0];
   sprintTasks.push({id:uid(),text:next.text,owner:'Carolina',prio:next.prio,done:false});
   saveSprint(); renderSprint(); toast('⚡ Agregada al sprint');
-  // Push: notificar al asignado de la tarea original
-  if(next.owner && next.owner !== (currentProfile.displayName||'') && window._notifyByName){
-    window._notifyByName(next.owner, '⚡ Tarea en tu sprint', '"'+next.text.slice(0,70)+'" fue añadida a tu sprint de esta semana.', {type:'sprint_task_added'});
+  // Push: notificar al asignado via UID real (assignedToUid primero, fallback por displayName)
+  const _sprintAssigneeUid = next.assignedToUid ||
+    (window.orgMembers||[]).find(m => m && m.uid && m.displayName === next.owner)?.uid;
+  if (_sprintAssigneeUid && _sprintAssigneeUid !== currentProfile.uid && window.sendNotificationToUser) {
+    window.sendNotificationToUser(
+      _sprintAssigneeUid,
+      '⚡ Tarea en tu sprint',
+      '"' + next.text.slice(0, 70) + '" fue añadida a tu sprint de esta semana.',
+      { type: 'sprint_task_added' }
+    );
   }
 }
 
@@ -9855,10 +9877,11 @@ window._handleNotifDeepLink = function(msg) {
   const taskId = msg.taskId || '';
   const url    = msg.deepUrl || '';
 
-  // Extraer parámetros de URL si viene por apertura de ventana
+  // Extraer parámetros de URL si viene por apertura de ventana (deepUrl)
+  // O directamente de msg.gpc cuando viene del arranque vía _readDeepLinkUrl
   const params = new URLSearchParams(url.split('?')[1] || '');
-  const gpc    = params.get('gpc') || '';
-  const urlId  = params.get('id')  || '';
+  const gpc    = msg.gpc || params.get('gpc') || '';
+  const urlId  = msg.id  || params.get('id')  || '';
 
   const finalTaskId = taskId || (gpc === 'task' ? urlId : '');
 
@@ -9875,8 +9898,14 @@ window._handleNotifDeepLink = function(msg) {
     if(window.showPage) window.showPage('club');
     return;
   }
+  // Director recibe aviso de propuesta nueva → panel familia
   if (gpc === 'familia' || type === 'proposal_submitted') {
     if(window.showPage) window.showPage('familia');
+    return;
+  }
+  // Hijo recibe respuesta a propuesta → su panel personal (mi-panel)
+  if (gpc === 'mi-panel' || type.startsWith('proposal_')) {
+    if(window.showPage) window.showPage('mi-panel');
     return;
   }
   if (gpc === 'tienda' || type === 'tienda_toggle' || type === 'emprendedor_added') {
