@@ -2785,6 +2785,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 
 <!-- debug panel eliminado (RBAC confirmado funcionando) -->
 
+<!-- ══════════════════════════════════════
+     PAGE: KANBAN (ui-components.js)
+════════════════════════════════════════ -->
+<div class="page" id="pg-kanban">
+  <div id="kanban-root"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: CALENDARIO (ui-components.js)
+════════════════════════════════════════ -->
+<div class="page" id="pg-calendario">
+  <div id="calendar-root"></div>
+</div>
+
 <script>
 // ═══════════════ STATE ═══════════════
 const SK  = 'carolina_v4_tasks';
@@ -2815,17 +2829,17 @@ const FREQ_MAP={
 // ═══════════════ RBAC · ROLES & PERMISOS ═══════════════
 const ORG_ID = 'curauma_001';
 const ROLES = {
-  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['dashboard','tareas','semana','club','personas','familia','coach','control','auditoria'], canReadAll:true,  canApprove:true},
-  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['dashboard','tareas','semana','bazar','tienda','familia','coach'],canReadAll:false},
+  director:             {label:'Director / Papá',     emoji:'👨', color:'#059669', bg:'#DCFCE7', modules:['casa','club','bazar','tienda'], nav:['dashboard','tareas','kanban','calendario','semana','club','personas','familia','coach','control','auditoria'], canReadAll:true,  canApprove:true},
+  mama:                 {label:'Mamá',                emoji:'👩', color:'#DB2777', bg:'#FCE7F3', modules:['casa','bazar','tienda'],        nav:['dashboard','tareas','kanban','calendario','semana','bazar','tienda','familia','coach'],canReadAll:false},
   hijo1:                {label:'Hijo 1',              emoji:'👦', color:'#2563EB', bg:'#DBEAFE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   hijo2:                {label:'Hijo 2',              emoji:'👧', color:'#7C3AED', bg:'#EDE9FE', modules:['casa'],                        nav:['mi-panel','semana','permisos','coach'],              canReadAll:false},
   publicista:           {label:'Publicista',          emoji:'📣', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   disenador:            {label:'Diseñador/a',         emoji:'🎨', color:'#7C3AED', bg:'#EDE9FE', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
-  coordinadora_bazares: {label:'Coord. Bazares',      emoji:'🎪', color:'#0891B2', bg:'#CFFAFE', modules:['club','bazar'],                nav:['tareas','club','bazar','equipo'],                   canReadAll:false},
-  coordinadora_tienda:  {label:'Coord. Tienda',       emoji:'🏪', color:'#16A34A', bg:'#DCFCE7', modules:['tienda'],                      nav:['tareas','tienda'],                                  canReadAll:false},
+  coordinadora_bazares: {label:'Coord. Bazares',      emoji:'🎪', color:'#0891B2', bg:'#CFFAFE', modules:['club','bazar'],                nav:['tareas','kanban','calendario','club','bazar','equipo'],canReadAll:false},
+  coordinadora_tienda:  {label:'Coord. Tienda',       emoji:'🏪', color:'#16A34A', bg:'#DCFCE7', modules:['tienda'],                      nav:['tareas','kanban','tienda'],                          canReadAll:false},
   staff_montaje:        {label:'Staff Montaje',       emoji:'🔧', color:'#64748B', bg:'#F1F5F9', modules:['bazar'],                       nav:['bazar'],                                            canReadAll:false},
   vendedor:             {label:'Vendedor/a',          emoji:'💼', color:'#0F766E', bg:'#CCFBF1', modules:['tienda'],                      nav:['tienda'],                                           canReadAll:false},
-  programador:          {label:'Encargado Web',       emoji:'💻', color:'#1D4ED8', bg:'#DBEAFE', modules:['tienda','club'],               nav:['tareas','club','tienda'],                           canReadAll:false},
+  programador:          {label:'Encargado Web',       emoji:'💻', color:'#1D4ED8', bg:'#DBEAFE', modules:['tienda','club'],               nav:['tareas','kanban','club','tienda'],                  canReadAll:false},
   disenador_pub:        {label:'Diseñador/Publicista',emoji:'🎨', color:'#7C3AED', bg:'#EDE9FE', modules:['club'],                        nav:['tareas','club'],                                    requiresApproval:true},
   staff_eventos:        {label:'Staff Eventos',       emoji:'⚽', color:'#D97706', bg:'#FEF3C7', modules:['club'],                        nav:['tareas'],                                           canReadAll:false},
   soporte_app:          {label:'Soporte Aplicaciones',emoji:'🛠️', color:'#0891B2', bg:'#CFFAFE', modules:['club'],                        nav:['tareas'],                                           canReadAll:false},
@@ -2852,6 +2866,8 @@ const NAV_META = {
   familia:   {icon:'🏠', label:'Familia'},
   dashboard: {icon:'🏛️', label:'Panel'},
   admin:     {icon:'🛡️', label:'Admin DB'},
+  kanban:    {icon:'📊', label:'Kanban'},
+  calendario:{icon:'🗓️', label:'Calendario'},
 };
 
 let currentRole = 'pending';
@@ -2937,22 +2953,31 @@ function showPage(p){
   if(pg) pg.classList.add('active');
   const nv = document.getElementById('nav-'+p);
   if(nv) nv.classList.add('active');
-  if(p==='sprint'){renderSprint();renderMatrix();renderGoals();}
-  if(p==='equipo'){renderFamily();renderTeam();renderCheckins();}
-  if(p==='coach'){renderScenarios();initMoodUI();if(!planOrder.length)refreshDayPlan();else renderDayPlan();}
-  if(p==='control'){renderControlTower();}
-  if(p==='familia')  {loadFamiliaPanel();}
-  if(p==='dashboard'){renderDashboard();}
-  if(p==='club')  {renderClubPage();}
-  if(p==='bazar') {renderBazarPage();}
-  if(p==='tienda'){renderTiendaPage();}
-  if(p==='roles')     {renderRolesPanel();}
-  if(p==='semana')    {renderWeekPlanner();}
-  if(p==='personas')  {renderPersonasPanel();}
-  if(p==='mi-panel')  {renderMiPanel();}
-  if(p==='permisos')  {renderPermissionsCenter();}
-  if(p==='auditoria') {loadAuditData();}
-  if(p==='admin')     {loadAdminPanel();}
+
+  // Tabla de despacho: añadir nuevas páginas aquí sin riesgo de romper las existentes
+  const PAGE_RENDERERS = {
+    sprint:      () => { renderSprint(); renderMatrix(); renderGoals(); },
+    equipo:      () => { renderFamily(); renderTeam(); renderCheckins(); },
+    coach:       () => { renderScenarios(); initMoodUI(); if(!planOrder.length) refreshDayPlan(); else renderDayPlan(); },
+    control:     () => renderControlTower(),
+    familia:     () => loadFamiliaPanel(),
+    dashboard:   () => renderDashboard(),
+    club:        () => renderClubPage(),
+    bazar:       () => renderBazarPage(),
+    tienda:      () => renderTiendaPage(),
+    roles:       () => renderRolesPanel(),
+    semana:      () => renderWeekPlanner(),
+    personas:    () => renderPersonasPanel(),
+    'mi-panel':  () => renderMiPanel(),
+    permisos:    () => renderPermissionsCenter(),
+    auditoria:   () => loadAuditData(),
+    admin:       () => loadAdminPanel(),
+    // ── Nuevos módulos visuales (ui-components.js) ──
+    kanban:      () => window.GPC?.Kanban.render(),
+    calendario:  () => window.GPC?.Calendar.render(),
+  };
+
+  PAGE_RENDERERS[p]?.();
   window.scrollTo(0,0);
 }
 
@@ -3255,13 +3280,27 @@ const MODULE_ASSIGNEES = {
 };
 
 function updateOwnerOpts(){
-  const ctx = document.getElementById('metaCtx').value;
-  const sel = document.getElementById('metaOwner');
-  const opts = MODULE_ASSIGNEES[ctx] || MODULE_ASSIGNEES.club;
-  sel.innerHTML = opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
-  // Pre-seleccionar al usuario actual si aplica
-  const me = currentProfile&&currentProfile.displayName;
-  if(me) [...sel.options].forEach(o=>{ if(o.value===me||o.text.includes(me)) o.selected=true; });
+  const ctx    = document.getElementById('metaCtx').value;
+  const sel    = document.getElementById('metaOwner');
+  const members = (window.orgMembers||[]).filter(m => m && m.uid && m.role && m.role !== 'pending');
+
+  if (members.length === 0) {
+    // orgMembers aún no cargó — fallback al diccionario estático
+    const opts = MODULE_ASSIGNEES[ctx] || MODULE_ASSIGNEES.club;
+    sel.innerHTML = opts.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
+    const me = currentProfile && currentProfile.displayName;
+    if(me) [...sel.options].forEach(o=>{ if(o.value===me||o.text.includes(me)) o.selected=true; });
+    return;
+  }
+
+  // Con orgMembers: value = UID real, texto = displayName · rol
+  const meUid = window.currentProfile?.uid || '';
+  sel.innerHTML = `<option value="">Sin asignar</option>` +
+    members.map(m => {
+      const label     = m.displayName || m.email || m.uid;
+      const roleLabel = (window.ROLES?.[m.role]||{}).label || m.role;
+      return `<option value="${m.uid}"${m.uid === meUid ? ' selected' : ''}>${label} · ${roleLabel}</option>`;
+    }).join('');
 }
 
 // ═══════════════ FREQ ═══════════════
@@ -3275,35 +3314,55 @@ function setFreq(f){
 
 // ═══════════════ TASKS ═══════════════
 function addTask(){
-  const input=document.getElementById('captureInput');
-  const text=input.value.trim();
-  if(!text){input.focus();return;}
-  const dur=parseInt(document.getElementById('metaDur').value)||0;
-  const ownerSel=document.getElementById('metaOwner');
-  const ownerVal=ownerSel.value;
+  const input  = document.getElementById('captureInput');
+  const text   = input.value.trim();
+  if(!text){ input.focus(); return; }
+
+  const dur      = parseInt(document.getElementById('metaDur').value) || 0;
+  const prio     = document.getElementById('metaPrio').value;
+  const dead     = document.getElementById('metaDate').value;
+  const ownerSel = document.getElementById('metaOwner');
+
+  // assignedToUid: UID criptográfico real del asignado ('' si sin asignar)
+  // assignedToName: displayName extraído del texto del <option>, para renderTasks()
+  const assignedToUid  = ownerSel.value || '';
+  const assignedToName = (ownerSel.options[ownerSel.selectedIndex]?.text || '').split(' · ')[0].trim();
+
   tasks.unshift({
-    id:uid(),text,
-    ctx:document.getElementById('metaCtx').value,
-    prio:document.getElementById('metaPrio').value,
+    id: uid(), text,
+    ctx:      document.getElementById('metaCtx').value,
+    prio,
     freq,
-    deadline:freq==='diaria'?'':document.getElementById('metaDate').value,
-    time:document.getElementById('metaTime').value,
-    dur,done:false,ts:Date.now(),
-    owner:ownerVal,
+    deadline: freq === 'diaria' ? '' : dead,
+    time:     document.getElementById('metaTime').value,
+    dur, done: false, ts: Date.now(),
+    owner:         assignedToName || '',   // legacy: renderTasks() y renderTasks() usan este campo
+    assignedToUid: assignedToUid  || null, // UID real para notificaciones y TaskService
   });
-  saveTasks(); input.value=''; ownerSel.value=''; input.focus();
+
+  saveTasks(); input.value = ''; ownerSel.value = ''; input.focus();
   renderTasks();
-  toast(ownerVal?'✅ Asignada a '+ownerVal:'✅ Tarea anotada');
-  // Push: notificar al asignado
-  if (ownerVal && window._notifyByName) {
-    const prio = document.getElementById('metaPrio').value;
-    const dead = document.getElementById('metaDate').value;
-    const bodyTxt = text.slice(0,80) + (dead ? ' · vence '+dead : '');
-    window._notifyByName(ownerVal, '📋 Nueva tarea asignada', bodyTxt, {type:'task_assigned'});
+  toast(assignedToName ? '✅ Asignada a ' + assignedToName.split(' ')[0] : '✅ Tarea anotada');
+
+  // Push: notificar via UID real — sin _notifyByName, sin búsqueda por texto
+  if (assignedToUid && window.sendNotificationToUser) {
+    const bodyTxt = text.slice(0, 80) + (dead ? ' · vence ' + dead : '');
+    window.sendNotificationToUser(
+      assignedToUid,
+      '📋 Nueva tarea asignada',
+      bodyTxt,
+      { type: 'task_assigned', prio }
+    ).catch(e => console.warn('[addTask] push task_assigned:', e.message));
   }
-  // Push: tarea p1 sin asignar → avisar al Director
-  if (!ownerVal && document.getElementById('metaPrio').value === 'p1' && currentRole !== 'director' && window._notifyByRole) {
-    window._notifyByRole(['director'], '📌 Tarea urgente sin asignar', '"'+text.slice(0,60)+'" es URGENTE y no tiene responsable.', {type:'task_urgent_unassigned'});
+
+  // Push: p1 sin asignar → avisar al Director si el creador no es director
+  if (!assignedToUid && prio === 'p1' && currentRole !== 'director' && window._notifyByRole) {
+    window._notifyByRole(
+      ['director'],
+      '📌 Tarea urgente sin asignar',
+      '"' + text.slice(0, 60) + '" es URGENTE y no tiene responsable.',
+      { type: 'task_urgent_unassigned' }
+    );
   }
 }
 function toggleDone(id){
@@ -8680,6 +8739,8 @@ window.loadOrgData = async function(){
     }
     window.orgMembers = members;
     if(window.renderControlTower) window.renderControlTower();
+    // Refrescar selector de asignados ahora que tenemos UIDs reales
+    if(document.getElementById('metaOwner')) updateOwnerOpts();
 
     // ── Aplicar PROFILE_PATCHES y PHONE_PATCHES para miembros con datos incompletos ──
     for(const m of members){
@@ -10407,5 +10468,6 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
        await TaskService.syncToGlobal()
 -->
 <script type="module" src="tasks.js"></script>
+<script src="ui-components.js"></script>
 </body>
 </html>

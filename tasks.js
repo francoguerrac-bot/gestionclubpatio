@@ -196,8 +196,64 @@ async function addTask(taskData) {
     reminderSent:   false,
   };
 
-  const ref  = await addDoc(collection(_db, 'tasks'), newDoc);
-  return { id: ref.id, ...newDoc };
+  const ref      = await addDoc(collection(_db, 'tasks'), newDoc);
+  const savedTask = { id: ref.id, ...newDoc };
+
+  // ── Push notification con UID real ────────────────────────────────────
+  // Se dispara DESPUÉS del addDoc para que taskId sea el ID real de Firestore.
+  // Fire-and-forget: un fallo de red no bloquea el guardado ni la UI.
+  _pushOnTaskCreated(savedTask, user.uid).catch(e =>
+    console.warn('[TaskService] push post-addTask:', e.message)
+  );
+
+  return savedTask;
+}
+
+/**
+ * _pushOnTaskCreated(task, creatorUid)
+ *
+ * Reglas de notificación al crear una tarea:
+ *   a) Asignado ≠ creador y tiene UID → task_assigned al responsable
+ *   b) p1 sin asignar y creador no es director → task_urgent_unassigned al Director
+ */
+async function _pushOnTaskCreated(task, creatorUid) {
+  const send      = window.sendNotificationToUser;  // definido en el módulo FCM
+  const byRole    = window._notifyByRole;           // definido en el módulo FCM
+  const creatorRole = window.currentProfile?.role || '';
+
+  const { id: taskId, title = '', prio = '', assignedToUid, dueDate } = task;
+
+  // Formatear fecha de vencimiento si existe
+  let dueSuffix = '';
+  if (dueDate?.toDate) {
+    try {
+      dueSuffix = ' · vence ' + dueDate.toDate()
+        .toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+    } catch (_) {}
+  }
+
+  const bodyText = title.slice(0, 80) + dueSuffix;
+
+  // a) Tarea asignada a otra persona
+  if (assignedToUid && assignedToUid !== creatorUid && typeof send === 'function') {
+    await send(
+      assignedToUid,
+      '📋 Nueva tarea asignada',
+      bodyText,
+      { type: 'task_assigned', taskId, prio }
+    );
+    return;
+  }
+
+  // b) Tarea p1 sin asignar, creador no es director
+  if (!assignedToUid && prio === 'p1' && creatorRole !== 'director' && typeof byRole === 'function') {
+    await byRole(
+      ['director'],
+      '📌 Tarea urgente sin asignar',
+      '"' + title.slice(0, 60) + '" es urgente y no tiene responsable.',
+      { type: 'task_urgent_unassigned', taskId, prio }
+    );
+  }
 }
 
 /**
