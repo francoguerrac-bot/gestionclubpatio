@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-10-v16';
+  var B='2026-07-10-v17';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -4856,15 +4856,37 @@ function renderNotificationCenter(){
     <div style="margin-top:10px;padding:9px 12px;background:#FEF3C7;border-radius:9px;border-left:3px solid #F59E0B;font-size:11px;color:#78350F;line-height:1.6;">
       <strong>Pasos rápidos:</strong> Toca el ícono 🔒 junto a la URL → Permisos → Notificaciones → Permitir → Recarga la app.
     </div>`:''}
-    ${status==='granted' && (window.currentRole==='director'||window.currentRole==='programador') ?`
-    <button onclick="window.testPushBackground&&window.testPushBackground(15)"
+    ${status==='granted' ?`
+    <button onclick="window.testMyRoleNotifications&&window.testMyRoleNotifications()"
       style="margin-top:8px;width:100%;padding:10px;border-radius:10px;border:1.5px solid #BFDBFE;background:#EFF6FF;font-size:12px;font-weight:700;color:#1D4ED8;cursor:pointer;font-family:'Inter',sans-serif;">
-      📱 Probar en SO (15s para cerrar la app)
+      🧪 Probar mis notificaciones (${(window.ROLE_NOTIF_KEYS&&window.currentRole&&window.ROLE_NOTIF_KEYS[window.currentRole]||[]).length||'...'})
     </button>
-    <button onclick="window.testDirectorNotifications&&window.testDirectorNotifications()"
-      style="margin-top:6px;width:100%;padding:10px;border-radius:10px;border:1.5px solid #DDD6FE;background:#F5F3FF;font-size:12px;font-weight:700;color:#6D28D9;cursor:pointer;font-family:'Inter',sans-serif;">
-      🧪 Probar todas las notificaciones (22)
-    </button>`:''}
+    <button onclick="window.testPushBackground&&window.testPushBackground(15)"
+      style="margin-top:6px;width:100%;padding:10px;border-radius:10px;border:1.5px solid #FEF08A;background:#FEFCE8;font-size:12px;font-weight:700;color:#A16207;cursor:pointer;font-family:'Inter',sans-serif;">
+      📱 Test en 2do plano · 15s para cerrar
+    </button>
+    ${window.currentRole==='director'?`
+    <details style="margin-top:10px;">
+      <summary style="cursor:pointer;font-size:11px;font-weight:700;color:#64748B;padding:6px 2px;list-style:none;display:flex;align-items:center;gap:6px;user-select:none;">
+        <span style="font-size:9px;">▶</span> 📨 Enviar test a cualquier usuario
+      </summary>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        <select id="fcmTestTargetUser" style="width:100%;padding:7px 10px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:12px;background:#fff;color:#1E293B;font-family:'Inter',sans-serif;">
+          <option value="">— Seleccionar usuario —</option>
+          ${(window.orgMembers||[]).filter(m=>m&&m.uid&&m.role!=='pending').map(m=>`<option value="${m.uid}">${(m.displayName||m.email||m.uid).slice(0,22)} · ${((window.ROLES||{})[m.role]||{}).label||m.role}</option>`).join('')}
+        </select>
+        <select id="fcmTestNotifType" style="width:100%;padding:7px 10px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:12px;background:#fff;color:#1E293B;font-family:'Inter',sans-serif;">
+          <option value="">— Tipo de notificación —</option>
+          ${Object.entries(window.NOTIF_CATALOG||{}).map(([k,v])=>`<option value="${k}">${v.title}</option>`).join('')}
+        </select>
+        <button onclick="window.sendTestToSelectedUser&&window.sendTestToSelectedUser()"
+          style="width:100%;padding:9px;border-radius:8px;border:none;background:#1E2D3D;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">
+          📨 Enviar notificación de prueba
+        </button>
+        <div id="fcmTestResult" style="font-size:11px;color:#64748B;text-align:center;min-height:16px;padding:2px 0;"></div>
+      </div>
+    </details>`:''}
+    `:''}
   `;
 }
 window.renderNotificationCenter = renderNotificationCenter;
@@ -9939,57 +9961,122 @@ window.diagnoseFCM = async function(){
   console.groupEnd();
 };
 
-// ── Test masivo: todas las notificaciones posibles para Director ───────────
-window.testDirectorNotifications = async function(){
-  const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
-  if(!uid){ alert('Debes estar autenticado para enviar notificaciones.'); return; }
-  if(!window.sendNotificationToUser){ alert('sendNotificationToUser no disponible aún.'); return; }
+// ── Catálogo canónico de notificaciones (fuente única de verdad) ──────────
+window.NOTIF_CATALOG = {
+  task_assigned:              { title:'📋 Nueva tarea asignada',      body:'Tarea de prueba fue asignada a ti.',              data:{type:'task_assigned',              taskId:'test-001'} },
+  task_completed:             { title:'✅ Tarea completada',           body:'Carolina: "Diseño banner" fue completada.',       data:{type:'task_completed',             taskId:'test-002'} },
+  task_due_today:             { title:'⏰ Tarea vence hoy',           body:'"Informe mensual" vence hoy. ¡Última oportunidad!', data:{type:'task_due_today',            taskId:'test-003'} },
+  task_overdue:               { title:'🚨 Tarea vencida',             body:'"Reporte KPI" lleva 2 días vencida sin completar.',data:{type:'task_overdue',              taskId:'test-004'} },
+  task_urgent_unassigned:     { title:'📌 Tarea urgente sin asignar', body:'"Landing page" es URGENTE y no tiene responsable.',data:{type:'task_urgent_unassigned'} },
+  sprint_task_added:          { title:'⚡ Tarea en tu sprint',        body:'"Rediseño web" fue añadida a tu sprint activo.',   data:{type:'sprint_task_added',         taskId:'test-005'} },
+  sprint_complete:            { title:'🏆 ¡Sprint completado!',       body:'¡Todas las tareas del sprint fueron completadas!', data:{type:'sprint_complete'} },
+  permission_requested:       { title:'🔑 Permiso solicitado',        body:'Sebastián solicita permiso para salida el viernes.',data:{type:'permission_requested',     reqId:'req-001'} },
+  permission_approved:        { title:'✅ Permiso aprobado',          body:'Tu permiso para el viernes fue aprobado.',         data:{type:'permission_approved',       reqId:'req-002'} },
+  permission_rejected:        { title:'❌ Permiso rechazado',         body:'Tu permiso fue rechazado. Habla con tu familia.',  data:{type:'permission_rejected',       reqId:'req-003'} },
+  permission_needs_signature: { title:'✍️ Permiso: falta tu firma',  body:'El permiso de Valentina necesita también tu firma.',data:{type:'permission_needs_signature',reqId:'req-004'} },
+  kanban_approval_needed:     { title:'📌 Kanban: aprobación',        body:'"Rediseño logo" de Valentina espera tu aprobación.',data:{type:'kanban_approval_needed',  cardId:'card-001'} },
+  kanban_approved:            { title:'✅ Kanban aprobada',           body:'Tu tarjeta "Rediseño logo" fue aprobada por Director.',data:{type:'kanban_approved',      cardId:'card-002'} },
+  kanban_rejected:            { title:'🔄 Kanban devuelta',           body:'"Propuesta web" fue devuelta para revisión.',       data:{type:'kanban_rejected',          cardId:'card-003'} },
+  proposal_submitted:         { title:'💡 Nueva propuesta familiar',  body:'Nuevo punto en la tabla familiar necesita tu voto.', data:{type:'proposal_submitted'} },
+  mood_low:                   { title:'😔 Ánimo bajo en el equipo',   body:'El equipo bajó al 30%. Considera hacer un check-in.', data:{type:'mood_low'} },
+  mood_bad_hijo:              { title:'😰 Hijo necesita apoyo',       body:'Sebastián reportó "estresado" en su diario hoy.',   data:{type:'mood_bad_hijo'} },
+  tienda_toggle:              { title:'🏪 Estado tienda cambiado',    body:'La tienda fue abierta/cerrada por un miembro.',     data:{type:'tienda_toggle'} },
+  emprendedor_added:          { title:'🛍️ Nuevo emprendedor',        body:'"Papelería Creativa" fue agregado a la tienda.',    data:{type:'emprendedor_added'} },
+  kpi_goal_reached:           { title:'🎯 ¡Meta KPI alcanzada!',      body:'"Ventas mensuales" superó la meta de 100 unidades.',data:{type:'kpi_goal_reached'} },
+  pending_users:              { title:'👤 Cuentas pendientes',         body:'2 usuarios esperan que les asignes un rol.',        data:{type:'pending_users', count:'2'} },
+  role_assigned:              { title:'🎉 ¡Bienvenido/a al equipo!',  body:'Tu rol fue asignado. Ya puedes acceder al sistema.', data:{type:'role_assigned', role:'miembro'} },
+};
 
-  const notifs = [
-    { title:'📋 Nueva tarea asignada', body:'Tarea: "Revisar presupuesto Q3" te fue asignada.',      data:{type:'task_assigned',   taskId:'test-task-001'} },
-    { title:'✅ Tarea completada',      body:'"Diseño banner" fue completada por Valentina.',          data:{type:'task_completed',  taskId:'test-task-002'} },
-    { title:'⏰ Tarea vence hoy',       body:'"Informe mensual" vence hoy. ¡Última oportunidad!',     data:{type:'task_due_today',  taskId:'test-task-003'} },
-    { title:'🚨 Tarea vencida',         body:'"Reporte KPI" lleva 2 días vencida sin completar.',     data:{type:'task_overdue',    taskId:'test-task-004'} },
-    { title:'📌 Tarea urgente P1',      body:'Nueva tarea urgente sin dueño necesita atención.',      data:{type:'task_urgent_unassigned'} },
-    { title:'⚡ Tarea en tu sprint',    body:'"Landing page" fue añadida a tu sprint activo.',        data:{type:'sprint_task_added', taskId:'test-task-005'} },
-    { title:'🏆 ¡Sprint completado!',   body:'¡Todas las tareas del sprint fueron completadas!',      data:{type:'sprint_complete'} },
-    { title:'🔑 Permiso solicitado',    body:'Sebastián solicita permiso para salida el viernes.',    data:{type:'permission_requested', reqId:'req-001'} },
-    { title:'✅ Permiso aprobado',      body:'Tu permiso para "salida el viernes" fue aprobado.',     data:{type:'permission_approved',  reqId:'req-002'} },
-    { title:'❌ Permiso rechazado',     body:'Tu permiso para "fiesta" fue rechazado por Papá.',      data:{type:'permission_rejected',  reqId:'req-003'} },
-    { title:'✍️ Permiso requiere firma',body:'El permiso de Valentina necesita tu firma también.',    data:{type:'permission_needs_signature', reqId:'req-004'} },
-    { title:'📌 Kanban: aprobación',    body:'"Rediseño logo" de Valentina espera tu aprobación.',   data:{type:'kanban_approval_needed', cardId:'card-001'} },
-    { title:'✅ Kanban aprobada',       body:'Tu tarjeta "Rediseño logo" fue aprobada por Director.', data:{type:'kanban_approved',  cardId:'card-002'} },
-    { title:'🔄 Kanban devuelta',       body:'"Propuesta web" fue devuelta con feedback.',            data:{type:'kanban_rejected',  cardId:'card-003'} },
-    { title:'💡 Propuesta enviada',     body:'Nuevo punto en tabla familiar necesita tu voto.',       data:{type:'proposal_submitted'} },
-    { title:'😔 Ánimo bajo en el equipo',body:'El ánimo del equipo bajó al 30%. Considera reunión.',  data:{type:'mood_low'} },
-    { title:'😰 Hijo necesita apoyo',   body:'Sebastián reportó "estresado" en su diario.',           data:{type:'mood_bad_hijo'} },
-    { title:'🏪 Estado tienda cambiado',body:'La tienda fue abierta/cerrada por un miembro.',         data:{type:'tienda_toggle'} },
-    { title:'🛍️ Nuevo emprendedor',    body:'"Papelería Creativa" fue agregado a la tienda.',        data:{type:'emprendedor_added'} },
-    { title:'🎯 Meta KPI alcanzada',    body:'"Ventas mensuales" superó la meta de 100 unidades.',   data:{type:'kpi_goal_reached'} },
-    { title:'👤 Cuenta pendiente',      body:'2 usuarios esperan que les asignes un rol.',            data:{type:'pending_users', count:'2'} },
-    { title:'🎉 ¡Bienvenido al equipo!',body:'Tu rol de Director fue asignado. Ya tienes acceso.',   data:{type:'role_assigned', role:'director'} },
-  ];
+// ── Notificaciones relevantes por rol ────────────────────────────────────
+window.ROLE_NOTIF_KEYS = {
+  director:             Object.keys(window.NOTIF_CATALOG),  // todas
+  mama:                 ['task_assigned','permission_requested','permission_needs_signature','mood_bad_hijo','mood_low','proposal_submitted','pending_users'],
+  hijo1:                ['task_assigned','sprint_task_added','permission_approved','permission_rejected','role_assigned'],
+  hijo2:                ['task_assigned','sprint_task_added','permission_approved','permission_rejected','role_assigned'],
+  publicista:           ['task_assigned','sprint_task_added','kanban_approved','kanban_rejected'],
+  disenador:            ['task_assigned','sprint_task_added','kanban_approved','kanban_rejected'],
+  disenador_pub:        ['task_assigned','sprint_task_added','kanban_approved','kanban_rejected'],
+  coordinadora_bazares: ['task_assigned','sprint_task_added','emprendedor_added'],
+  coordinadora_tienda:  ['task_assigned','sprint_task_added','emprendedor_added','tienda_toggle'],
+  staff_montaje:        ['task_assigned','sprint_task_added'],
+  vendedor:             ['task_assigned','sprint_task_added'],
+  programador:          ['task_assigned','sprint_task_added','kanban_approved','kanban_rejected','kpi_goal_reached'],
+  staff_eventos:        ['task_assigned','sprint_task_added'],
+  soporte_app:          ['task_assigned','sprint_task_added'],
+  logistica:            ['task_assigned','sprint_task_added','tienda_toggle'],
+};
 
-  console.log(`[FCM TEST] Enviando ${notifs.length} notificaciones al Director (uid=${uid})...`);
-  if(window.toast) window.toast(`Enviando ${notifs.length} notificaciones de prueba...`);
-
+// ── Helper interno: enviar lista de notifs al uid indicado ───────────────
+async function _runNotifTest(uid, keys){
+  const catalog = window.NOTIF_CATALOG || {};
   let ok = 0, fail = 0;
-  for(let i = 0; i < notifs.length; i++){
-    const n = notifs[i];
+  for(const key of keys){
+    const n = catalog[key];
+    if(!n) continue;
     try{
       const r = await window.sendNotificationToUser(uid, n.title, n.body, n.data);
-      if(r && r.success){ ok++; console.log(`✅ [${i+1}/${notifs.length}] ${n.title}`); }
-      else{ fail++; console.warn(`❌ [${i+1}/${notifs.length}] ${n.title}:`, r?.reason||r?.error||'sin respuesta'); }
-    }catch(e){ fail++; console.error(`❌ [${i+1}/${notifs.length}] ${n.title}:`, e.message); }
-    // 1.5s entre envíos — Android descarta notificaciones en ráfaga rápida
+      if(r?.success){ ok++; console.log(`✅ ${key}`); }
+      else{ fail++; console.warn(`❌ ${key}:`, r?.reason||r?.error); }
+    }catch(e){ fail++; console.error(`❌ ${key}:`, e.message); }
     await new Promise(res=>setTimeout(res,1500));
   }
-  const msg = `Test completado: ${ok} enviadas, ${fail} fallidas`;
-  console.log(`[FCM TEST] ${msg}`);
-  if(window.toast) window.toast(ok > 0 ? `✅ ${msg}` : `❌ ${msg}`);
-  return { ok, fail, total: notifs.length };
+  return { ok, fail, total: keys.length };
+}
+
+// ── Test de mis notificaciones (según el rol actual) ──────────────────────
+window.testMyRoleNotifications = async function(){
+  const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
+  if(!uid){ alert('Debes estar autenticado.'); return; }
+  if(!window.sendNotificationToUser){ alert('sendNotificationToUser no disponible aún.'); return; }
+  const role = window.currentRole || 'director';
+  const keys = (window.ROLE_NOTIF_KEYS||{})[role] || Object.keys(window.NOTIF_CATALOG||{});
+  const roleName = (window.ROLES||{})[role]?.label || role;
+  console.log(`[FCM TEST] Rol: ${roleName} → ${keys.length} notificaciones`);
+  if(window.toast) window.toast(`Enviando ${keys.length} notifs para ${roleName}...`);
+  const result = await _runNotifTest(uid, keys);
+  const msg = `Test ${roleName}: ${result.ok} enviadas, ${result.fail} fallidas`;
+  if(window.toast) window.toast(result.ok > 0 ? `✅ ${msg}` : `❌ ${msg}`);
+  return result;
 };
-window.testDirNotifs = window.testDirectorNotifications; // alias corto
+
+// ── Director: test de TODAS las notificaciones ───────────────────────────
+window.testDirectorNotifications = async function(){
+  const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
+  if(!uid){ alert('Debes estar autenticado.'); return; }
+  if(!window.sendNotificationToUser){ alert('sendNotificationToUser no disponible aún.'); return; }
+  const keys = Object.keys(window.NOTIF_CATALOG||{});
+  if(window.toast) window.toast(`Enviando ${keys.length} notificaciones de prueba...`);
+  const result = await _runNotifTest(uid, keys);
+  const msg = `Test Director: ${result.ok} enviadas, ${result.fail} fallidas`;
+  if(window.toast) window.toast(result.ok > 0 ? `✅ ${msg}` : `❌ ${msg}`);
+  return result;
+};
+window.testDirNotifs = window.testDirectorNotifications;
+
+// ── Director: enviar notif específica al usuario seleccionado en el panel ─
+window.sendTestToSelectedUser = async function(){
+  const targetSel  = document.getElementById('fcmTestTargetUser');
+  const typeSel    = document.getElementById('fcmTestNotifType');
+  const resultEl   = document.getElementById('fcmTestResult');
+  const targetUid  = targetSel?.value;
+  const notifKey   = typeSel?.value;
+  if(!targetUid){ if(resultEl) resultEl.textContent='⚠️ Selecciona un usuario.'; return; }
+  if(!notifKey){  if(resultEl) resultEl.textContent='⚠️ Selecciona un tipo de notificación.'; return; }
+  const n = (window.NOTIF_CATALOG||{})[notifKey];
+  if(!n){ if(resultEl) resultEl.textContent='⚠️ Tipo no encontrado.'; return; }
+  if(resultEl){ resultEl.textContent='⏳ Enviando...'; resultEl.style.color='#64748B'; }
+  try{
+    const r = await window.sendNotificationToUser(targetUid, n.title, n.body, n.data);
+    const label = targetSel.options[targetSel.selectedIndex]?.text || targetUid;
+    if(r?.success){
+      if(resultEl){ resultEl.textContent=`✅ Enviado a ${label.split('·')[0].trim()}`; resultEl.style.color='#16A34A'; }
+    } else {
+      if(resultEl){ resultEl.textContent=`❌ ${r?.reason||r?.error||'Sin tokens FCM'}`;  resultEl.style.color='#DC2626'; }
+    }
+  }catch(e){
+    if(resultEl){ resultEl.textContent=`❌ ${e.message}`; resultEl.style.color='#DC2626'; }
+  }
+};
 
 // ── Test unitario con delay: cierra la app y llega como notificación del SO ──
 window.testPushBackground = async function(delaySec=15){
