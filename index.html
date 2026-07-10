@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-10-v19';
+  var B='2026-07-10-v20';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -4787,9 +4787,13 @@ function getNotificationStatus(){
 window.getNotificationStatus = getNotificationStatus;
 
 function _notifUnsupportedReason(){
+  const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const _isSA  = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  // iOS en Safari regular: Web Push requiere app instalada (standalone) desde iOS 16.4
+  if (_isIOS && !_isSA) return 'ios-install-required';
   if(!('Notification' in window))    return 'La API de Notificaciones no está disponible en este navegador.';
   if(!('serviceWorker' in navigator))return 'Los Service Workers no están disponibles (requiere HTTPS).';
-  if(!('PushManager' in window))     return 'PushManager no disponible (navegador muy antiguo o iOS < 16.4).';
+  if(!('PushManager' in window))     return 'PushManager no disponible. En iOS 16.4+, la app debe estar instalada en la pantalla de inicio.';
   return 'Soporte insuficiente.';
 }
 
@@ -4804,13 +4808,52 @@ function renderNotificationCenter(){
 
   const { status, supported, reason } = getNotificationStatus();
 
+  // ── Detección de plataforma ───────────────────────────────────────────
+  const _isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const _isAndroid    = /Android/.test(navigator.userAgent);
+  const _isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                     || window.navigator.standalone === true;
+  const _iosNeedsInstall = _isIOS && !_isStandalone;
+
+  // Hint contextual mostrado debajo del botón principal
+  let mobileHint = '';
+  if (_iosNeedsInstall) {
+    // iOS en Safari regular (no instalada) — sin hint si ya está denegado (otro mensaje aplica)
+    if (status !== 'denied') {
+      mobileHint = `
+    <div style="margin-top:10px;padding:11px 14px;background:#FEF9C3;border:1.5px solid #FDE047;border-radius:11px;font-size:12px;color:#713F12;line-height:1.75;">
+      <div style="font-weight:700;margin-bottom:3px;">📲 iPhone / iPad — instala la app primero</div>
+      En iOS, las notificaciones <em>solo funcionan cuando la app está instalada</em> en la pantalla de inicio:<br>
+      <span style="display:inline-block;margin-top:4px;">1️⃣ Toca <strong>Compartir ⬆️</strong> (icono inferior de Safari)</span><br>
+      <span>2️⃣ Selecciona <strong>«Agregar a pantalla de inicio»</strong></span><br>
+      <span>3️⃣ Abre la app desde el ícono instalado</span><br>
+      <span>4️⃣ Regresa aquí y activa las alertas normalmente</span>
+    </div>`;
+    }
+  } else if (_isAndroid && status === 'granted') {
+    mobileHint = `
+    <div style="margin-top:8px;padding:9px 13px;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:9px;font-size:11px;color:#166534;line-height:1.65;">
+      <strong>📱 Android configurado.</strong> Si los banners no aparecen en pantalla, verifica: <strong>«No Molestar»</strong> desactivado · Chrome con permiso de notificaciones en <strong>Ajustes → Apps → Chrome → Notificaciones</strong> → activar <em>«Mostrar notificaciones»</em>.
+    </div>`;
+  }
+
   // Variantes visuales por estado
   const STATES = {
     unsupported: {
-      border:'var(--border)', bg:'var(--bg-card)',
-      dot:'#D1D5DB', dotTitle:'No soportado',
-      label: reason || 'Este navegador no soporta notificaciones push.',
-      btn: { text:'⚠️ No disponible', style:'background:#F3F4F6;color:#9CA3AF;border-color:#E5E7EB;cursor:not-allowed;', disabled:true },
+      border: _iosNeedsInstall ? '#FDE047' : 'var(--border)',
+      bg:     _iosNeedsInstall ? '#FEFCE8' : 'var(--bg-card)',
+      dot:    _iosNeedsInstall ? '#FACC15' : '#D1D5DB',
+      dotTitle: _iosNeedsInstall ? 'Requiere instalación' : 'No soportado',
+      label: reason === 'ios-install-required'
+        ? 'Instala la app en tu pantalla de inicio para habilitar alertas en iPhone/iPad.'
+        : (reason || 'Este navegador no soporta notificaciones push.'),
+      btn: {
+        text:     _iosNeedsInstall ? '📲 Instalar app en pantalla de inicio' : '⚠️ No disponible',
+        style:    _iosNeedsInstall
+          ? 'background:#FEF9C3;color:#713F12;border-color:#FDE047;cursor:default;'
+          : 'background:#F3F4F6;color:#9CA3AF;border-color:#E5E7EB;cursor:not-allowed;',
+        disabled: true,
+      },
       guide: null
     },
     default: {
@@ -4859,6 +4902,7 @@ function renderNotificationCenter(){
       style="width:100%;padding:12px;border-radius:10px;border:1.5px solid;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;transition:all .2s;${v.btn.style}">
       ${v.btn.text}
     </button>` : ''}
+    ${mobileHint}
     ${status==='denied'?`
     <div style="margin-top:10px;padding:9px 12px;background:#FEF3C7;border-radius:9px;border-left:3px solid #F59E0B;font-size:11px;color:#78350F;line-height:1.6;">
       <strong>Pasos rápidos:</strong> Toca el ícono 🔒 junto a la URL → Permisos → Notificaciones → Permitir → Recarga la app.

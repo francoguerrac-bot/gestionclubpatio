@@ -3,7 +3,7 @@
 // Maneja: FCM push, offline cache, deep links, postMessage.
 // Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION    = '6.1.0';
+const SW_VERSION    = '6.2.0';
 const APP_ORIGIN    = 'https://gestionclubpatio.vercel.app';
 const PROJECT_ID    = 'gestion-de-personas-ce003';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
@@ -114,14 +114,24 @@ messaging.onBackgroundMessage(async function(payload) {
   else if (notifType === 'role_assigned')      openLabel = '🎉 Ingresar';
   else if (notifType === 'mood_bad_hijo' || notifType === 'mood_low') openLabel = '💛 Ver familia';
 
+  // Tipos que exigen acción humana — la notificación NO se descarta sola en Android
+  const requiresAction = notifType.startsWith('permission') ||
+                         notifType === 'task_assigned'      ||
+                         notifType === 'task_urgent_unassigned' ||
+                         notifType === 'kanban_approval_needed' ||
+                         notifType === 'mood_bad_hijo';
+
   const options = {
     body,
     icon,
     badge:              '/assets/Logo2.png',
     tag,
     data:               { url: link, ...data },
-    vibrate:            [200, 100, 200],
-    requireInteraction: notifType.startsWith('permission') || notifType === 'task_assigned',
+    // Patrón de vibración triple — despierta la pantalla de Android incluso en modo silencioso
+    vibrate:            [300, 100, 300, 100, 500],
+    requireInteraction: requiresAction,
+    // renotify:true → fuerza sonido/vibración aunque ya exista una notificación con el mismo tag
+    renotify:           true,
     silent:             false,
     timestamp:          Date.now(),
     actions: [
@@ -180,8 +190,10 @@ self.addEventListener('push', function(event) {
         badge:   '/assets/Logo2.png',
         tag:     `gpc-fallback-${Date.now()}`,
         data:    { url: link, ...data },
-        vibrate: [200, 100, 200],
-        requireInteraction: false,
+        vibrate: [300, 100, 300, 100, 500],
+        requireInteraction: true,
+        renotify:           true,
+        silent:             false,
         actions: [
           { action: 'open',  title: '🔔 Abrir app' },
           { action: 'close', title: '✕ Ignorar' },
