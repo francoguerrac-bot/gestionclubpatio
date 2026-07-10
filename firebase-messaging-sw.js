@@ -3,7 +3,7 @@
 // Maneja: FCM push, offline cache, deep links, postMessage.
 // Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION    = '6.2.0';
+const SW_VERSION    = '6.3.0';
 const APP_ORIGIN    = 'https://gestionclubpatio.vercel.app';
 const PROJECT_ID    = 'gestion-de-personas-ce003';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
@@ -82,25 +82,22 @@ async function logToFirestore(event, payload, extra = {}) {
 // ya procesó el mensaje correctamente via onBackgroundMessage.
 let _bgMessageHandled = false;
 
-// ── onBackgroundMessage: app cerrada o sin foco ───────────────────────
-messaging.onBackgroundMessage(async function(payload) {
+// ── onBackgroundMessage: app cerrada o en background ─────────────────
+// ★ REGLA CRÍTICA ANDROID: showNotification debe llamarse SINCRÓNICAMENTE
+//   (sin await previo). Chrome Android cancela el evento push si hay operaciones
+//   de red ANTES de mostrar la notificación, especialmente en conexiones 4G/3G lentas.
+messaging.onBackgroundMessage(function(payload) {
   _bgMessageHandled = true;  // Firebase procesó el mensaje
-  const ts = new Date().toISOString();
-  console.log(`[FCM-SW ${ts}] ✅ onBackgroundMessage:`, JSON.stringify(payload));
+  console.log('[FCM-SW] ✅ onBackgroundMessage', new Date().toISOString(),
+              '| tipo:', payload?.data?.type || '—');
 
-  // Log remoto — confirma que el mensaje llegó al SW
-  await logToFirestore('background_received', payload, {
-    notifFrom: 'onBackgroundMessage',
-    hasNotification: String(!!payload.notification),
-    hasData: String(!!payload.data),
-  });
-
+  // Extraer datos (síncrono — sin await)
   const notif = payload.notification || {};
   const data  = payload.data         || {};
   const title = notif.title || data.title || 'Gestión de Equipos · Patio Curauma';
   const body  = notif.body  || data.body  || 'Tienes una novedad en la app.';
   const icon  = notif.icon  || '/assets/Logo2.png';
-  const link  = data.link   || payload.fcmOptions?.link || 'https://gestionclubpatio.vercel.app';
+  const link  = data.link   || payload.fcmOptions?.link || APP_ORIGIN;
   const tag   = data.tag    || `gpc-${Date.now()}`;
 
   // Etiqueta del botón acción según tipo
@@ -114,7 +111,6 @@ messaging.onBackgroundMessage(async function(payload) {
   else if (notifType === 'role_assigned')      openLabel = '🎉 Ingresar';
   else if (notifType === 'mood_bad_hijo' || notifType === 'mood_low') openLabel = '💛 Ver familia';
 
-  // Tipos que exigen acción humana — la notificación NO se descarta sola en Android
   const requiresAction = notifType.startsWith('permission') ||
                          notifType === 'task_assigned'      ||
                          notifType === 'task_urgent_unassigned' ||
@@ -127,10 +123,8 @@ messaging.onBackgroundMessage(async function(payload) {
     badge:              '/assets/Logo2.png',
     tag,
     data:               { url: link, ...data },
-    // Patrón de vibración triple — despierta la pantalla de Android incluso en modo silencioso
     vibrate:            [300, 100, 300, 100, 500],
     requireInteraction: requiresAction,
-    // renotify:true → fuerza sonido/vibración aunque ya exista una notificación con el mismo tag
     renotify:           true,
     silent:             false,
     timestamp:          Date.now(),
@@ -140,15 +134,30 @@ messaging.onBackgroundMessage(async function(payload) {
     ],
   };
 
-  return self.registration.showNotification(title, options)
-    .then(async () => {
-      console.log('[FCM-SW] ✅ Notificación mostrada:', title);
-      await logToFirestore('notification_shown', payload, { title, tag });
+  // ▶ showNotification INMEDIATAMENTE — sin await, sin red, sin logs previos.
+  //   Retornar esta promesa garantiza que el SW se mantiene vivo hasta que
+  //   Chrome confirme que la notificación fue encolada en el sistema.
+  const notifPromise = self.registration.showNotification(title, options);
+
+  // Logs DESPUÉS de mostrar — en paralelo, no bloquean el banner
+  notifPromise
+    .then(() => {
+      console.log('[FCM-SW] ✅ Notificación mostrada:', title, '| tag:', tag);
+      // Escribir ambos logs en paralelo (no esperamos el resultado)
+      Promise.all([
+        logToFirestore('notification_shown', payload, { title, tag }),
+        logToFirestore('background_received', payload, {
+          notifFrom: 'onBackgroundMessage',
+          hasData:   String(!!payload.data),
+        }),
+      ]).catch(() => {});
     })
-    .catch(async (err) => {
-      console.error('[FCM-SW] ❌ Error mostrando notificación:', err.message);
-      await logToFirestore('notification_error', payload, { error: err.message });
+    .catch((err) => {
+      console.error('[FCM-SW] ❌ showNotification error:', err.message);
+      logToFirestore('notification_error', payload, { error: err.message, title, tag }).catch(() => {});
     });
+
+  return notifPromise;
 });
 
 // ── Push raw: log + fallback garantizado si onBackgroundMessage no dispara ──

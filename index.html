@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-10-v20';
+  var B='2026-07-10-v21';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -9354,22 +9354,16 @@ async function renderOnboarding(){
   // Si ya denegó: no molestar
   if(perm === 'denied') return;
 
-  // Si ya concedió: registrar foreground handler + verificar token
+  // Si ya concedió: registrar foreground handler + renovar token silenciosamente.
   if(perm === 'granted'){
-    // BUG FIX: onMessage solo se registra dentro de requestNotificationPermission,
-    // pero si el permiso ya existía de una sesión anterior, nunca se llama.
-    // _initFCMForeground() lo registra una sola vez en cualquier caso.
+    // Registrar onMessage una sola vez (en sesiones previas con permiso ya otorgado)
     setTimeout(()=>window._initFCMForeground&&window._initFCMForeground(), 500);
 
-    const uid = window.currentProfile?.uid;
-    if(uid && window.loadUserFCMTokens){
-      const tokens = await window.loadUserFCMTokens(uid).catch(()=>[]);
-      if(!tokens.length){
-        // Tiene permiso pero no tiene token → obtenerlo silenciosamente
-        console.log('[FCM] Permiso concedido pero sin token — registrando silenciosamente...');
-        setTimeout(()=>window.requestNotificationPermission&&window.requestNotificationPermission(), 1500);
-      }
-    }
+    // Renovar/verificar token FCM en cada inicio de sesión.
+    // Idempotente — no muestra UI, no pide permiso, usa la push subscription existente.
+    // Garantiza que el token de la PWA instalada en Android esté siempre sincronizado
+    // con Firestore, incluso si el OS actualizó Chrome o cambió el Service Worker.
+    setTimeout(()=>window._silentTokenRefresh&&window._silentTokenRefresh(), 2500);
     return;
   }
 
@@ -10062,6 +10056,57 @@ function _initFCMForeground(){
   }catch(e){ console.warn('[FCM] onMessage foreground error:', e.message); }
 }
 window._initFCMForeground = _initFCMForeground;
+
+// ── Renovación silenciosa de token FCM al iniciar sesión ──────────────────
+// Llamado desde renderOnboarding cuando permission='granted'.
+// Siempre obtiene el token actual (cacheado si la push subscription no cambió)
+// y lo guarda vía arrayUnion (idempotente). Crítico para PWA instalada en Android:
+// el token del navegador y el del standalone pueden desincronizarse tras una
+// actualización del OS o del Chrome, y este mecanismo los resincroniza en silencio.
+window._silentTokenRefresh = async function() {
+  if (Notification.permission !== 'granted') return;
+  try {
+    const swReg = window._fcmSwReg || await window._ensureFCMSwRegistered?.();
+    if (!swReg) return;
+
+    // Detectar cambio de SW (misma lógica que requestNotificationPermission)
+    const swScriptUrl = swReg?.active?.scriptURL || '';
+    const storedSwUrl = localStorage.getItem('gpc_sw_url') || '';
+    if (storedSwUrl && storedSwUrl !== swScriptUrl) {
+      console.log('[FCM] 🔄 Silent refresh: SW cambió, eliminando token anterior...');
+      try { await deleteToken(getMsg()); } catch(e) {}
+    }
+
+    await navigator.serviceWorker.ready;
+    const token = await getToken(getMsg(), {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swReg,
+    });
+    if (!token) { console.warn('[FCM] _silentTokenRefresh: getToken devolvió vacío'); return; }
+
+    const uid = fcmAuth.currentUser?.uid || window.currentProfile?.uid;
+    if (!uid) { console.warn('[FCM] _silentTokenRefresh: sin uid'); return; }
+
+    await setDoc(doc(fcmDb, 'users', uid), {
+      fcmTokens:      arrayUnion(token),
+      fcmLastUpdated: serverTimestamp(),
+      fcmDevice:      navigator.userAgent.slice(0, 80),
+    }, { merge: true });
+
+    const tokenHash = token.slice(-20);
+    await setDoc(doc(fcmDb, 'users', uid, 'tokens', tokenHash), {
+      token,
+      device:    navigator.userAgent.slice(0, 80),
+      updatedAt: serverTimestamp(),
+      standalone: String(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true),
+    }, { merge: true });
+
+    if (swScriptUrl) localStorage.setItem('gpc_sw_url', swScriptUrl);
+    console.log('[FCM] ✅ Token startup verificado:', token.slice(0, 20) + '… | SW:', swScriptUrl.split('/').pop());
+  } catch(e) {
+    console.warn('[FCM] _silentTokenRefresh falló:', e.message);
+  }
+};
 
 // ── Diagnóstico FCM completo (ejecutar desde consola) ─────────────────────
 window.diagnoseFCM = async function(){
