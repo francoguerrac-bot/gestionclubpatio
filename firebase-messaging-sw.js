@@ -1,10 +1,16 @@
-// firebase-messaging-sw.js — v5 (deep links + postMessage)
+// firebase-messaging-sw.js — v6 (SW único: FCM + PWA cache)
+// Este archivo es el ÚNICO Service Worker registrado.
+// Maneja: FCM push, offline cache, deep links, postMessage.
 // Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION    = '5.1.0';
+const SW_VERSION    = '6.0.0';
 const APP_ORIGIN    = 'https://gestionclubpatio.vercel.app';
 const PROJECT_ID    = 'gestion-de-personas-ce003';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+
+// ── PWA Cache (fusionado desde sw.js) ────────────────────────────────────
+const CACHE_NAME = 'clubpatio-v7';
+const CACHE_URLS = ['/', '/index.html', '/assets/Logo2.png', '/manifest.json'];
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
@@ -186,6 +192,54 @@ self.addEventListener('notificationclose', e =>
   console.log('[FCM-SW] Notificación cerrada — tag:', e.notification.tag)
 );
 
-// ── Ciclo de vida ─────────────────────────────────────────────────────
-self.addEventListener('install',  e => { console.log(`[FCM-SW v${SW_VERSION}] install`); self.skipWaiting(); });
-self.addEventListener('activate', e => { console.log(`[FCM-SW v${SW_VERSION}] activate`); e.waitUntil(self.clients.claim()); });
+// ── Ciclo de vida (PWA cache incluido) ───────────────────────────────────
+self.addEventListener('install', e => {
+  console.log(`[FCM-SW v${SW_VERSION}] install — precacheando ${CACHE_URLS.length} archivos`);
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(CACHE_URLS))
+      .then(() => self.skipWaiting())
+      .catch(err => console.warn('[FCM-SW] Precache parcial:', err.message))
+  );
+});
+
+self.addEventListener('activate', e => {
+  console.log(`[FCM-SW v${SW_VERSION}] activate — limpiando caches viejas`);
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => {
+          console.log('[FCM-SW] Eliminando cache antigua:', k);
+          return caches.delete(k);
+        })
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+// ── Fetch: Network-first para Firebase/API, Cache-first para assets ───────
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  // Siempre desde red: Firebase, Firestore, APIs externas, Vercel functions
+  if (
+    url.hostname.includes('firebase') ||
+    url.hostname.includes('firestore') ||
+    url.hostname.includes('googleapis') ||
+    url.hostname.includes('gstatic') ||
+    url.pathname.startsWith('/api/')
+  ) return;
+
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        if (!response || response.status !== 200 || response.type !== 'basic') return response;
+        const toCache = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, toCache));
+        return response;
+      }).catch(() => {
+        if (event.request.destination === 'document') return caches.match('/index.html');
+      });
+    })
+  );
+});

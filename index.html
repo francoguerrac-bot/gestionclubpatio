@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-10-v17';
+  var B='2026-07-10-v18';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -4596,7 +4596,14 @@ function renderDashboard(){
       ['Roles',   (prof.roles||[]).join(', ') || role],
       ['Org',     prof.orgId  || 'curauma_001'],
       ['Build',   localStorage.getItem('app-build') || '—'],
-      ['SW',      navigator.serviceWorker?.controller ? 'activo' : 'sin SW'],
+      ['SW',      (()=>{
+        const ctrl = navigator.serviceWorker?.controller;
+        if(!ctrl) return 'sin SW';
+        const url = ctrl.scriptURL||'';
+        if(url.includes('firebase-messaging-sw')) return 'FCM activo ✅';
+        if(url.includes('sw.js')) return 'sw.js (sin FCM) ⚠️';
+        return 'activo (desconocido)';
+      })()],
       ['Online',  navigator.onLine ? 'sí' : 'offline'],
     ];
     body.innerHTML = items.map(([k,v])=>`<div class="support-console-item"><span class="sci-key">${k}</span><span class="sci-val">${v}</span></div>`).join('');
@@ -9150,16 +9157,70 @@ onAuthStateChanged(auth, async (user)=>{
   }
 });
 </script>
-<!-- ── PWA: Registro del Service Worker ── -->
+<!-- ── PWA + FCM: Registro del Service Worker único ── -->
 <script>
-// ── PWA: Service Worker ──
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg=>console.log('[PWA] SW registrado:', reg.scope))
-      .catch(err=>console.warn('[PWA] SW error:', err));
-  });
+// firebase-messaging-sw.js es el ÚNICO SW — maneja tanto FCM push como el
+// caché PWA offline. Registrar sw.js por separado causaría conflicto de scope.
+//
+// Resilencia: si al cargar la página el SW de FCM no está activo
+// (porque fue eliminado, el scope cambió o es la primera visita)
+// se registra automáticamente aquí, ANTES de que el usuario tenga que
+// pulsar "Activar notificaciones".
+
+window._fcmSwReg = null; // referencia global a la registration activa
+
+async function _ensureFCMSwRegistered() {
+  if (!('serviceWorker' in navigator)) return null;
+
+  try {
+    // 1. Buscar si ya está registrado el SW de FCM
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    const existing = registrations.find(r =>
+      [r.active, r.installing, r.waiting].some(sw => sw?.scriptURL.includes('firebase-messaging-sw.js'))
+    );
+
+    if (existing) {
+      const state = existing.active?.state || existing.installing?.state || 'waiting';
+      console.log(`[FCM-SW] Ya registrado — estado: ${state} | scope: ${existing.scope}`);
+      window._fcmSwReg = existing;
+      return existing;
+    }
+
+    // 2. No está registrado → registrar ahora
+    console.log('[FCM-SW] No encontrado → registrando firebase-messaging-sw.js...');
+    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    console.log('[FCM-SW] ✅ Registrado correctamente | scope:', reg.scope);
+
+    // Esperar a que esté activo (puede tardar si hay un SW viejo en espera)
+    if (reg.installing) {
+      await new Promise(resolve => {
+        reg.installing.addEventListener('statechange', function() {
+          if (this.state === 'activated') resolve();
+        });
+      });
+    }
+
+    window._fcmSwReg = reg;
+    return reg;
+
+  } catch(err) {
+    console.error('[FCM-SW] ❌ Error al registrar Service Worker:', err.name, '—', err.message);
+    // Causas comunes:
+    //  "SecurityError"  → la página no es HTTPS
+    //  "TypeError"      → la URL del SW no existe (404)
+    //  "InvalidStateError" → scope inválido
+    return null;
+  }
 }
+window._ensureFCMSwRegistered = _ensureFCMSwRegistered;
+
+// Registrar en cuanto la página carga (sin esperar al clic de notificaciones)
+window.addEventListener('load', () => {
+  _ensureFCMSwRegistered().then(reg => {
+    if (reg) console.log('[FCM-SW] ✅ SW activo al inicio de sesión');
+    else     console.warn('[FCM-SW] ⚠️ SW no pudo registrarse — notificaciones background desactivadas');
+  });
+});
 
 // ── PWA: Banner de instalación inteligente ──
 let pwaInstallEvent = null;
@@ -9527,11 +9588,15 @@ async function requestNotificationPermission(){
       return;
     }
 
-    // PASO 2: Registrar SW de mensajería
-    console.log('[FCM] Paso 2: Registrando firebase-messaging-sw.js...');
-    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope:'/' });
+    // PASO 2: Obtener la registration del SW (ya existe desde el load proactivo)
+    console.log('[FCM] Paso 2: Asegurando SW de mensajería...');
+    const swReg = window._fcmSwReg || await window._ensureFCMSwRegistered();
+    if (!swReg) {
+      _fcmError('No se pudo registrar el Service Worker. Verifica que la app use HTTPS y que /firebase-messaging-sw.js exista.');
+      return;
+    }
     await navigator.serviceWorker.ready;
-    console.log('[FCM] Paso 2: SW registrado correctamente. Estado:', swReg.active?.state);
+    console.log('[FCM] Paso 2: SW listo. Estado:', swReg.active?.state || 'activando...');
 
     // PASO 3: Obtener token FCM
     console.log('[FCM] Paso 3: Obteniendo token con getToken()...');
@@ -9947,7 +10012,17 @@ window.diagnoseFCM = async function(){
 
   if(swOk){
     const regs = await navigator.serviceWorker.getRegistrations();
-    console.log('SW registrations:', regs.map(r=>r.scope));
+    console.log('SW registrations:', regs.length);
+    regs.forEach((r,i) => {
+      const script = r.active?.scriptURL || r.installing?.scriptURL || r.waiting?.scriptURL || '(ninguno)';
+      const state  = r.active?.state     || r.installing?.state     || r.waiting?.state     || 'waiting';
+      const isFCM  = script.includes('firebase-messaging-sw');
+      console.log(`  [${i}] ${isFCM?'✅ FCM':'⚠️ otro'} scope=${r.scope} state=${state} script=${script.split('/').pop()}`);
+    });
+    const fcmReg = regs.find(r => [r.active,r.installing,r.waiting].some(s=>s?.scriptURL.includes('firebase-messaging-sw')));
+    if(!fcmReg) console.warn('  ❌ firebase-messaging-sw.js NO está registrado — notificaciones background desactivadas');
+    const ctrl = navigator.serviceWorker.controller;
+    console.log('Controller actual:', ctrl ? ctrl.scriptURL.split('/').pop() : 'ninguno (tab recién abierta o sin SW)');
   }
 
   // Probar la API con un push a mí mismo
