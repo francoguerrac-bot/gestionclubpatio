@@ -222,16 +222,17 @@ function buildDeepLink(extraData) {
   if (extraData.taskId) {
     return `${APP_URL}?gpc=task&id=${extraData.taskId}`;
   }
-  // Permisos familiares
-  if (['permission_requested','permission_approved','permission_rejected','permission_needs_signature'].includes(type)) {
+  // Permisos familiares (incluyendo 'evaluating' y respuestas al hijo)
+  if (type.startsWith('permission_')) {
     return `${APP_URL}?gpc=permisos`;
   }
+  // Propuestas: Director recibe aviso → panel familia; hijo recibe respuesta → mi-panel
+  if (type === 'proposal_submitted')  return `${APP_URL}?gpc=familia`;
+  if (type.startsWith('proposal_'))   return `${APP_URL}?gpc=mi-panel`;
   // Kanban
   if (['kanban_approved','kanban_rejected','kanban_approval_needed'].includes(type)) {
     return `${APP_URL}?gpc=club`;
   }
-  // Propuestas
-  if (type === 'proposal_submitted') return `${APP_URL}?gpc=familia`;
   // Tienda
   if (type === 'tienda_toggle' || type === 'emprendedor_added') return `${APP_URL}?gpc=tienda`;
   // Bazar
@@ -246,8 +247,8 @@ function buildActionLabel(extraData) {
   const type = extraData.type || '';
   if (extraData.taskId || type.startsWith('task') || type.startsWith('sprint')) return '📋 Ver tarea';
   if (type.startsWith('permission')) return '🔑 Ver permiso';
-  if (type.startsWith('kanban'))    return '📌 Ver tablero';
-  if (type === 'proposal_submitted') return '💡 Ver propuesta';
+  if (type.startsWith('kanban'))     return '📌 Ver tablero';
+  if (type.startsWith('proposal'))   return '💡 Ver propuesta';
   if (type.startsWith('tienda') || type === 'emprendedor_added') return '🏪 Ver tienda';
   if (type === 'mood_bad_hijo' || type === 'mood_low') return '💛 Ver familia';
   return '🔔 Abrir app';

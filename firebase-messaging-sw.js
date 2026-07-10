@@ -106,16 +106,20 @@ messaging.onBackgroundMessage(function(payload) {
   if (data.taskId || notifType.startsWith('task') || notifType.startsWith('sprint')) openLabel = '📋 Ver tarea';
   else if (notifType.startsWith('permission')) openLabel = '🔑 Ver permiso';
   else if (notifType.startsWith('kanban'))     openLabel = '📌 Ver tablero';
-  else if (notifType === 'proposal_submitted') openLabel = '💡 Ver propuesta';
+  else if (notifType.startsWith('proposal'))   openLabel = '💡 Ver propuesta';
   else if (notifType === 'tienda_toggle' || notifType === 'emprendedor_added') openLabel = '🏪 Ver tienda';
   else if (notifType === 'role_assigned')      openLabel = '🎉 Ingresar';
   else if (notifType === 'mood_bad_hijo' || notifType === 'mood_low') openLabel = '💛 Ver familia';
 
-  const requiresAction = notifType.startsWith('permission') ||
-                         notifType === 'task_assigned'      ||
-                         notifType === 'task_urgent_unassigned' ||
-                         notifType === 'kanban_approval_needed' ||
-                         notifType === 'mood_bad_hijo';
+  const requiresAction = notifType.startsWith('permission')          ||
+                         notifType === 'task_assigned'               ||
+                         notifType === 'task_urgent_unassigned'      ||
+                         notifType === 'kanban_approval_needed'      ||
+                         notifType === 'mood_bad_hijo'               ||
+                         // Hijo debe ver el resultado de su propuesta
+                         notifType === 'proposal_approved'           ||
+                         notifType === 'proposal_rejected'           ||
+                         notifType === 'proposal_evaluating';
 
   const options = {
     body,

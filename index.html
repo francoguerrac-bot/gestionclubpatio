@@ -5238,6 +5238,49 @@ async function handleFamiliaResponse(id,type,action,note){
     else              window.updateProposalStatus(id,ap).catch(()=>{});
   }
   toast(action==='approve'?'✅ Aprobado con nota':action==='eval'?'🔄 En evaluación':'❌ Rechazado con nota');
+
+  // ── Push al solicitante (hijo / colaborador) ──────────────────────────
+  // Ruta: Director/Mamá resolvió via panel de familia con nota obligatoria.
+  // patch.status indica el estado final; undefined = firma parcial (perm aún pendiente).
+  const requesterUid = item?.requesterId;
+  const finalStatus  = patch.status;           // 'approved' | 'evaluating' | 'rejected' | undefined
+  const isPerm       = type === 'perm';
+  const label        = (item?.motivo || item?.titulo || 'tu solicitud').slice(0, 60);
+  const notePreview  = note.slice(0, 60);
+
+  if (requesterUid && window.sendNotificationToUser && finalStatus) {
+    // Estado final → notificar al solicitante
+    const PUSH_CFG = {
+      approved:   { title: isPerm ? '✅ ¡Permiso aprobado!'        : '✅ ¡Propuesta aceptada!',
+                    type:  isPerm ? 'permission_approved'           : 'proposal_approved' },
+      evaluating: { title: '🔄 Tu solicitud está en evaluación',
+                    type:  isPerm ? 'permission_evaluating'         : 'proposal_evaluating' },
+      rejected:   { title: isPerm ? '❌ Permiso no aprobado'        : '❌ Propuesta no aceptada',
+                    type:  isPerm ? 'permission_rejected'           : 'proposal_rejected' },
+    };
+    const cfg = PUSH_CFG[finalStatus];
+    if (cfg) {
+      window.sendNotificationToUser(
+        requesterUid,
+        cfg.title,
+        `"${label}" — ${notePreview}`,
+        { type: cfg.type, reqId: id }
+      ).catch(e => console.warn('[Familia] push→requester:', e.message));
+    }
+  }
+
+  // Firma parcial de permiso (una sola firma, falta la otra) → notificar al otro padre
+  if (isPerm && action === 'approve' && !finalStatus && window._notifyByRole) {
+    const otherRole = isMama ? 'director' : 'mama';
+    const whoSigned = isMama ? 'Mamá' : 'Papá';
+    window._notifyByRole(
+      [otherRole],
+      '✍️ Falta tu firma en un permiso',
+      `${whoSigned} aprobó "${label}" y dejó una nota. Falta tu revisión.`,
+      { type: 'permission_needs_signature', reqId: id }
+    );
+  }
+
   await loadFamiliaPanel();
 }
 
