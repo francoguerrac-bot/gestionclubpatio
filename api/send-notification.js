@@ -279,7 +279,9 @@ function buildFCMMessage(token, title, body, extraData, uid) {
     },
     webpush: {
       headers: { Urgency: 'high', TTL: '86400' },
-      notification: { title, body, icon: '/assets/Logo2.png', badge: '/assets/Logo2.png', vibrate: [200, 100, 200] },
+      // Sin notification aquí → mensaje data-only para Chrome → siempre pasa por
+      // onBackgroundMessage en el SW en lugar de mostrarse de forma nativa.
+      // Esto garantiza que nuestro handler muestre la notificación con opciones completas.
       fcmOptions: { link: deepLink },
       data: strData,
     },
@@ -301,6 +303,39 @@ async function sendOneFCM(token, title, body, data, uid, accessToken) {
     }
   );
   return resp.json();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Eliminar token FCM obsoleto (UNREGISTERED) de Firestore
+// ─────────────────────────────────────────────────────────────────────────
+async function removeStaleToken(uid, staleToken, accessToken) {
+  const projectId = _projectId || process.env.FIREBASE_PROJECT_ID || 'gestion-de-personas-ce003';
+  const BASE      = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+  const tokenHash = staleToken.slice(-20);
+
+  await Promise.allSettled([
+    // Eliminar del array fcmTokens[] en el doc principal
+    fetch(`${BASE}:batchWrite`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        writes: [{
+          transform: {
+            document: `projects/${projectId}/databases/(default)/documents/users/${uid}`,
+            fieldTransforms: [{
+              fieldPath: 'fcmTokens',
+              removeAllFromArray: { values: [{ stringValue: staleToken }] },
+            }],
+          },
+        }],
+      }),
+    }),
+    // Eliminar documento de subcolección /users/{uid}/tokens/{hash}
+    fetch(`${BASE}/users/${encodeURIComponent(uid)}/tokens/${tokenHash}`, {
+      method:  'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }),
+  ]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -382,14 +417,31 @@ module.exports = async (req, res) => {
   );
 
   let sent = 0, failed = 0;
+  const staleTokens = [];
   results.forEach((r, i) => {
     if (r.status === 'fulfilled' && r.value?.name) {
       sent++;
     } else {
       failed++;
-      console.warn(`[API] Token[${i}]:`, r.reason?.message || JSON.stringify(r.value?.error));
+      const errDetails = r.value?.error?.details || [];
+      const errCode    = errDetails.find(d => d.errorCode)?.errorCode || '';
+      const errStatus  = r.value?.error?.status || '';
+      const errMsg     = r.reason?.message || JSON.stringify(r.value?.error) || '';
+      console.warn(`[API] Token[${i}] error:`, errCode || errStatus || errMsg);
+
+      // Detectar token inválido → programar limpieza en Firestore
+      if (errCode === 'UNREGISTERED' || errStatus === 'NOT_FOUND' || errMsg.includes('UNREGISTERED')) {
+        staleTokens.push(tokens[i]);
+      }
     }
   });
+
+  // Limpiar tokens obsoletos en background (no bloquea la respuesta)
+  if (staleTokens.length > 0) {
+    console.log(`[API] Limpiando ${staleTokens.length} token(s) obsoleto(s) de ${userId}`);
+    Promise.allSettled(staleTokens.map(t => removeStaleToken(userId, t, accessToken)))
+      .then(() => console.log(`[API] Tokens obsoletos eliminados`));
+  }
 
   console.log(`[API] uid=${userId} sent=${sent}/${tokens.length}`);
   return res.status(200).json({ success: sent > 0, sent, failed, total: tokens.length });

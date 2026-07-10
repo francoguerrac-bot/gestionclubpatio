@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-10-v18';
+  var B='2026-07-10-v19';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -9479,7 +9479,7 @@ window.showNotifPrompt = showNotifFloatBanner;
 <script type="module">
 import { initializeApp, getApps }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getMessaging, getToken, onMessage }
+import { getMessaging, getToken, onMessage, deleteToken }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
 import { getFirestore, doc, setDoc, arrayUnion, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
@@ -9598,9 +9598,26 @@ async function requestNotificationPermission(){
     await navigator.serviceWorker.ready;
     console.log('[FCM] Paso 2: SW listo. Estado:', swReg.active?.state || 'activando...');
 
-    // PASO 3: Obtener token FCM
+    // PASO 3: Obtener token FCM (con renovación automática si el SW cambió)
     console.log('[FCM] Paso 3: Obteniendo token con getToken()...');
     console.log('[FCM] VAPID configurada:', _vapidConfigured(), '| Key:', VAPID_KEY.slice(0,12)+'…');
+
+    // Detectar cambio de SW → el push subscription cambió → el token guardado es inválido.
+    // Si el SW actual difiere del que se registró en la sesión anterior, invalidar el token
+    // viejo y obtener uno nuevo vinculado a firebase-messaging-sw.js.
+    const swScriptUrl = swReg?.active?.scriptURL || '';
+    const storedSwUrl = localStorage.getItem('gpc_sw_url') || '';
+    if (storedSwUrl && storedSwUrl !== swScriptUrl) {
+      console.log('[FCM] 🔄 SW cambió:', storedSwUrl.split('/').pop(), '→', swScriptUrl.split('/').pop());
+      console.log('[FCM] Eliminando token anterior (push subscription obsoleta)...');
+      try {
+        await deleteToken(getMsg());
+        console.log('[FCM] ✅ Token anterior eliminado — obteniendo token fresco');
+      } catch(delErr) {
+        console.warn('[FCM] No se pudo eliminar token anterior (puede no existir):', delErr.message);
+      }
+    }
+
     let token = null;
     try{
       token = await getToken(getMsg(), {
@@ -9661,6 +9678,10 @@ async function requestNotificationPermission(){
     } else {
       console.warn('[FCM] ⚠️ No hay UID disponible — token no guardado en Firestore todavía.');
     }
+
+    // Registrar SW activo para detectar cambios en futuras sesiones
+    const activeSwUrl = swReg?.active?.scriptURL || '';
+    if (activeSwUrl) localStorage.setItem('gpc_sw_url', activeSwUrl);
 
     // Actualizar UI al estado "granted"
     checkPermissionStatus('auto');
@@ -9966,7 +9987,8 @@ function _initFCMForeground(){
       //    incluso cuando la app está en primer plano (tab activo)
       if('serviceWorker' in navigator){
         try{
-          const reg = await navigator.serviceWorker.ready;
+          // Usar específicamente el SW de FCM (no cualquier SW activo)
+          const reg = window._fcmSwReg || await navigator.serviceWorker.ready;
           const notifType = data.type || '';
           let openLabel = '🔔 Abrir app';
           if(data.taskId || notifType.startsWith('task') || notifType.startsWith('sprint')) openLabel = '📋 Ver tarea';

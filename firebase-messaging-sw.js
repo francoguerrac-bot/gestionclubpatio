@@ -3,7 +3,7 @@
 // Maneja: FCM push, offline cache, deep links, postMessage.
 // Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION    = '6.0.0';
+const SW_VERSION    = '6.1.0';
 const APP_ORIGIN    = 'https://gestionclubpatio.vercel.app';
 const PROJECT_ID    = 'gestion-de-personas-ce003';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
@@ -77,8 +77,14 @@ async function logToFirestore(event, payload, extra = {}) {
   ]);
 }
 
+// ── Coordinación push ↔ onBackgroundMessage ──────────────────────────
+// La flag evita que el handler de fallback muestre duplicado cuando Firebase
+// ya procesó el mensaje correctamente via onBackgroundMessage.
+let _bgMessageHandled = false;
+
 // ── onBackgroundMessage: app cerrada o sin foco ───────────────────────
 messaging.onBackgroundMessage(async function(payload) {
+  _bgMessageHandled = true;  // Firebase procesó el mensaje
   const ts = new Date().toISOString();
   console.log(`[FCM-SW ${ts}] ✅ onBackgroundMessage:`, JSON.stringify(payload));
 
@@ -135,22 +141,58 @@ messaging.onBackgroundMessage(async function(payload) {
     });
 });
 
-// ── Push raw (fallback — detecta si llega pero onBackgroundMessage no dispara) ──
-self.addEventListener('push', async function(event) {
-  const ts = new Date().toISOString();
-  console.log(`[FCM-SW ${ts}] push raw recibido`);
+// ── Push raw: log + fallback garantizado si onBackgroundMessage no dispara ──
+self.addEventListener('push', function(event) {
+  _bgMessageHandled = false;  // Reset para este push
 
   let payload = {};
   try {
     payload = event.data ? event.data.json() : {};
-    console.log('[FCM-SW] push data:', JSON.stringify(payload));
+    console.log(`[FCM-SW] push raw — tipo: ${payload?.data?.type || '—'}`);
   } catch(e) {
-    console.warn('[FCM-SW] push data no es JSON:', event.data?.text?.());
+    console.warn('[FCM-SW] push data no es JSON');
   }
 
-  // Solo logueamos — onBackgroundMessage de Firebase maneja el show
-  // Si ves este log pero NO 'background_received', hay un bug en la inicialización
-  await logToFirestore('push_raw', payload, { note: 'fallback_handler' });
+  // event.waitUntil() es OBLIGATORIO para mantener el SW vivo durante trabajo async
+  event.waitUntil(
+    (async () => {
+      // 1. Log de diagnóstico
+      await logToFirestore('push_raw', payload, { note: 'raw_handler' }).catch(() => {});
+
+      // 2. Esperar a que Firebase SDK procese el mensaje via onBackgroundMessage.
+      //    Si _bgMessageHandled queda en false después de 2s → Firebase falló → mostrar fallback.
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      if (_bgMessageHandled) return; // Firebase lo manejó ✅ — no duplicar
+
+      // FALLBACK: Firebase no llamó onBackgroundMessage (inicialización fallida,
+      // formato inesperado, etc.). Mostrar notificación de todas formas.
+      console.warn('[FCM-SW] ⚠️ onBackgroundMessage no disparó — activando fallback');
+      const data  = payload.data         || {};
+      const notif = payload.notification || {};
+      const title = notif.title || data.title || 'Gestión de Equipos · Patio Curauma';
+      const body  = notif.body  || data.body  || 'Tienes una novedad en la app.';
+      const link  = data.gpc_link || data.link || APP_ORIGIN;
+
+      await self.registration.showNotification(title, {
+        body,
+        icon:    '/assets/Logo2.png',
+        badge:   '/assets/Logo2.png',
+        tag:     `gpc-fallback-${Date.now()}`,
+        data:    { url: link, ...data },
+        vibrate: [200, 100, 200],
+        requireInteraction: false,
+        actions: [
+          { action: 'open',  title: '🔔 Abrir app' },
+          { action: 'close', title: '✕ Ignorar' },
+        ],
+      }).catch(async (err) => {
+        await logToFirestore('fallback_error', payload, { error: err.message }).catch(() => {});
+      });
+
+      await logToFirestore('fallback_shown', payload, { reason: 'onBackgroundMessage_not_called' }).catch(() => {});
+    })()
+  );
 });
 
 // ── Click en la notificación ──────────────────────────────────────────
