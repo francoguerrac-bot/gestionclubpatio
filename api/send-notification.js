@@ -236,6 +236,8 @@ function buildDeepLink(extraData) {
   if (type === 'tienda_toggle' || type === 'emprendedor_added') return `${APP_URL}?gpc=tienda`;
   // Bazar
   if (type === 'bazar_checklist') return `${APP_URL}?gpc=bazar`;
+  // Ánimo / estado emocional
+  if (type === 'mood_bad_hijo' || type === 'mood_low') return `${APP_URL}?gpc=familia`;
   return APP_URL;
 }
 
@@ -247,6 +249,7 @@ function buildActionLabel(extraData) {
   if (type.startsWith('kanban'))    return '📌 Ver tablero';
   if (type === 'proposal_submitted') return '💡 Ver propuesta';
   if (type.startsWith('tienda') || type === 'emprendedor_added') return '🏪 Ver tienda';
+  if (type === 'mood_bad_hijo' || type === 'mood_low') return '💛 Ver familia';
   return '🔔 Abrir app';
 }
 

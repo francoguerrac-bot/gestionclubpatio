@@ -8,7 +8,7 @@
 <!-- ── CACHE BUSTER ── -->
 <script>
 (function(){
-  var B='2026-07-09-v15';
+  var B='2026-07-10-v16';
   var s=localStorage.getItem('app-build');
   if(s&&s!==B){
     localStorage.setItem('app-build',B);
@@ -3303,7 +3303,7 @@ function addTask(){
   }
   // Push: tarea p1 sin asignar → avisar al Director
   if (!ownerVal && document.getElementById('metaPrio').value === 'p1' && currentRole !== 'director' && window._notifyByRole) {
-    window._notifyByRole(['director'], '📌 Tarea urgente sin asignar', '"'+text.slice(0,60)+'" es URGENTE y no tiene responsable.', {type:'task_unassigned_urgent'});
+    window._notifyByRole(['director'], '📌 Tarea urgente sin asignar', '"'+text.slice(0,60)+'" es URGENTE y no tiene responsable.', {type:'task_urgent_unassigned'});
   }
 }
 function toggleDone(id){
@@ -3314,7 +3314,7 @@ function toggleDone(id){
     // Push: notificar al Director (solo si no es el Director quien lo marca)
     if(currentRole !== 'director' && window._notifyByRole){
       const who = currentProfile.displayName || currentRole;
-      window._notifyByRole(['director'], '✅ Tarea completada', who+': "'+t.text.slice(0,60)+'"', {type:'task_done'});
+      window._notifyByRole(['director'], '✅ Tarea completada', who+': "'+t.text.slice(0,60)+'"', {type:'task_completed'});
     }
     // Push: si todas las tareas del sprint están completas → avisar Director
     if(sprintTasks.length && sprintTasks.every(s=>s.done) && window._notifyByRole){
@@ -3576,7 +3576,7 @@ function addToSprint(){
   saveSprint(); renderSprint(); toast('⚡ Agregada al sprint');
   // Push: notificar al asignado de la tarea original
   if(next.owner && next.owner !== (currentProfile.displayName||'') && window._notifyByName){
-    window._notifyByName(next.owner, '⚡ Tarea en tu sprint', '"'+next.text.slice(0,70)+'" fue añadida a tu sprint de esta semana.', {type:'sprint_added'});
+    window._notifyByName(next.owner, '⚡ Tarea en tu sprint', '"'+next.text.slice(0,70)+'" fue añadida a tu sprint de esta semana.', {type:'sprint_task_added'});
   }
 }
 
@@ -6704,7 +6704,7 @@ function submitHijoMood(){
   // Push: si el ánimo es "mal" o "estresado" → notificar Director y Mamá
   if(['mal','estresado'].includes(hmoodAnswers[0]) && window._notifyByRole){
     const hijoName = currentProfile.displayName || (ROLES[currentRole]||{}).label || 'Tu hijo/a';
-    window._notifyByRole(['director','mama'], '💛 Check-in emocional: '+hijoName, hijoName+' reportó: "'+hmoodAnswers[0]+'". Puede necesitar apoyo hoy.', {type:'hijo_mood_alert', mood:hmoodAnswers[0]});
+    window._notifyByRole(['director','mama'], '💛 Check-in emocional: '+hijoName, hijoName+' reportó: "'+hmoodAnswers[0]+'". Puede necesitar apoyo hoy.', {type:'mood_bad_hijo', mood:hmoodAnswers[0]});
   }
 }
 function closeHijoMood(){
@@ -9637,6 +9637,10 @@ window._handleNotifDeepLink = function(msg) {
     if(window.showPage) window.showPage('bazar');
     return;
   }
+  if (type === 'mood_bad_hijo' || type === 'mood_low') {
+    if(window.showPage) window.showPage('familia');
+    return;
+  }
 };
 
 // Resalta y hace scroll a una tarjeta de tarea por su ID
@@ -9881,6 +9885,7 @@ function _initFCMForeground(){
           if(data.taskId || notifType.startsWith('task') || notifType.startsWith('sprint')) openLabel = '📋 Ver tarea';
           else if(notifType.startsWith('permission')) openLabel = '🔑 Ver permiso';
           else if(notifType.startsWith('kanban'))     openLabel = '📌 Ver tablero';
+          else if(notifType === 'mood_bad_hijo' || notifType === 'mood_low') openLabel = '💛 Ver familia';
           const deepUrl = data.gpc_link || data.link || 'https://gestionclubpatio.vercel.app';
           await reg.showNotification(title, {
             body,

@@ -1,7 +1,7 @@
 // firebase-messaging-sw.js — v5 (deep links + postMessage)
 // Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION    = '5.0.0';
+const SW_VERSION    = '5.1.0';
 const APP_ORIGIN    = 'https://gestionclubpatio.vercel.app';
 const PROJECT_ID    = 'gestion-de-personas-ce003';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
@@ -100,6 +100,7 @@ messaging.onBackgroundMessage(async function(payload) {
   else if (notifType === 'proposal_submitted') openLabel = '💡 Ver propuesta';
   else if (notifType === 'tienda_toggle' || notifType === 'emprendedor_added') openLabel = '🏪 Ver tienda';
   else if (notifType === 'role_assigned')      openLabel = '🎉 Ingresar';
+  else if (notifType === 'mood_bad_hijo' || notifType === 'mood_low') openLabel = '💛 Ver familia';
 
   const options = {
     body,
