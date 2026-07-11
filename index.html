@@ -5827,6 +5827,12 @@ async function resetUserTasks(uid, name){
     await window.resetUserTasksFirestore(uid);
     toast(`🧹 Perfil de ${who} limpiado exitosamente`);
     writeAuditEntry && writeAuditEntry('admin_reset_user_tasks',{emoji:'🧹', uid, name:who});
+    // Si el uid reseteado es el propio Director → limpiar en-place sin cambiar la referencia
+    if(uid === (currentProfile && currentProfile.uid)){
+      tasks.splice(0, tasks.length);
+      window.tasks = tasks;
+      renderTasks();
+    }
   }catch(e){
     toast('⚠️ Error al limpiar: '+e.message);
     console.error('[Admin Reset]', e);
@@ -8626,7 +8632,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
-  collection, getDocs, addDoc, query, where, serverTimestamp, onSnapshot
+  collection, getDocs, addDoc, query, where, serverTimestamp, onSnapshot, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -9210,17 +9216,32 @@ window.deleteUserFirestoreDoc = async function(uid){
   await deleteDoc(doc(db,'users',uid));
 };
 
-// ── Admin: limpiar tareas legacy y Kanban sin borrar la cuenta ──
+// ── Admin: limpiar tareas legacy, Kanban y colección /tasks (deep reset) ──
 window.resetUserTasksFirestore = async function(uid){
   if(!uid) throw new Error('UID requerido');
-  console.log('[Admin Reset] Limpiando tareas y Kanban para uid:', uid);
+  console.log('[Admin Reset] Deep reset para uid:', uid);
+
+  // 1. Limpiar doc legacy /users/{uid}
   await setDoc(doc(db,'users',uid), {
-    tasks:     [],                         // array legacy de tareas (cloudSet system)
-    kanban:    [],                         // tablero Kanban embebido en el doc del usuario
+    tasks:     [],
+    kanban:    [],
     updatedAt: new Date().toISOString(),
     updatedBy: currentUser ? currentUser.uid : 'director',
   }, { merge: true });
-  console.log('[Admin Reset] ✅ uid:', uid);
+
+  // 2. Batch delete en /tasks con single-field query (sin índice compuesto)
+  //    Filtramos orgId en JS para no requerir composite index en Firestore
+  const q    = query(collection(db,'tasks'), where('assignedToUid','==', uid));
+  const snap = await getDocs(q);
+  const toDelete = snap.docs.filter(d => (d.data().orgId || '') === ORG_ID);
+  if(toDelete.length > 0){
+    const batch = writeBatch(db);
+    toDelete.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    console.log('[Admin Reset] /tasks eliminados:', toDelete.length, 'docs para uid:', uid);
+  }
+
+  console.log('[Admin Reset] ✅ Deep reset completo para uid:', uid);
 };
 
 // ── Cargar TODOS los usuarios de la org para auditoría ──
@@ -10691,6 +10712,26 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
 // ── IMPORT MAGIC — Importación en bloque ──────────────────────────────────
 (function() {
 
+  // ── Smart Parser ─────────────────────────────────────────────────────────
+  var _TASK_KW = /\b(prueba|control|tarea|traer|llevar|entregar|pagar|recoger|buscar|reuni[oó]n|comprar|enviar|llenar|firmar|leer|hacer|presentar|avisar|confirmar|recordar|completar|preparar|solicitar|gestionar|revisar|coordinar|asistir|subir|bajar|imprimir|descargar|inscribir|registrar|devolver|retirar)\b/i;
+
+  var _JUNK = [
+    /^(hola|estimad|buenos\s|buenas\s|queridos|de\s+parte\s+de|para\s+padres)/i,
+    /^(atte|atentamente|cordialmente|un\s+abrazo|pd:|p\.d\.|posdata)/i,
+    /^(el\s+equipo|dirección|directora|coordinación|saludos|buen\s+día)/i,
+    /[@].*\.[a-z]{2,}/,
+    /^https?:\/\//i,
+    /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\s*$/,
+  ];
+
+  function _filterTaskLines(lines) {
+    return lines.filter(function(l) {
+      if (l.length < 6 || l.length > 220)                       return false;
+      if (_JUNK.some(function(re){ return re.test(l); }))        return false;
+      return _TASK_KW.test(l) || /^[-•*·]\s/.test(l) || /^\d+[.)]\s/.test(l);
+    });
+  }
+
   function openImportModal() {
     if (window.currentRole !== 'director' && window.currentRole !== 'mama') return;
 
@@ -10736,10 +10777,14 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
     var ta  = document.getElementById('importTextarea');
     var pre = document.getElementById('importPreview');
     if (!ta || !pre) return;
-    var lines = ta.value.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
-    pre.textContent = lines.length
-      ? lines.length + ' tarea' + (lines.length === 1 ? '' : 's') + ' detectada' + (lines.length === 1 ? '' : 's')
-      : '';
+    var raw      = ta.value.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    var filtered = _filterTaskLines(raw);
+    var skipped  = raw.length - filtered.length;
+    if (!raw.length) { pre.textContent = ''; return; }
+    pre.textContent = filtered.length
+      ? filtered.length + ' tarea' + (filtered.length === 1 ? '' : 's') + ' detectada' + (filtered.length === 1 ? '' : 's')
+        + (skipped > 0 ? ' · ' + skipped + ' línea' + (skipped === 1 ? '' : 's') + ' de relleno omitida' + (skipped === 1 ? '' : 's') : '')
+      : '⚠️ Sin tareas accionables detectadas — usa viñetas (- •) o palabras clave';
   }
 
   async function runBulkImport() {
@@ -10752,11 +10797,18 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
       return;
     }
 
-    var ta    = document.getElementById('importTextarea');
-    var lines = (ta ? ta.value : '').split('\n')
-                  .map(function(l){ return l.trim(); }).filter(Boolean);
+    var ta       = document.getElementById('importTextarea');
+    var rawLines = (ta ? ta.value : '').split('\n')
+                    .map(function(l){ return l.trim(); }).filter(Boolean);
+    var lines    = _filterTaskLines(rawLines);
+    var skipped  = rawLines.length - lines.length;
 
-    if (!lines.length) { window.toast && window.toast('Escribe al menos una tarea.'); return; }
+    if (!rawLines.length) { window.toast && window.toast('Escribe al menos una tarea.'); return; }
+    if (!lines.length) {
+      window.toast && window.toast('⚠️ Smart Parser no encontró tareas accionables. Usa viñetas (- •) o palabras clave como traer, hacer, entregar.');
+      return;
+    }
+    if (skipped > 0) window.toast && window.toast('🧹 Smart Parser: ' + skipped + ' línea' + (skipped > 1 ? 's' : '') + ' de relleno descartada' + (skipped > 1 ? 's' : '') + '. Importando ' + lines.length + ' tarea' + (lines.length > 1 ? 's' : '') + '.');
     if (lines.length > 30) { window.toast && window.toast('Máximo 30 tareas por importación.'); return; }
 
     // Leer opciones del formulario
