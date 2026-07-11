@@ -5679,19 +5679,13 @@ function renderMasterAdminPanel(users){
   const status = document.getElementById('adminLiveStatus');
   if(!tbody) return;
 
-  // Garantizar que el Director aparece aunque su doc no tenga orgId en Firestore
-  const safeUsers = Array.isArray(users) ? [...users] : [];
-  const cp = window.currentProfile;
-  if(cp && cp.uid && !safeUsers.some(u => u.uid === cp.uid)){
-    safeUsers.unshift({ ...cp, _selfInjected: true });
-    console.log('[Admin DB] Director auto-inyectado en tabla (orgId faltante en Firestore)');
-  }
+  // Debugging: log exactly what we received
+  console.log('[Admin DB] onSnapshot recibido:', users ? users.length : 'null', 'documentos');
+  console.log('[Admin DB] Datos:', users);
 
-  console.log('[Admin DB] onSnapshot recibido:', safeUsers.length, 'documentos');
+  if(status) status.textContent = `${users ? users.length : 0} registros · En vivo 🟢`;
 
-  if(status) status.textContent = `${safeUsers.length} registros · En vivo 🟢`;
-
-  if(!safeUsers.length){
+  if(!users || users.length === 0){
     console.warn('[Admin DB] Snapshot vacío — la colección users puede estar vacía o las reglas de Firestore bloquean la lectura');
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">
       <div style="font-size:24px;margin-bottom:8px;">📭</div>
@@ -5701,7 +5695,7 @@ function renderMasterAdminPanel(users){
     return;
   }
 
-  const sorted = [...safeUsers].sort((a,b)=>(a.displayName||'').localeCompare(b.displayName||''));
+  const sorted = [...users].sort((a,b)=>(a.displayName||'').localeCompare(b.displayName||''));
   tbody.innerHTML = sorted.map((u, i)=>{
     const roles   = Array.isArray(u.roles) ? u.roles.filter(Boolean) : (u.role?[u.role]:[]);
     const mods    = Array.isArray(u.modules) ? u.modules : [];
@@ -5833,11 +5827,6 @@ async function resetUserTasks(uid, name){
     await window.resetUserTasksFirestore(uid);
     toast(`🧹 Perfil de ${who} limpiado exitosamente`);
     writeAuditEntry && writeAuditEntry('admin_reset_user_tasks',{emoji:'🧹', uid, name:who});
-    // Si el uid reseteado es el propio usuario activo → limpiar estado en memoria
-    if(uid === (currentProfile && currentProfile.uid)){
-      tasks = []; window.tasks = [];
-      renderTasks();
-    }
   }catch(e){
     toast('⚠️ Error al limpiar: '+e.message);
     console.error('[Admin Reset]', e);
@@ -8637,7 +8626,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
-  collection, getDocs, addDoc, query, where, serverTimestamp, onSnapshot, writeBatch
+  collection, getDocs, addDoc, query, where, serverTimestamp, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -9221,32 +9210,17 @@ window.deleteUserFirestoreDoc = async function(uid){
   await deleteDoc(doc(db,'users',uid));
 };
 
-// ── Admin: limpiar tareas legacy, Kanban Y colección /tasks (deep reset) ──
+// ── Admin: limpiar tareas legacy y Kanban sin borrar la cuenta ──
 window.resetUserTasksFirestore = async function(uid){
   if(!uid) throw new Error('UID requerido');
-  console.log('[Admin Reset] Deep reset para uid:', uid);
-
-  // 1. Limpiar doc legacy /users/{uid}
+  console.log('[Admin Reset] Limpiando tareas y Kanban para uid:', uid);
   await setDoc(doc(db,'users',uid), {
-    tasks:     [],
-    kanban:    [],
+    tasks:     [],                         // array legacy de tareas (cloudSet system)
+    kanban:    [],                         // tablero Kanban embebido en el doc del usuario
     updatedAt: new Date().toISOString(),
     updatedBy: currentUser ? currentUser.uid : 'director',
   }, { merge: true });
-
-  // 2. Batch delete en colección /tasks donde assignedToUid === uid
-  const q    = query(collection(db,'tasks'),
-                     where('assignedToUid','==', uid),
-                     where('orgId','==', ORG_ID));
-  const snap = await getDocs(q);
-  if(snap.size > 0){
-    const batch = writeBatch(db);
-    snap.docs.forEach(d => batch.delete(d.ref));
-    await batch.commit();
-    console.log('[Admin Reset] /tasks batch delete:', snap.size, 'docs eliminados para uid:', uid);
-  }
-
-  console.log('[Admin Reset] ✅ Deep reset completo para uid:', uid);
+  console.log('[Admin Reset] ✅ uid:', uid);
 };
 
 // ── Cargar TODOS los usuarios de la org para auditoría ──
@@ -10717,26 +10691,6 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
 // ── IMPORT MAGIC — Importación en bloque ──────────────────────────────────
 (function() {
 
-  // ── Smart Parser ─────────────────────────────────────────────────────────
-  var _TASK_KEYWORDS = /\b(prueba|control|tarea|traer|llevar|entregar|pagar|recoger|buscar|reuni[oó]n|comprar|enviar|llenar|firmar|leer|hacer|presentar|avisar|confirmar|recordar|completar|preparar|solicitar|gestionar|revisar|coordinar|asistir|subir|bajar|imprimir|descargar|inscribir|registrar|devolver|retirar)\b/i;
-
-  var _JUNK_PATTERNS = [
-    /^(hola|estimad|buenos\s|buenas\s|queridos|de\s+parte\s+de|para\s+padres)/i,
-    /^(atte|atentamente|cordialmente|un\s+abrazo|pd:|p\.d\.|posdata)/i,
-    /^(equipo|dirección|directora|coordinación|saludos|buen\s+día)/i,
-    /[@].*\.[a-z]{2,}/,
-    /^https?:\/\//i,
-    /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\s*$/,
-  ];
-
-  function _filterTaskLines(lines) {
-    return lines.filter(function(l) {
-      if (l.length < 6 || l.length > 220)              return false;
-      if (_JUNK_PATTERNS.some(function(re){ return re.test(l); })) return false;
-      return _TASK_KEYWORDS.test(l) || /^[-•*·]\s/.test(l) || /^\d+[.)]\s/.test(l);
-    });
-  }
-
   function openImportModal() {
     if (window.currentRole !== 'director' && window.currentRole !== 'mama') return;
 
@@ -10782,14 +10736,10 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
     var ta  = document.getElementById('importTextarea');
     var pre = document.getElementById('importPreview');
     if (!ta || !pre) return;
-    var raw      = ta.value.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
-    var filtered = _filterTaskLines(raw);
-    var skipped  = raw.length - filtered.length;
-    if (!raw.length) { pre.textContent = ''; return; }
-    pre.textContent = filtered.length
-      ? filtered.length + ' tarea' + (filtered.length === 1 ? '' : 's') + ' detectada' + (filtered.length === 1 ? '' : 's')
-        + (skipped > 0 ? ' · ' + skipped + ' línea' + (skipped === 1 ? '' : 's') + ' de relleno ignorada' + (skipped === 1 ? '' : 's') : '')
-      : '⚠️ Sin tareas accionables detectadas';
+    var lines = ta.value.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    pre.textContent = lines.length
+      ? lines.length + ' tarea' + (lines.length === 1 ? '' : 's') + ' detectada' + (lines.length === 1 ? '' : 's')
+      : '';
   }
 
   async function runBulkImport() {
@@ -10802,18 +10752,11 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
       return;
     }
 
-    var ta       = document.getElementById('importTextarea');
-    var rawLines = (ta ? ta.value : '').split('\n')
-                    .map(function(l){ return l.trim(); }).filter(Boolean);
-    var lines    = _filterTaskLines(rawLines);
-    var skipped  = rawLines.length - lines.length;
+    var ta    = document.getElementById('importTextarea');
+    var lines = (ta ? ta.value : '').split('\n')
+                  .map(function(l){ return l.trim(); }).filter(Boolean);
 
-    if (!rawLines.length) { window.toast && window.toast('Escribe al menos una tarea.'); return; }
-    if (!lines.length) {
-      window.toast && window.toast('⚠️ El Smart Parser no encontró tareas accionables. Revisa el texto o usa viñetas (•, -).');
-      return;
-    }
-    if (skipped > 0) window.toast && window.toast('🧹 Smart Parser: ' + skipped + ' líneas de relleno descartadas. Importando ' + lines.length + ' tarea' + (lines.length !== 1 ? 's' : '') + '.');
+    if (!lines.length) { window.toast && window.toast('Escribe al menos una tarea.'); return; }
     if (lines.length > 30) { window.toast && window.toast('Máximo 30 tareas por importación.'); return; }
 
     // Leer opciones del formulario
