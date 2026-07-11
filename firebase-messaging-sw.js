@@ -3,13 +3,13 @@
 // Maneja: FCM push, offline cache, deep links, postMessage.
 // Depurar: DevTools → Application → Service Workers → firebase-messaging-sw.js
 
-const SW_VERSION    = '6.3.0';
+const SW_VERSION    = '6.4.0';
 const APP_ORIGIN    = 'https://gestionclubpatio.vercel.app';
 const PROJECT_ID    = 'gestion-de-personas-ce003';
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 // ── PWA Cache (fusionado desde sw.js) ────────────────────────────────────
-const CACHE_NAME = 'clubpatio-v7';
+const CACHE_NAME = 'clubpatio-v8';
 const CACHE_URLS = ['/', '/index.html', '/assets/Logo2.png', '/manifest.json'];
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
