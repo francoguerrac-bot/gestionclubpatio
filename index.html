@@ -2253,6 +2253,36 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
       ⚠️ Eliminar un usuario borra su documento en Firestore pero <strong>NO</strong> borra su cuenta de Firebase Auth. Para eliminar la cuenta completa, usa la consola de Firebase.
     </div>
 
+    <!-- Herramientas de Recuperación (colapsables) -->
+    <details style="margin-top:14px;" id="recoveryToolsPanel">
+      <summary style="cursor:pointer;user-select:none;font-size:11px;font-weight:700;color:#e07070;letter-spacing:.08em;text-transform:uppercase;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0;">
+        ⚠ Herramientas de Recuperación
+      </summary>
+      <div style="margin-top:10px;padding:14px;background:rgba(220,60,60,.06);border:1px solid rgba(220,60,60,.2);border-radius:10px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+          Usar solo ante datos corruptos o Split-Brain. Estas operaciones escriben directamente en Firestore y recargan la app.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+            <button onclick="repairDirectorProfile()" class="btn btn-sm" style="background:#1e1e3a;color:#9898f5;border:1px solid #4444aa;white-space:nowrap;flex-shrink:0;">
+              🔑 Reparar Perfil Director
+            </button>
+            <div style="font-size:10px;color:var(--text-muted);align-self:center;line-height:1.4;">
+              Asigna <code style="background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">orgId</code> al Director actual → lo hace visible en Admin DB y recarga.
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+            <button onclick="syncTasksBridge()" class="btn btn-sm" style="background:#1a2e1a;color:#70d090;border:1px solid #3a7050;white-space:nowrap;flex-shrink:0;">
+              🔀 Sincronizar Tareas (Bridge)
+            </button>
+            <div style="font-size:10px;color:var(--text-muted);align-self:center;line-height:1.4;">
+              Lee <code style="background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">/tasks</code> y escribe en <code style="background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px;">/users/{uid}.tasks[]</code> por usuario. Resuelve Split-Brain.
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
   </div>
 </div>
 
@@ -9243,6 +9273,83 @@ window.resetUserTasksFirestore = async function(uid){
 
   console.log('[Admin Reset] ✅ Deep reset completo para uid:', uid);
 };
+
+// ── Reparar Perfil Director (asigna orgId al doc del Director en Firestore) ──
+window.repairDirectorProfile = async function(){
+  if(currentRole !== 'director'){ toast('⛔ Solo el Director puede usar esta herramienta.'); return; }
+  const uid = currentUser && currentUser.uid;
+  if(!uid){ toast('⚠️ UID no detectado. Vuelve a iniciar sesión.'); return; }
+  try{
+    await setDoc(doc(db,'users',uid), {
+      orgId:     ORG_ID,
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    console.log('[Recovery] repairDirectorProfile ✅ uid:', uid, '→ orgId:', ORG_ID);
+    toast('✅ Perfil del Director reparado. Recargando...');
+    setTimeout(()=>location.reload(), 1800);
+  }catch(e){
+    toast('❌ Error al reparar: '+e.message);
+    console.error('[Recovery] repairDirectorProfile error:', e);
+  }
+};
+window.repairDirectorProfile = window.repairDirectorProfile;
+
+// ── Bridge de Sincronización: /tasks → /users/{uid}.tasks[] (resuelve Split-Brain) ──
+window.syncTasksBridge = async function(){
+  if(currentRole !== 'director'){ toast('⛔ Solo el Director puede usar esta herramienta.'); return; }
+  const confirmed = confirm(
+    '⚠️ Bridge de Sincronización\n\n' +
+    'Leerá todas las tareas de /tasks (colección nueva) y\n' +
+    'las escribirá en el campo tasks[] de cada usuario en /users.\n\n' +
+    'Operación atómica — no se puede deshacer. ¿Continuar?'
+  );
+  if(!confirmed) return;
+  try{
+    // 1. Query single-field para evitar índice compuesto, filtro orgId en JS
+    const q    = query(collection(db,'tasks'), where('orgId','==',ORG_ID));
+    const snap = await getDocs(q);
+    if(snap.empty){
+      toast('ℹ️ No hay tareas en /tasks para esta org.');
+      return;
+    }
+
+    // 2. Agrupar por assignedToUid
+    const byUser = {};
+    snap.docs.forEach(d=>{
+      const data = d.data();
+      const uid  = data.assignedToUid;
+      if(!uid) return;
+      if(!byUser[uid]) byUser[uid] = [];
+      byUser[uid].push({ id: d.id, ...data });
+    });
+
+    const uids = Object.keys(byUser);
+    if(uids.length === 0){
+      toast('ℹ️ Las tareas encontradas no tienen assignedToUid asignado.');
+      return;
+    }
+
+    // 3. Batch write — una operación setDoc por usuario (max ~20 usuarios, muy bajo del límite 500)
+    const batch = writeBatch(db);
+    uids.forEach(uid=>{
+      batch.set(doc(db,'users',uid), {
+        tasks:     byUser[uid],
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser ? currentUser.uid : 'bridge',
+      }, { merge: true });
+    });
+    await batch.commit();
+
+    const total = Object.values(byUser).reduce((s,a)=>s+a.length, 0);
+    console.log('[Recovery] syncTasksBridge ✅ — usuarios:', uids.length, '| tareas:', total);
+    toast(`✅ Bridge completado: ${total} tareas → ${uids.length} perfiles. Recargando...`);
+    setTimeout(()=>location.reload(), 2200);
+  }catch(e){
+    toast('❌ Error en Bridge: '+e.message);
+    console.error('[Recovery] syncTasksBridge error:', e);
+  }
+};
+window.syncTasksBridge = window.syncTasksBridge;
 
 // ── Cargar TODOS los usuarios de la org para auditoría ──
 window.loadAllOrgUsers = async function(){
