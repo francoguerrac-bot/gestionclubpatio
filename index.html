@@ -2988,6 +2988,7 @@ function showPage(p){
 
   // Tabla de despacho: añadir nuevas páginas aquí sin riesgo de romper las existentes
   const PAGE_RENDERERS = {
+    tareas:      () => { var b=document.getElementById('importTriggerRow'),r=window.currentRole||''; if(b) b.style.display=(r==='director'||r==='mama'?'flex':'none'); },
     sprint:      () => { renderSprint(); renderMatrix(); renderGoals(); },
     equipo:      () => { renderFamily(); renderTeam(); renderCheckins(); },
     coach:       () => { renderScenarios(); initMoodUI(); if(!planOrder.length) refreshDayPlan(); else renderDayPlan(); },
@@ -3312,6 +3313,9 @@ const MODULE_ASSIGNEES = {
 };
 
 function updateOwnerOpts(){
+  // Sync import button visibility every time owner opts refresh (init + loadOrgData)
+  (function(){ var b=document.getElementById('importTriggerRow'),r=window.currentRole||currentRole||'';
+    if(b) b.style.display=(r==='director'||r==='mama'?'flex':'none'); }());
   const ctx    = document.getElementById('metaCtx').value;
   const sel    = document.getElementById('metaOwner');
   const members = (window.orgMembers||[]).filter(m => m && m.uid && m.role && m.role !== 'pending');
