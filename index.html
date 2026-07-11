@@ -1025,6 +1025,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
   .bottom-nav{justify-content:center;}
   .nav-item{max-width:120px;}
 }
+/* ── IMPORT MAGIC MODAL ─────────────────────────────── */
+.import-overlay{position:fixed;inset:0;z-index:8000;background:rgba(45,49,66,.72);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.import-card{background:var(--bg-card);border-radius:22px 22px 0 0;padding:22px 18px 36px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;font-family:'Inter',sans-serif;box-shadow:0 -8px 40px rgba(45,49,66,.22);animation:import-up .28s cubic-bezier(.34,1.2,.64,1);}
+@keyframes import-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.import-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.import-title{font-size:16px;font-weight:800;color:var(--text-main);}
+.import-close{width:32px;height:32px;border-radius:99px;border:none;background:var(--bg-main);color:var(--text-main);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.import-label{font-size:10px;font-weight:700;color:#6B7280;letter-spacing:.07em;text-transform:uppercase;margin:14px 0 5px;}
+.import-textarea{width:100%;min-height:124px;font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;resize:vertical;color:var(--text-main);background:var(--bg-main);outline:none;box-sizing:border-box;}
+.import-textarea:focus{border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(91,192,190,.12);}
+.import-preview{font-size:11px;font-weight:700;color:var(--primary-blue);margin-top:5px;min-height:16px;letter-spacing:.01em;}
+.import-2col{display:flex;gap:10px;margin-top:0;}
+.import-2col>div{flex:1;}
+.import-select{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--text-main);background:var(--bg-main);outline:none;}
+.import-select:focus{border-color:var(--primary-blue);}
+.import-date{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--text-main);background:var(--bg-main);outline:none;box-sizing:border-box;}
+.import-date:focus{border-color:var(--primary-blue);}
+.import-progress{margin-top:14px;padding:11px 13px;background:var(--bg-main);border-radius:10px;}
+.import-progress-text{font-size:12px;font-weight:600;color:var(--text-main);}
+.import-bar-track{height:4px;background:var(--border);border-radius:99px;margin-top:8px;overflow:hidden;}
+.import-bar-fill{height:100%;background:linear-gradient(90deg,var(--primary-blue),var(--sage-light));border-radius:99px;transition:width .35s ease;width:0%;}
+.import-footer{display:flex;gap:10px;margin-top:18px;}
 </style>
 </head>
 <body>
@@ -1468,6 +1490,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
         <option value="90">1.5 h</option><option value="120">2 h</option>
         <option value="180">3 h</option><option value="240">4 h</option>
       </select>
+    </div>
+    <!-- Director/Mamá only: importar tareas en bloque desde texto -->
+    <div class="meta-row" id="importTriggerRow" style="display:none;justify-content:flex-end;padding-top:2px;">
+      <button class="btn btn-ghost btn-sm" onclick="openImportModal()"
+        style="font-size:11px;gap:5px;display:inline-flex;align-items:center;opacity:.85;">
+        📥 Importar varias tareas
+      </button>
     </div>
   </div>
 
@@ -8489,6 +8518,9 @@ function initApp(cloudData, profile){
   setTimeout(()=>{ try{ window._checkDailyDeadlines&&window._checkDailyDeadlines(); }catch(e){} }, 4000);
   var role = currentRole;
   mountRoleUI(role, safeProfile);
+  // Mostrar botón de importación masiva solo a Director y Mamá
+  (function(){ var r=document.getElementById('importTriggerRow');
+    if(r) r.style.display=(role==='director'||role==='mama'?'flex':'none'); })();
   if(role !== 'pending'){
     setTimeout(()=>window.triggerDailyCheckin&&window.triggerDailyCheckin(), 500);
     // Verificar notificaciones de permisos para hijos
@@ -10539,6 +10571,245 @@ window.addEventListener('visibilitychange', ()=>{ if(!document.hidden) window.re
      Para sincronizar los datos de Firestore al array global (después de migrar):
        await TaskService.syncToGlobal()
 -->
+<!-- ══════════════════════════════════════
+     IMPORT MAGIC MODAL
+════════════════════════════════════════ -->
+<div id="importOverlay" class="import-overlay" style="display:none;"
+     onclick="if(event.target===this)closeImportModal()">
+  <div class="import-card" role="dialog" aria-modal="true" aria-label="Importar tareas en bloque">
+
+    <div class="import-header">
+      <span class="import-title">📥 Importar tareas en bloque</span>
+      <button class="import-close" onclick="closeImportModal()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="import-label">Texto a importar — cada línea es una tarea</div>
+    <textarea class="import-textarea" id="importTextarea"
+      placeholder="Pega aquí el cuerpo del correo o tu lista&#10;&#10;Actualizar inventario del bazar&#10;Llamar a proveedor de camisetas&#10;Preparar informe semanal&#10;Revisar presupuesto Q3"
+      oninput="_importUpdatePreview()"></textarea>
+    <div class="import-preview" id="importPreview"></div>
+
+    <div class="import-label">Responsable</div>
+    <select class="import-select" id="importAssignee"></select>
+
+    <div class="import-2col">
+      <div>
+        <div class="import-label">Vencimiento</div>
+        <input type="date" class="import-date" id="importDueDate">
+      </div>
+      <div>
+        <div class="import-label">Prioridad</div>
+        <select class="import-select" id="importPrio">
+          <option value="p2" selected>🟡 Alta</option>
+          <option value="p1">🔴 Urgente</option>
+          <option value="p3">🔵 Normal</option>
+          <option value="p4">⚪ Cuando pueda</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="import-label">Contexto</div>
+    <select class="import-select" id="importCtx">
+      <option value="club" selected>🟢 Club Patio</option>
+      <option value="casa">🏠 Casa</option>
+      <option value="bazar">🛍️ Bazar</option>
+      <option value="tienda">🏪 Tienda</option>
+    </select>
+
+    <div class="import-progress" id="importProgress" style="display:none;">
+      <div class="import-progress-text" id="importProgressText">Importando…</div>
+      <div class="import-bar-track"><div class="import-bar-fill" id="importBarFill"></div></div>
+    </div>
+
+    <div class="import-footer">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeImportModal()">Cancelar</button>
+      <button class="btn btn-sage"  style="flex:2" id="importRunBtn" onclick="runBulkImport()">
+        📥 Importar tareas
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── IMPORT MAGIC — Importación en bloque ──────────────────────────────────
+(function() {
+
+  function openImportModal() {
+    if (window.currentRole !== 'director' && window.currentRole !== 'mama') return;
+
+    // Poblar selector de responsables desde orgMembers
+    var sel = document.getElementById('importAssignee');
+    if (sel) {
+      var meUid = window.currentProfile && window.currentProfile.uid || '';
+      var opts  = '<option value="">Sin asignar</option>';
+      (window.orgMembers || [])
+        .filter(function(m){ return m && m.uid && m.role !== 'pending'; })
+        .forEach(function(m) {
+          var name  = m.displayName || m.email || m.uid;
+          var label = ((window.ROLES || {})[m.role] || {}).label || m.role;
+          var sel_  = m.uid === meUid ? ' selected' : '';
+          opts += '<option value="' + m.uid + '" data-name="' + name + '"' + sel_ + '>'
+                + name + ' · ' + label + '</option>';
+        });
+      sel.innerHTML = opts;
+    }
+
+    // Resetear estado
+    var ta = document.getElementById('importTextarea');
+    if (ta) ta.value = '';
+    _importUpdatePreview();
+    var prog = document.getElementById('importProgress');
+    if (prog) prog.style.display = 'none';
+    var btn = document.getElementById('importRunBtn');
+    if (btn) { btn.disabled = false; btn.textContent = '📥 Importar tareas'; }
+
+    var overlay = document.getElementById('importOverlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      setTimeout(function(){ ta && ta.focus(); }, 120);
+    }
+  }
+
+  function closeImportModal() {
+    var overlay = document.getElementById('importOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function _importUpdatePreview() {
+    var ta  = document.getElementById('importTextarea');
+    var pre = document.getElementById('importPreview');
+    if (!ta || !pre) return;
+    var lines = ta.value.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    pre.textContent = lines.length
+      ? lines.length + ' tarea' + (lines.length === 1 ? '' : 's') + ' detectada' + (lines.length === 1 ? '' : 's')
+      : '';
+  }
+
+  async function runBulkImport() {
+    if (window.currentRole !== 'director' && window.currentRole !== 'mama') {
+      window.toast && window.toast('🚫 Función exclusiva del Director.');
+      return;
+    }
+    if (!window.TaskService) {
+      window.toast && window.toast('⚠️ TaskService no disponible aún. Espera un momento.');
+      return;
+    }
+
+    var ta    = document.getElementById('importTextarea');
+    var lines = (ta ? ta.value : '').split('\n')
+                  .map(function(l){ return l.trim(); }).filter(Boolean);
+
+    if (!lines.length) { window.toast && window.toast('Escribe al menos una tarea.'); return; }
+    if (lines.length > 30) { window.toast && window.toast('Máximo 30 tareas por importación.'); return; }
+
+    // Leer opciones del formulario
+    var assigneeSel     = document.getElementById('importAssignee');
+    var assignedToUid   = assigneeSel ? assigneeSel.value : '';
+    var selOpt          = assigneeSel && assigneeSel.options[assigneeSel.selectedIndex];
+    var assignedToName  = selOpt
+      ? (selOpt.dataset && selOpt.dataset.name || selOpt.text.split(' · ')[0].trim())
+      : '';
+    var dead = (document.getElementById('importDueDate')  || {}).value || '';
+    var prio = (document.getElementById('importPrio')      || {}).value || 'p2';
+    var ctx  = (document.getElementById('importCtx')       || {}).value || 'club';
+
+    // Bloquear UI durante importación
+    var btn  = document.getElementById('importRunBtn');
+    var prog = document.getElementById('importProgress');
+    var fill = document.getElementById('importBarFill');
+    var txt  = document.getElementById('importProgressText');
+    if (btn)  { btn.disabled = true; btn.textContent = '⏳ Importando…'; }
+    if (prog) prog.style.display = 'block';
+
+    // ── Importación en chunks de 3 con pausa entre ellos ──────────────────
+    var CHUNK = 3;   // escrituras Firestore en paralelo máximo
+    var DELAY = 700; // ms entre chunks — protege FCM de burst de notificaciones
+    var done = 0, failed = 0;
+    var addedTasks = [];
+
+    function updateBar() {
+      var pct = Math.round(((done + failed) / lines.length) * 100);
+      if (fill) fill.style.width = pct + '%';
+      if (txt)  txt.textContent  = 'Importando ' + (done + failed) + ' de ' + lines.length + '…';
+    }
+
+    for (var i = 0; i < lines.length; i += CHUNK) {
+      var chunk = lines.slice(i, i + CHUNK);
+
+      var results = await Promise.allSettled(
+        chunk.map(function(line) {
+          return window.TaskService.addTask({
+            text:          line,
+            deadline:      dead || '',
+            assignedToUid: assignedToUid || null,
+            owner:         assignedToName || '',
+            prio:          prio,
+            ctx:           ctx,
+            freq:          'unica',
+          });
+        })
+      );
+
+      results.forEach(function(r, idx) {
+        if (r.status === 'fulfilled') {
+          done++;
+          var t = r.value;
+          // Normalizar al formato legacy para que renderTasks() lo muestre de inmediato
+          addedTasks.push(Object.assign({}, t, {
+            text:     t.title || chunk[idx],
+            owner:    t.assignedToName || assignedToName,
+            deadline: dead,
+            done:     false,
+            ts:       Date.now() - idx, // timestamps ligeramente distintos → orden correcto
+          }));
+        } else {
+          failed++;
+          console.warn('[BulkImport] fallo en tarea:', chunk[idx],
+                       r.reason && r.reason.message);
+        }
+      });
+
+      updateBar();
+
+      // Pausa entre chunks solo si quedan más
+      if (i + CHUNK < lines.length) {
+        await new Promise(function(res){ setTimeout(res, DELAY); });
+      }
+    }
+
+    // Inyectar en el array legacy y refrescar la lista de tareas
+    if (addedTasks.length && Array.isArray(window.tasks)) {
+      window.tasks.unshift.apply(window.tasks, addedTasks);
+      window.renderTasks && window.renderTasks();
+      window.saveTasks   && window.saveTasks();
+    }
+
+    // Barra al 100% + mensaje final
+    if (fill) fill.style.width = '100%';
+    var summary = failed === 0
+      ? '✅ ' + done + ' tarea' + (done === 1 ? '' : 's') + ' importada' + (done === 1 ? '' : 's')
+      : '⚠️ ' + done + ' OK · ' + failed + ' con error. Revisa la consola.';
+    if (txt) txt.textContent = summary;
+    window.toast && window.toast(summary);
+
+    if (failed === 0) {
+      setTimeout(closeImportModal, 1600);
+    } else {
+      // Dejar modal abierto con opción de reintentar
+      if (btn) { btn.disabled = false; btn.textContent = '🔁 Reintentar'; }
+    }
+  }
+
+  // Exponer al scope global
+  window.openImportModal      = openImportModal;
+  window.closeImportModal     = closeImportModal;
+  window._importUpdatePreview = _importUpdatePreview;
+  window.runBulkImport        = runBulkImport;
+
+})();
+</script>
+
 <script type="module" src="tasks.js"></script>
 <script src="ui-components.js"></script>
 </body>
