@@ -578,6 +578,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg-main);color:var(--text-m
 .admin-edit-btn:hover{background:var(--primary-blue);color:#fff;}
 .admin-del-btn{font-size:10px;font-weight:700;padding:5px 10px;border-radius:7px;border:1.5px solid var(--accent-coral);color:var(--accent-coral);background:none;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
 .admin-del-btn:hover{background:var(--accent-coral);color:#fff;}
+.admin-reset-btn{font-size:10px;font-weight:700;padding:5px 10px;border-radius:7px;border:1.5px solid #D97706;color:#D97706;background:none;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
+.admin-reset-btn:hover{background:#D97706;color:#fff;}
 .admin-live-dot{width:8px;height:8px;border-radius:50%;background:var(--primary-green);animation:pulse 2s infinite;flex-shrink:0;display:inline-block;margin-right:5px;}
 .admin-modal{position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;}
 .admin-modal-card{background:var(--bg-card);border-radius:18px;padding:24px;max-width:420px;width:100%;font-family:'Inter',sans-serif;box-shadow:0 24px 60px rgba(0,0,0,.3);}
@@ -5707,8 +5709,9 @@ function renderMasterAdminPanel(users){
       <td><div class="admin-td-phone ${phoneOk?'ph-ok':'ph-no'}">${u.phone||'Sin número'}</div></td>
       <td style="font-size:14px;text-align:center;">${health}</td>
       <td><div class="admin-actions-cell">
-        <button class="admin-edit-btn" onclick="openAdminEdit('${u.uid}')">✏️ Editar</button>
-        <button class="admin-del-btn"  onclick="deleteUserFirestore('${u.uid}','${(u.email||'').replace(/'/g,"\\'")}','${(u.displayName||'').replace(/'/g,"\\'")}')">🗑️ Borrar</button>
+        <button class="admin-edit-btn"  onclick="openAdminEdit('${u.uid}')">✏️ Editar</button>
+        <button class="admin-reset-btn" onclick="resetUserTasks('${u.uid}','${(u.displayName||u.email||'Usuario').replace(/'/g,"\\'")}')">🧹 Limpiar</button>
+        <button class="admin-del-btn"   onclick="deleteUserFirestore('${u.uid}','${(u.email||'').replace(/'/g,"\\'")}','${(u.displayName||'').replace(/'/g,"\\'")}')">🗑️ Borrar</button>
       </div></td>
     </tr>`;
   }).join('');
@@ -5803,6 +5806,29 @@ async function deleteUserFirestore(uid, email, name){
   }
 }
 window.deleteUserFirestore = deleteUserFirestore;
+
+// ── Limpiar tareas y Kanban de un usuario (sin borrar su cuenta) ──
+async function resetUserTasks(uid, name){
+  if(currentRole !== 'director'){ toast('⛔ Solo el Director puede hacer esto.'); return; }
+  if(!uid) return;
+  const who = name || 'este usuario';
+  const msg =
+    `¿Estás seguro de que deseas borrar todas las tareas y resetear el perfil de ${who}?\n\n` +
+    `• Se eliminarán todas sus tareas del sistema legacy\n` +
+    `• Se limpiará su tablero Kanban personal\n\n` +
+    `Esta acción no se puede deshacer.`;
+  if(!confirm(msg)) return;
+
+  try{
+    await window.resetUserTasksFirestore(uid);
+    toast(`🧹 Perfil de ${who} limpiado exitosamente`);
+    writeAuditEntry && writeAuditEntry('admin_reset_user_tasks',{emoji:'🧹', uid, name:who});
+  }catch(e){
+    toast('⚠️ Error al limpiar: '+e.message);
+    console.error('[Admin Reset]', e);
+  }
+}
+window.resetUserTasks = resetUserTasks;
 
 // ── Update desde auditoría ──
 async function updateUserFirestore(uid, patch){
@@ -9178,6 +9204,19 @@ window.adminUpdateDoc = async function(uid, patch){
 window.deleteUserFirestoreDoc = async function(uid){
   console.log('[Admin DB] deleteDoc uid:', uid);
   await deleteDoc(doc(db,'users',uid));
+};
+
+// ── Admin: limpiar tareas legacy y Kanban sin borrar la cuenta ──
+window.resetUserTasksFirestore = async function(uid){
+  if(!uid) throw new Error('UID requerido');
+  console.log('[Admin Reset] Limpiando tareas y Kanban para uid:', uid);
+  await setDoc(doc(db,'users',uid), {
+    tasks:     [],                         // array legacy de tareas (cloudSet system)
+    kanban:    [],                         // tablero Kanban embebido en el doc del usuario
+    updatedAt: new Date().toISOString(),
+    updatedBy: currentUser ? currentUser.uid : 'director',
+  }, { merge: true });
+  console.log('[Admin Reset] ✅ uid:', uid);
 };
 
 // ── Cargar TODOS los usuarios de la org para auditoría ──
